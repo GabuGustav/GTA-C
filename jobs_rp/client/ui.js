@@ -11,6 +11,10 @@ UI.promptCooldownMs = 1000;
 UI.hud = UI.hud || {
     active: false,
     drawEventName: "",
+    useJobsUi: false,
+    uiReady: false,
+    uiWindow: null,
+    uiControls: null,
     cash: 0,
     cashKnown: false,
     currentJobId: null,
@@ -27,6 +31,19 @@ function nowMs() {
         return Date.now();
     }
     return Math.floor(Math.random() * 1000000000);
+}
+
+function getJobsRpUi() {
+    try {
+        if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.ui) {
+            return JobsRP.ui;
+        }
+    } catch (e) {
+    }
+    if (typeof mexui !== "undefined" && mexui) {
+        return mexui;
+    }
+    return null;
 }
 
 function safeChat(message, r, g, b) {
@@ -259,8 +276,223 @@ function getPoliceRankName(grade) {
     return names[idx] || "";
 }
 
+function initHudUi() {
+    if (UI.hud.uiReady) {
+        return true;
+    }
+
+    var ui = getJobsRpUi();
+    if (!ui || typeof ui.window !== "function") {
+        return false;
+    }
+    if (typeof toColour !== "function") {
+        return false;
+    }
+
+    var windowStyles = {
+        main: {
+            backgroundColour: toColour(0, 0, 0, 0),
+            textColour: toColour(255, 255, 255, 255)
+        },
+        title: {
+            backgroundColour: toColour(0, 0, 0, 0),
+            textColour: toColour(255, 255, 255, 255)
+        },
+        icon: {
+            backgroundColour: toColour(0, 0, 0, 0),
+            textColour: toColour(255, 255, 255, 255)
+        }
+    };
+
+    var rectStyles = {
+        main: {
+            backgroundColour: toColour(0, 0, 0, 160)
+        }
+    };
+
+    var fillStyles = {
+        main: {
+            backgroundColour: toColour(60, 200, 120, 220)
+        }
+    };
+
+    var xpFillStyles = {
+        main: {
+            backgroundColour: toColour(80, 160, 255, 220)
+        }
+    };
+
+    var textStyles = {
+        main: {
+            textColour: toColour(255, 255, 255, 255),
+            textIndent: 2
+        }
+    };
+
+    var rankTextStyles = {
+        main: {
+            textColour: toColour(255, 224, 128, 255),
+            textIndent: 0
+        }
+    };
+
+    var window = ui.window(0, 0, 1280, 720, "", windowStyles);
+    window.titleBarShown = false;
+    window.titleBarIconShown = false;
+    window.shown = false;
+
+    var cashBox = window.rectangle(0, 0, 10, 10, rectStyles);
+    var cashFill = window.rectangle(0, 0, 10, 10, fillStyles);
+    var cashText = window.text(0, 0, 10, 10, "", textStyles);
+
+    var rankText = window.text(0, 0, 10, 10, "", rankTextStyles);
+    var pipRects = [];
+    for (var i = 0; i < 6; i++) {
+        pipRects.push(window.rectangle(0, 0, 10, 10, rectStyles));
+    }
+
+    var xpBarBg = window.rectangle(0, 0, 10, 10, rectStyles);
+    var xpBarFill = window.rectangle(0, 0, 10, 10, xpFillStyles);
+
+    UI.hud.uiWindow = window;
+    UI.hud.uiControls = {
+        cashBox: cashBox,
+        cashFill: cashFill,
+        cashText: cashText,
+        rankText: rankText,
+        pipRects: pipRects,
+        xpBarBg: xpBarBg,
+        xpBarFill: xpBarFill
+    };
+    UI.hud.uiReady = true;
+    UI.hud.useJobsUi = true;
+    return true;
+}
+
+function updateHudUi() {
+    if (!UI.hud.uiReady || !UI.hud.uiControls || !UI.hud.uiWindow) {
+        return;
+    }
+
+    var ui = getJobsRpUi();
+    if (!ui) {
+        return;
+    }
+
+    var screen = getScreenSize();
+    var scale = Math.min(screen.width / 1280, screen.height / 720);
+    var cfg = JobsRP && JobsRP.Config ? JobsRP.Config : {};
+    var cashEnabled = cfg.hud_cash_enabled !== false;
+    var nativeCash = cfg.hud_use_native_cash === true;
+    var now = nowMs();
+
+    UI.hud.uiWindow.position = new Vec2(0, 0);
+    UI.hud.uiWindow.size = new Vec2(screen.width, screen.height);
+
+    var rightPx = screen.width * 0.95;
+    var topPx = screen.height * 0.06;
+
+    var cashBox = UI.hud.uiControls.cashBox;
+    var cashFill = UI.hud.uiControls.cashFill;
+    var cashText = UI.hud.uiControls.cashText;
+
+    if (cashEnabled && !nativeCash) {
+        var cashBoxW = 230 * scale;
+        var cashBoxH = 28 * scale;
+        var cashX = rightPx - cashBoxW;
+        var cashY = topPx;
+
+        cashBox.shown = true;
+        cashBox.position = new Vec2(cashX, cashY);
+        cashBox.size = new Vec2(cashBoxW, cashBoxH);
+
+        var cap = (cfg.payout_cap_amount || 1500);
+        var ratio = cap > 0 ? Math.min((UI.hud.cash || 0) / cap, 1) : 0;
+        cashFill.shown = true;
+        cashFill.position = new Vec2(cashX + 2, cashY + cashBoxH * 0.2);
+        cashFill.size = new Vec2((cashBoxW - 4) * ratio, cashBoxH * 0.6);
+
+        cashText.shown = true;
+        cashText.position = new Vec2(cashX + 6, cashY + 2);
+        cashText.size = new Vec2(cashBoxW - 12, cashBoxH);
+        cashText.text = "$" + String(Math.floor(UI.hud.cash || 0));
+    } else {
+        cashBox.shown = false;
+        cashFill.shown = false;
+        cashText.shown = false;
+    }
+
+    var rankText = UI.hud.uiControls.rankText;
+    var pipRects = UI.hud.uiControls.pipRects;
+    if (UI.hud.currentJobId === "police") {
+        var pipCount = pipRects.length;
+        var grade = Math.max(0, Math.min(pipCount - 1, Number(UI.hud.policeGrade) || 0));
+        var pipW = 18 * scale;
+        var pipH = 12 * scale;
+        var gap = 4 * scale;
+        var totalW = (pipW * pipCount) + (gap * (pipCount - 1));
+        var baseX = rightPx - totalW;
+        var baseY = topPx + (30 * scale);
+        for (var p = 0; p < pipCount; p++) {
+            var filled = p <= grade;
+            var color = filled ? toColour(255, 215, 80, 220) : toColour(40, 40, 40, 160);
+            pipRects[p].shown = true;
+            pipRects[p].position = new Vec2(baseX + p * (pipW + gap), baseY);
+            pipRects[p].size = new Vec2(pipW, pipH);
+            pipRects[p].styles.main.backgroundColour = color;
+        }
+        var rankName = getPoliceRankName(grade);
+        rankText.shown = true;
+        rankText.position = new Vec2(baseX, baseY + pipH + (4 * scale));
+        rankText.size = new Vec2(totalW, 18 * scale);
+        rankText.text = rankName;
+    } else {
+        for (var i = 0; i < pipRects.length; i++) {
+            pipRects[i].shown = false;
+        }
+        rankText.shown = false;
+    }
+
+    var xpBarBg = UI.hud.uiControls.xpBarBg;
+    var xpBarFill = UI.hud.uiControls.xpBarFill;
+
+    var duration = cfg.hud_xp_bar_duration_ms || 2500;
+    var fade = cfg.hud_xp_bar_fade_ms || 600;
+    var elapsed = now - UI.hud.xpGainAt;
+    if (UI.hud.xpGainAt > 0 && elapsed >= 0 && elapsed <= (duration + fade)) {
+        var barW = 300 * scale;
+        var barH = 18 * scale;
+        var barX = rightPx - barW;
+        var barY = topPx + (60 * scale);
+        var t = clamp01(elapsed / duration);
+        var fillPct = lerp(UI.hud.xpFromPct, UI.hud.xpToPct, t);
+        var alpha = 220;
+        if (elapsed > duration) {
+            var fadeT = clamp01((elapsed - duration) / fade);
+            alpha = Math.floor(220 * (1 - fadeT));
+        }
+        xpBarBg.shown = true;
+        xpBarBg.position = new Vec2(barX, barY);
+        xpBarBg.size = new Vec2(barW, barH);
+        xpBarBg.styles.main.backgroundColour = toColour(0, 0, 0, Math.floor(alpha * 0.7));
+
+        xpBarFill.shown = true;
+        xpBarFill.position = new Vec2(barX + 2, barY + barH * 0.2);
+        xpBarFill.size = new Vec2((barW - 4) * fillPct, barH * 0.6);
+        xpBarFill.styles.main.backgroundColour = toColour(80, 160, 255, alpha);
+    } else {
+        xpBarBg.shown = false;
+        xpBarFill.shown = false;
+    }
+}
+
 function drawHud() {
     if (!UI.hud.active) {
+        return;
+    }
+
+    if (UI.hud.useJobsUi) {
+        updateHudUi();
         return;
     }
 
@@ -362,6 +594,10 @@ UI.startHud = function() {
         return;
     }
     UI.hud.active = true;
+    initHudUi();
+    if (UI.hud.uiWindow) {
+        UI.hud.uiWindow.shown = true;
+    }
     UI.hud.drawEventName = attachFirstHandler(
         ["OnDrawnHUD", "onDrawnHUD", "OnDrawHUD", "onDrawHUD", "OnRender", "onRender"],
         onHudDraw
@@ -382,6 +618,9 @@ UI.stopHud = function() {
     }
     detachHandler(UI.hud.drawEventName, onHudDraw);
     UI.hud.drawEventName = "";
+    if (UI.hud.uiWindow) {
+        UI.hud.uiWindow.shown = false;
+    }
     UI.hud.active = false;
 };
 

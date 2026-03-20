@@ -12,7 +12,11 @@ Controls.drawEventName = "";
 Controls.overlay = Controls.overlay || {
     activeUntil: 0,
     title: "",
-    lines: []
+    lines: [],
+    uiReady: false,
+    uiWindow: null,
+    uiControls: null,
+    useJobsUi: false
 };
 
 function outputChat(text, r, g, b) {
@@ -70,6 +74,19 @@ function getScreenSize() {
     return { width: width, height: height };
 }
 
+function getJobsRpUi() {
+    try {
+        if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.ui) {
+            return JobsRP.ui;
+        }
+    } catch (e) {
+    }
+    if (typeof mexui !== "undefined" && mexui) {
+        return mexui;
+    }
+    return null;
+}
+
 function drawRectNorm(cx, cy, w, h, r, g, b, a) {
     try {
         if (natives && natives.drawRect && typeof Vec2 !== "undefined") {
@@ -93,6 +110,114 @@ function drawRectNorm(cx, cy, w, h, r, g, b, a) {
     } catch (e3) {
     }
     return false;
+}
+
+function initOverlayUi() {
+    if (Controls.overlay.uiReady) {
+        return true;
+    }
+
+    var ui = getJobsRpUi();
+    if (!ui || typeof ui.window !== "function") {
+        return false;
+    }
+    if (typeof toColour !== "function") {
+        return false;
+    }
+
+    var windowStyles = {
+        main: { backgroundColour: toColour(0, 0, 0, 0), textColour: toColour(255, 255, 255, 255) },
+        title: { backgroundColour: toColour(0, 0, 0, 0), textColour: toColour(255, 255, 255, 255) },
+        icon: { backgroundColour: toColour(0, 0, 0, 0), textColour: toColour(255, 255, 255, 255) }
+    };
+    var rectStyles = { main: { backgroundColour: toColour(0, 0, 0, 190) } };
+    var headerStyles = { main: { backgroundColour: toColour(255, 180, 0, 220) } };
+    var titleStyles = { main: { textColour: toColour(0, 0, 0, 255), textIndent: 2 } };
+    var lineStyles = { main: { textColour: toColour(255, 255, 255, 255), textIndent: 2 } };
+
+    var window = ui.window(0, 0, 1280, 720, "", windowStyles);
+    window.titleBarShown = false;
+    window.titleBarIconShown = false;
+    window.shown = false;
+
+    var bg = window.rectangle(0, 0, 10, 10, rectStyles);
+    var header = window.rectangle(0, 0, 10, 10, headerStyles);
+    var titleText = window.text(0, 0, 10, 10, "", titleStyles);
+
+    var maxLines = 12;
+    var lineTexts = [];
+    for (var i = 0; i < maxLines; i++) {
+        lineTexts.push(window.text(0, 0, 10, 10, "", lineStyles));
+    }
+
+    Controls.overlay.uiWindow = window;
+    Controls.overlay.uiControls = {
+        bg: bg,
+        header: header,
+        titleText: titleText,
+        lineTexts: lineTexts,
+        maxLines: maxLines
+    };
+    Controls.overlay.uiReady = true;
+    Controls.overlay.useJobsUi = true;
+    return true;
+}
+
+function updateOverlayUi() {
+    if (!Controls.overlay.uiReady || !Controls.overlay.uiControls || !Controls.overlay.uiWindow) {
+        return;
+    }
+
+    var screen = getScreenSize();
+    var scale = Math.min(screen.width / 1280, screen.height / 720);
+    var lines = Controls.overlay.lines || [];
+    var maxLines = Controls.overlay.uiControls.maxLines || 12;
+    var lineCount = Math.min(lines.length, maxLines);
+
+    var padding = 0.018 * scale * screen.height;
+    var lineHeight = 0.028 * scale * screen.height;
+    var titleHeight = 0.03 * scale * screen.height;
+    var boxWidth = 0.48 * scale * screen.width;
+    var totalHeight = titleHeight + (lineCount * lineHeight) + padding * 2;
+
+    var cx = screen.width * 0.5;
+    var cy = screen.height * 0.25;
+
+    Controls.overlay.uiWindow.position = new Vec2(0, 0);
+    Controls.overlay.uiWindow.size = new Vec2(screen.width, screen.height);
+
+    var bg = Controls.overlay.uiControls.bg;
+    var header = Controls.overlay.uiControls.header;
+    var titleText = Controls.overlay.uiControls.titleText;
+
+    var boxX = cx - (boxWidth / 2);
+    var boxY = cy - (totalHeight / 2);
+
+    bg.shown = true;
+    bg.position = new Vec2(boxX, boxY);
+    bg.size = new Vec2(boxWidth, totalHeight);
+
+    header.shown = true;
+    header.position = new Vec2(boxX, boxY + padding * 0.2);
+    header.size = new Vec2(boxWidth, titleHeight);
+
+    titleText.shown = true;
+    titleText.position = new Vec2(boxX + padding, boxY + padding * 0.2);
+    titleText.size = new Vec2(boxWidth - padding * 2, titleHeight);
+    titleText.text = Controls.overlay.title || "";
+
+    var baseY = boxY + padding * 0.2 + titleHeight * 0.9;
+    var lineTexts = Controls.overlay.uiControls.lineTexts || [];
+    for (var i = 0; i < lineTexts.length; i++) {
+        if (i < lineCount) {
+            lineTexts[i].shown = true;
+            lineTexts[i].position = new Vec2(boxX + padding, baseY + (i * lineHeight));
+            lineTexts[i].size = new Vec2(boxWidth - padding * 2, lineHeight);
+            lineTexts[i].text = lines[i];
+        } else {
+            lineTexts[i].shown = false;
+        }
+    }
 }
 
 function drawTextNative(text, x, y, r, g, b, a) {
@@ -140,6 +265,10 @@ function showOverlay(title, list) {
     Controls.overlay.title = String(title || "");
     Controls.overlay.lines = lines;
     Controls.overlay.activeUntil = nowMs() + 8000;
+    if (initOverlayUi()) {
+        Controls.overlay.uiWindow.shown = true;
+        updateOverlayUi();
+    }
 }
 
 function toggleOverlay(title, list) {
@@ -154,6 +283,14 @@ function toggleOverlay(title, list) {
 function drawOverlay() {
     var now = nowMs();
     if (Controls.overlay.activeUntil <= now) {
+        if (Controls.overlay.uiReady && Controls.overlay.uiWindow) {
+            Controls.overlay.uiWindow.shown = false;
+        }
+        return;
+    }
+
+    if (Controls.overlay.useJobsUi) {
+        updateOverlayUi();
         return;
     }
 

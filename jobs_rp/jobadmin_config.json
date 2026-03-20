@@ -1,0 +1,17 @@
+{
+  "commandLevels": {
+    "help": 0,
+    "whoami": 0,
+    "save": 1,
+    "reload": 1,
+    "dbstatus": 1,
+    "authreset": 1,
+    "authinfo": 1,
+    "setcash": 1,
+    "setxp": 1,
+    "reset": 1,
+    "security": 1,
+    "vehicles": 1,
+    "economy": 1
+  }
+}

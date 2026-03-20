@@ -31,7 +31,7 @@ end
 function RoleCommands.setRoleCommand(player, accountId, roleName)
     -- Check admin permission
     if not RoleCommands.isAdmin(player) then
-        RoleCommands.sendMessage(player, "[RoleManager] Admin permission required", 255, 100, 100)
+        RoleCommands.sendMessage(player, "[RoleManager] Admin permission required", 255, 120, 100)
         return false
     end
     

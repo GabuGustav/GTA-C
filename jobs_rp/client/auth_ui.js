@@ -3,6 +3,10 @@
 var JobsAuthUI = {
     started: false,
     visible: false,
+    useMexui: false,
+    mexuiReady: false,
+    mexuiWindow: null,
+    mexuiControls: null,
     mode: "register",
     lastMode: "register",
     activeField: "account",
@@ -104,6 +108,239 @@ var KeyCharPairs = {
     "slash": ["/", "?"],
     "grave": ["`", "~"]
 };
+
+function statusToColour(level) {
+    if (typeof toColour !== "function") {
+        return null;
+    }
+    if (level === "success") {
+        return toColour(0, 214, 143, 255);
+    }
+    if (level === "warn") {
+        return toColour(243, 156, 18, 255);
+    }
+    if (level === "error") {
+        return toColour(231, 76, 60, 255);
+    }
+    return toColour(220, 220, 220, 255);
+}
+
+function updateMexuiStatus() {
+    if (!JobsAuthUI.mexuiControls || !JobsAuthUI.mexuiControls.statusText) {
+        return;
+    }
+    JobsAuthUI.mexuiControls.statusText.text = JobsAuthUI.statusMessage || "";
+    var colour = statusToColour(JobsAuthUI.statusLevel);
+    if (colour && JobsAuthUI.mexuiControls.statusText.styles && JobsAuthUI.mexuiControls.statusText.styles.main) {
+        JobsAuthUI.mexuiControls.statusText.styles.main.textColour = colour;
+    }
+
+    if (JobsAuthUI.mexuiControls.tokenText) {
+        if (JobsAuthUI.waitingTokenAck && JobsAuthUI.pendingToken) {
+            JobsAuthUI.mexuiControls.tokenText.text = "Token: " + JobsAuthUI.pendingToken;
+        } else {
+            JobsAuthUI.mexuiControls.tokenText.text = "";
+        }
+    }
+}
+
+function updateMexuiMode() {
+    if (!JobsAuthUI.mexuiControls) {
+        return;
+    }
+    var mode = JobsAuthUI.mode === "login" ? "login" : "register";
+    var title = (mode === "register") ? "Register" : "Login";
+    if (JobsAuthUI.mexuiControls.titleText) {
+        JobsAuthUI.mexuiControls.titleText.text = title;
+    }
+    if (JobsAuthUI.mexuiControls.submitButton) {
+        JobsAuthUI.mexuiControls.submitButton.text = title;
+    }
+    if (JobsAuthUI.mexuiControls.toggleButton) {
+        JobsAuthUI.mexuiControls.toggleButton.text = (mode === "register") ? "Switch to Login" : "Switch to Register";
+    }
+    if (JobsAuthUI.mexuiControls.secretLabel) {
+        JobsAuthUI.mexuiControls.secretLabel.text = (mode === "register") ? "Password" : "Password / Token";
+    }
+    if (JobsAuthUI.mexuiControls.secretInput) {
+        JobsAuthUI.mexuiControls.secretInput.placeholder = (mode === "register") ? "password" : "password or token";
+    }
+}
+
+function syncInputsFromMexui() {
+    if (!JobsAuthUI.mexuiControls) {
+        return;
+    }
+    var accountInput = JobsAuthUI.mexuiControls.accountInput;
+    var secretInput = JobsAuthUI.mexuiControls.secretInput;
+    if (accountInput && typeof accountInput.getText === "function") {
+        JobsAuthUI.accountInput = String(accountInput.getText() || "");
+    }
+    if (secretInput && typeof secretInput.getText === "function") {
+        JobsAuthUI.tokenInput = String(secretInput.getText() || "");
+    }
+}
+
+function syncMexuiInputsFromState() {
+    if (!JobsAuthUI.mexuiControls) {
+        return;
+    }
+    var accountInput = JobsAuthUI.mexuiControls.accountInput;
+    var secretInput = JobsAuthUI.mexuiControls.secretInput;
+    if (accountInput && typeof accountInput.setText === "function") {
+        accountInput.setText(JobsAuthUI.accountInput || "");
+    }
+    if (secretInput && typeof secretInput.setText === "function") {
+        secretInput.setText(JobsAuthUI.tokenInput || "");
+    }
+}
+
+function getJobsRpUi() {
+    try {
+        if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.ui) {
+            return JobsRP.ui;
+        }
+    } catch (e) {
+    }
+    if (typeof mexui !== "undefined" && mexui) {
+        return mexui;
+    }
+    return null;
+}
+
+function initMexuiAuthUI() {
+    if (JobsAuthUI.mexuiReady) {
+        return true;
+    }
+    var ui = getJobsRpUi();
+    if (!ui || typeof ui.window !== "function") {
+        return false;
+    }
+    if (typeof toColour !== "function") {
+        return false;
+    }
+
+    var windowStyles = {
+        main: {
+            backgroundColour: toColour(22, 30, 50, 220),
+            textColour: toColour(240, 240, 240, 255)
+        },
+        title: {
+            backgroundColour: toColour(72, 120, 196, 210),
+            textColour: toColour(10, 10, 10, 255)
+        },
+        icon: {
+            backgroundColour: toColour(233, 69, 96, 210),
+            textColour: toColour(10, 10, 10, 255)
+        }
+    };
+
+    var inputStyles = {
+        main: {
+            backgroundColour: toColour(20, 30, 55, 230),
+            textColour: toColour(240, 240, 240, 255),
+            borderColour: toColour(60, 80, 120, 255),
+            hover: {
+                backgroundColour: toColour(30, 40, 70, 230),
+                textColour: toColour(255, 255, 255, 255)
+            }
+        },
+        focused: {
+            borderColour: toColour(120, 180, 255, 255)
+        }
+    };
+
+    var buttonStyles = {
+        main: {
+            backgroundColour: toColour(233, 69, 96, 230),
+            textColour: toColour(255, 255, 255, 255),
+            hover: {
+                backgroundColour: toColour(255, 107, 107, 240)
+            }
+        },
+        focused: {
+            borderColour: toColour(255, 255, 255, 255)
+        }
+    };
+
+    var labelStyles = {
+        main: {
+            textColour: toColour(235, 235, 235, 255),
+            textSize: 14,
+            textIndent: 0
+        }
+    };
+
+    var statusStyles = {
+        main: {
+            textColour: toColour(220, 220, 220, 255),
+            textSize: 13,
+            textIndent: 0
+        }
+    };
+
+    var window = ui.window(0, 0, 480, 360, "Authentication", windowStyles);
+    window.center();
+    window.shown = false;
+
+    var titleText = window.text(20, 50, 440, 24, "Register", labelStyles);
+    var accountLabel = window.text(20, 80, 440, 18, "Account", labelStyles);
+    var accountInput = window.textInput(20, 100, 440, 30, "", inputStyles);
+    accountInput.placeholder = "account id";
+    accountInput.maxLength = (JobsRP && JobsRP.Config && JobsRP.Config.auth_ui_max_account_len) ? JobsRP.Config.auth_ui_max_account_len : 24;
+
+    var secretLabel = window.text(20, 140, 440, 18, "Password", labelStyles);
+    var secretInput = window.password(20, 160, 440, 30, "", inputStyles);
+    secretInput.placeholder = "password";
+    secretInput.maxLength = (JobsRP && JobsRP.Config && JobsRP.Config.auth_ui_max_password_len) ? JobsRP.Config.auth_ui_max_password_len : 64;
+
+    var statusText = window.text(20, 210, 440, 20, "", statusStyles);
+    var tokenText = window.text(20, 230, 440, 20, "", statusStyles);
+
+    var submitButton = window.button(20, 265, 210, 36, "Register", buttonStyles, function() {
+        syncInputsFromMexui();
+        submit();
+    });
+
+    var toggleButton = window.button(250, 265, 210, 36, "Switch to Login", buttonStyles, function() {
+        toggleMode();
+    });
+
+    JobsAuthUI.mexuiWindow = window;
+    JobsAuthUI.mexuiControls = {
+        titleText: titleText,
+        accountLabel: accountLabel,
+        accountInput: accountInput,
+        secretLabel: secretLabel,
+        secretInput: secretInput,
+        statusText: statusText,
+        tokenText: tokenText,
+        submitButton: submitButton,
+        toggleButton: toggleButton
+    };
+    JobsAuthUI.mexuiReady = true;
+    JobsAuthUI.useMexui = true;
+
+    try {
+        if (typeof ui.setInput === "function") {
+            ui.setInput(false);
+        }
+    } catch (e) {
+    }
+
+    updateMexuiMode();
+    updateMexuiStatus();
+    syncMexuiInputsFromState();
+
+    bindKeySafe("F3", "down", function() {
+        if (!JobsAuthUI.visible) {
+            return;
+        }
+        toggleMode();
+    });
+
+    return true;
+}
 
 // mode toggle uses dedicated key (F3)
 
@@ -412,6 +649,16 @@ function setVisible(visible) {
     }
 
     JobsAuthUI.visible = next;
+    if (JobsAuthUI.useMexui && JobsAuthUI.mexuiWindow) {
+        try {
+            JobsAuthUI.mexuiWindow.shown = next;
+            var ui = getJobsRpUi();
+            if (ui && typeof ui.setInput === "function") {
+                ui.setInput(next);
+            }
+        } catch (e0) {
+        }
+    }
 
     try {
         if (typeof gui !== "undefined" && gui && typeof gui.showCursor === "function") {
@@ -435,6 +682,9 @@ function setVisible(visible) {
 function setStatus(message, level) {
     JobsAuthUI.statusMessage = String(message || "");
     JobsAuthUI.statusLevel = String(level || "info");
+    if (JobsAuthUI.useMexui) {
+        updateMexuiStatus();
+    }
 }
 
 function sendServer(eventName) {
@@ -1120,6 +1370,9 @@ function deleteLastChar() {
     }
 }
 function submit() {
+    if (JobsAuthUI.useMexui) {
+        syncInputsFromMexui();
+    }
     if (JobsAuthUI.waitingTokenAck) {
         JobsAuthUI.waitingTokenAck = false;
         JobsAuthUI.pendingToken = "";
@@ -1171,6 +1424,9 @@ function setMode(nextMode) {
     }
     if (next === "register") {
         JobsAuthUI.activeField = "account";
+    }
+    if (JobsAuthUI.useMexui) {
+        updateMexuiMode();
     }
 }
 
@@ -1350,6 +1606,11 @@ function onTokenIssued() {
         setStatus("Token issued. Save it now. Press Enter to acknowledge.", "success");
     } else {
         setStatus("Token issued.", "success");
+    }
+
+    if (JobsAuthUI.useMexui) {
+        syncMexuiInputsFromState();
+        updateMexuiStatus();
     }
 
     setVisible(true);
@@ -1554,6 +1815,9 @@ function drawAuthUI() {
 
 function onDrawEvent() {
     if (!JobsAuthUI.started) {
+        return;
+    }
+    if (JobsAuthUI.useMexui) {
         return;
     }
 
@@ -1775,42 +2039,45 @@ function onResourceStartInternal(ev, res) {
     // Force UI initialization
     sendDiag("auth_ui.start", "resource starting - initializing UI", true);
 
-    ensureFont();
-    startAuthKeyboardService();
-    if (typeof KeyboardService !== "undefined" && KeyboardService && typeof KeyboardService.setConfig === "function") {
-        KeyboardService.setConfig({
-            isActive: function() {
-                return canCaptureInput() && !JobsAuthUI.waitingTokenAck;
-            },
-            appendChar: function(ch) {
-                if (!ch) {
-                    return;
+    var mexuiReady = initMexuiAuthUI();
+    if (!mexuiReady) {
+        ensureFont();
+        startAuthKeyboardService();
+        if (typeof KeyboardService !== "undefined" && KeyboardService && typeof KeyboardService.setConfig === "function") {
+            KeyboardService.setConfig({
+                isActive: function() {
+                    return canCaptureInput() && !JobsAuthUI.waitingTokenAck;
+                },
+                appendChar: function(ch) {
+                    if (!ch) {
+                        return;
+                    }
+                    if (isInjectedCharDuplicate(ch)) {
+                        return;
+                    }
+                    appendChar(ch);
+                    rememberInjectedChar(ch);
+                },
+                deleteChar: function() {
+                    if (!JobsAuthUI.waitingTokenAck) {
+                        deleteLastChar();
+                    }
+                },
+                spaceChar: function() {
+                    appendChar(" ");
                 }
-                if (isInjectedCharDuplicate(ch)) {
-                    return;
-                }
-                appendChar(ch);
-                rememberInjectedChar(ch);
-            },
-            deleteChar: function() {
-                if (!JobsAuthUI.waitingTokenAck) {
-                    deleteLastChar();
-                }
-            },
-            spaceChar: function() {
-                appendChar(" ");
-            }
-        });
-    }
-    attachRuntimeHandlers();
+            });
+        }
+        attachRuntimeHandlers();
 
-    if (typeof setInterval === "function") {
-        JobsAuthUI.blinkTimer = setInterval(function() {
-            JobsAuthUI.cursorBlink = !JobsAuthUI.cursorBlink;
-        }, 530);
-    } else {
-        JobsAuthUI.blinkTimer = null;
-        sendDiag("auth_ui.hook", "setInterval unavailable", true);
+        if (typeof setInterval === "function") {
+            JobsAuthUI.blinkTimer = setInterval(function() {
+                JobsAuthUI.cursorBlink = !JobsAuthUI.cursorBlink;
+            }, 530);
+        } else {
+            JobsAuthUI.blinkTimer = null;
+            sendDiag("auth_ui.hook", "setInterval unavailable", true);
+        }
     }
 
     sendServer("jobs.authRequestState");
@@ -1852,17 +2119,30 @@ function onResourceStopInternal(ev, res) {
         JobsAuthUI.blinkTimer = null;
     }
 
-    detachRuntimeHandlers();
-    stopAuthKeyboardService();
-    if (typeof KeyboardService !== "undefined" && KeyboardService && typeof KeyboardService.setConfig === "function") {
-        KeyboardService.setConfig(null);
+    if (!JobsAuthUI.useMexui) {
+        detachRuntimeHandlers();
+        stopAuthKeyboardService();
+        if (typeof KeyboardService !== "undefined" && KeyboardService && typeof KeyboardService.setConfig === "function") {
+            KeyboardService.setConfig(null);
+        }
+    } else {
+        try {
+            if (JobsAuthUI.mexuiWindow) {
+                JobsAuthUI.mexuiWindow.shown = false;
+            }
+            var ui = getJobsRpUi();
+            if (ui && typeof ui.setInput === "function") {
+                ui.setInput(false);
+            }
+        } catch (e) {
+        }
     }
     setVisible(false);
     JobsAuthUI.started = false;
 }
 
-addEventHandler("OnResourceStart", onResourceStartInternal);
-addEventHandler("OnResourceStop", onResourceStopInternal);
+attachFirstHandler(["OnResourceStart", "onResourceStart"], onResourceStartInternal);
+attachFirstHandler(["OnResourceStop", "onResourceStop"], onResourceStopInternal);
 
 addNetworkHandler("jobs.authState", function() {
     onAuthState.apply(null, arguments);
