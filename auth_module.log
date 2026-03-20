@@ -1,0 +1,10 @@
+DllMain: DLL_PROCESS_ATTACH
+RegisterModule: called.
+DllMain: DLL_PROCESS_ATTACH
+RegisterModule: called.
+DllMain: DLL_PROCESS_ATTACH
+RegisterModule: called.
+DllMain: DLL_PROCESS_ATTACH
+RegisterModule: called.
+DllMain: DLL_PROCESS_ATTACH
+RegisterModule: called.

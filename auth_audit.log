@@ -1,0 +1,202 @@
+1773364242|register|123|ok|ok
+1773364288|logout|unknown|ok|ok
+1773364360|login|123|ok|ok
+1773364644|logout|unknown|ok|ok
+1773405769|login|123|ok|ok
+1773406120|register|123|fail|exists
+1773406124|login|123|ok|ok
+1773406124|recordName|123|ok|Noob Player
+1773406124|recordIp|123|ok|100.98.96.7
+1773406644|login|123|ok|ok
+1773406644|recordName|123|ok|Noob Player
+1773406644|recordIp|123|ok|100.98.96.7
+1773407076|logout|unknown|ok|ok
+1773407848|login|123|ok|ok
+1773407848|recordName|123|ok|Noob Player
+1773407848|recordIp|123|ok|100.98.96.7
+1773503226|register|123|fail|exists
+1773503228|login|123|ok|ok
+1773503228|recordName|123|ok|Noob Player
+1773503228|recordIp|123|ok|100.98.96.7
+1773503690|logout|unknown|ok|ok
+1773509420|register|123|fail|exists
+1773509423|login|123|ok|ok
+1773509423|recordName|123|ok|Noob Player
+1773509423|recordIp|123|ok|100.98.96.7
+1773511320|register|123|fail|exists
+1773511324|login|123|ok|ok
+1773511324|recordName|123|ok|Noob Player
+1773511324|recordIp|123|ok|100.98.96.7
+1773511808|logout|unknown|ok|ok
+1773511953|logout|unknown|ok|ok
+1773521830|logout|unknown|ok|ok
+1773542154|logout|unknown|ok|ok
+1773542215|logout|unknown|ok|ok
+1773591957|logout|unknown|ok|ok
+1773592214|logout|unknown|ok|ok
+1773592434|logout|unknown|ok|ok
+1773593124|logout|unknown|ok|ok
+1773593252|logout|unknown|ok|ok
+1773593764|logout|unknown|ok|ok
+1773594048|login|123|ok|ok
+1773594048|recordName|123|ok|Noob Player
+1773594048|recordIp|123|ok|172.29.223.195
+1773594216|logout|unknown|ok|ok
+1773594303|register|123|fail|exists
+1773594306|login|123|ok|ok
+1773594306|recordName|123|ok|Noob Player
+1773594306|recordIp|123|ok|172.29.223.195
+1773596089|logout|unknown|ok|ok
+1773598958|register|123|fail|exists
+1773598961|login|123|ok|ok
+1773598961|recordName|123|ok|Noob Player
+1773598961|recordIp|123|ok|172.29.223.195
+1773599057|logout|unknown|ok|ok
+1773599065|register|1234|ok|ok
+1773599065|recordName|1234|ok|Noob Player
+1773599065|recordIp|1234|ok|172.29.223.195
+1773599101|logout|unknown|ok|ok
+1773768525|register|123|fail|exists
+1773768532|login|123|ok|ok
+1773768532|recordName|123|ok|Noob Player
+1773768532|recordIp|123|ok|172.29.223.195
+1773769700|register|123|fail|exists
+1773769702|login|123|ok|ok
+1773769702|recordName|123|ok|Noob Player
+1773769702|recordIp|123|ok|172.29.223.195
+1773769811|login|123|ok|ok
+1773769811|recordName|123|ok|Noob Player
+1773769811|recordIp|123|ok|172.29.223.195
+1773770147|register|123|fail|exists
+1773770163|register|123|fail|exists
+1773770165|login|123|fail|invalid_secret
+1773770182|login|123|ok|ok
+1773770182|recordName|123|ok|Noob Player
+1773770182|recordIp|123|ok|172.29.223.195
+1773771163|login|123|ok|ok
+1773771163|recordName|123|ok|Noob Player
+1773771163|recordIp|123|ok|172.29.223.195
+1773771724|login|123|ok|ok
+1773771724|recordName|123|ok|Noob Player
+1773771724|recordIp|123|ok|172.29.223.195
+1773771783|logout|unknown|ok|ok
+1773771912|register|123|fail|exists
+1773771914|login|123|ok|ok
+1773771914|recordName|123|ok|Noob Player
+1773771914|recordIp|123|ok|172.29.223.195
+1773772631|logout|unknown|ok|ok
+1773780691|register|123|fail|exists
+1773780693|login|123|ok|ok
+1773780693|recordName|123|ok|Noob Player
+1773780693|recordIp|123|ok|172.29.223.195
+1773780723|logout|unknown|ok|ok
+1773780747|login|123|fail|invalid_secret
+1773780752|register|123|fail|exists
+1773780755|login|123|fail|invalid_secret
+1773780769|login|12345678|fail|not_found
+1773780788|logout|unknown|ok|ok
+1773780988|login|123|ok|ok
+1773780988|recordName|123|ok|Noob Player
+1773780988|recordIp|123|ok|172.29.223.195
+1773781994|login|123|ok|ok
+1773781994|recordName|123|ok|Noob Player
+1773781994|recordIp|123|ok|172.29.223.195
+1773782567|login|123|ok|ok
+1773782567|recordName|123|ok|Noob Player
+1773782567|recordIp|123|ok|172.29.223.195
+1773783095|login|123|ok|ok
+1773783095|recordName|123|ok|Noob Player
+1773783095|recordIp|123|ok|172.29.223.195
+1773783202|login|123|ok|ok
+1773783202|recordName|123|ok|Noob Player
+1773783202|recordIp|123|ok|172.29.223.195
+1773784195|logout|unknown|ok|ok
+1773785111|login|123|ok|ok
+1773785111|recordName|123|ok|Noob Player
+1773785111|recordIp|123|ok|172.29.223.195
+1773785292|login|123|ok|ok
+1773785292|recordName|123|ok|Noob Player
+1773785292|recordIp|123|ok|172.29.223.195
+1773785919|login|123|ok|ok
+1773785919|recordName|123|ok|Noob Player
+1773785919|recordIp|123|ok|172.29.223.195
+1773785946|logout|unknown|ok|ok
+1773817260|login|123|ok|ok
+1773817260|recordName|123|ok|Noob Player
+1773817260|recordIp|123|ok|172.29.223.195
+1773818072|login|123|ok|ok
+1773818073|recordName|123|ok|Noob Player
+1773818073|recordIp|123|ok|172.29.223.195
+1773818540|login|123|ok|ok
+1773818540|recordName|123|ok|Noob Player
+1773818540|recordIp|123|ok|172.29.223.195
+1773818661|login|123|ok|ok
+1773818661|recordName|123|ok|Noob Player
+1773818661|recordIp|123|ok|172.29.223.195
+1773819273|login|123|ok|ok
+1773819273|recordName|123|ok|Noob Player
+1773819273|recordIp|123|ok|172.29.223.195
+1773819433|login|123|ok|ok
+1773819433|recordName|123|ok|Noob Player
+1773819433|recordIp|123|ok|172.29.223.195
+1773819566|login|123|ok|ok
+1773819566|recordName|123|ok|Noob Player
+1773819566|recordIp|123|ok|172.29.223.195
+1773819845|login|123|ok|ok
+1773819845|recordName|123|ok|Noob Player
+1773819845|recordIp|123|ok|172.29.223.195
+1773820185|login|123|ok|ok
+1773820185|recordName|123|ok|Noob Player
+1773820185|recordIp|123|ok|172.29.223.195
+1773820350|login|123|ok|ok
+1773820350|recordName|123|ok|Noob Player
+1773820350|recordIp|123|ok|172.29.223.195
+1773820464|login|123|ok|ok
+1773820464|recordName|123|ok|Noob Player
+1773820464|recordIp|123|ok|172.29.223.195
+1773840680|logout|unknown|ok|ok
+1773844443|logout|unknown|ok|ok
+1773844508|login|123|ok|ok
+1773844508|recordName|123|ok|Noob Player
+1773844508|recordIp|123|ok|172.29.223.195
+1773844863|logout|unknown|ok|ok
+1773930178|logout|unknown|ok|ok
+1773930249|register|123|fail|exists
+1773930252|login|123|ok|ok
+1773930252|recordName|123|ok|Noob Player
+1773930252|recordIp|123|ok|172.29.223.195
+1773930366|login|123|ok|ok
+1773930366|recordName|123|ok|Noob Player
+1773930366|recordIp|123|ok|172.29.223.195
+1773930537|login|123|ok|ok
+1773930537|recordName|123|ok|Noob Player
+1773930537|recordIp|123|ok|172.29.223.195
+1773930745|login|123|ok|ok
+1773930745|recordName|123|ok|Noob Player
+1773930745|recordIp|123|ok|172.29.223.195
+1773931150|login|123|ok|ok
+1773931150|recordName|123|ok|Noob Player
+1773931150|recordIp|123|ok|172.29.223.195
+1773931215|login|123|ok|ok
+1773931215|recordName|123|ok|Noob Player
+1773931215|recordIp|123|ok|172.29.223.195
+1773931576|login|123|ok|ok
+1773931576|recordName|123|ok|Noob Player
+1773931576|recordIp|123|ok|172.29.223.195
+1773931676|login|123|ok|ok
+1773931676|recordName|123|ok|Noob Player
+1773931676|recordIp|123|ok|172.29.223.195
+1773931788|logout|unknown|ok|ok
+1773943624|register|123|fail|exists
+1773943628|login|123|ok|ok
+1773943628|recordName|123|ok|Noob Player
+1773943628|recordIp|123|ok|172.29.223.195
+1773943808|login|123|ok|ok
+1773943808|recordName|123|ok|Noob Player
+1773943808|recordIp|123|ok|172.29.223.195
+1773943815|logout|unknown|ok|ok
+1773943982|register|123|fail|exists
+1773943984|login|123|ok|ok
+1773943984|recordName|123|ok|playyer1
+1773943984|recordIp|123|ok|172.29.223.195
+1773944010|logout|unknown|ok|ok
