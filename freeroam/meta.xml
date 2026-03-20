@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<meta>
+  <info author="Codex" description="Freeroam utilities: rules, player list, HUD/chat toggles" />
+
+  <script language="lua" type="server" src="shared/config.lua" />
+  <script language="lua" type="server" src="server/colors.lua" />
+  <script language="lua" type="server" src="server/commands.lua" />
+  <script language="lua" type="server" src="server/chat.lua" />
+  <script language="lua" type="server" src="server/announcements.lua" />
+
+  <script language="javascript" type="client" src="shared/config.js" />
+  <script language="javascript" type="client" src="client/controls.js" />
+  <script language="javascript" type="client" src="client/player_blips.js" />
+</meta>

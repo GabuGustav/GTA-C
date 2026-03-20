@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<meta>
+  <info author="GTA Scripting Expert" description="Dynamic trainer CVAR management based on gamemode and admin status" />
+  
+  <script language="javascript" type="client" src="trainer_cvar_manager.js" />
+</meta>

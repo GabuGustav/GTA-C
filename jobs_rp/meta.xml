@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<meta>
+  <info author="Codex" description="Roleplay jobs framework: Taxi, Robbery, Police" />
+
+  <script language="lua" type="server" src="shared/config.lua" />
+  <script language="lua" type="server" src="shared/job_defs.lua" />
+  <script language="lua" type="server" src="shared/json.lua" />
+
+  <script language="lua" type="server" src="server/security.lua" />
+  <script language="lua" type="server" src="server/vehicles.lua" />
+  <script language="lua" type="server" src="server/db.lua" />
+  <script language="lua" type="server" src="server/store.lua" />
+  <script language="lua" type="server" src="server/economy.lua" />
+  <script language="lua" type="server" src="server/auth_module_integration.lua" />
+  <script language="lua" type="server" src="server/auth.lua" />
+  <script language="lua" type="server" src="server/auth_console.lua" />
+  <script language="lua" type="server" src="server/role_commands.lua" />
+  <script language="lua" type="server" src="server/jobs.lua" />
+  <script language="lua" type="server" src="server/commands.lua" />
+  <script language="lua" type="server" src="server/network.lua" />
+
+  <script language="javascript" type="client" src="shared/config.js" />
+  <script language="javascript" type="client" src="shared/job_defs.js" />
+
+  <script language="javascript" type="client" src="client/ui.js" />
+  <script language="javascript" type="client" src="client/keyboard_service.js" />
+  <script language="javascript" type="client" src="client/auth_ui.js" />
+  <script language="javascript" type="client" src="client/zones.js" />
+  <script language="javascript" type="client" src="client/main.js" />
+</meta>
+
+
+
+

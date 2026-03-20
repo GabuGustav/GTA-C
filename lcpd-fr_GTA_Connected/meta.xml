@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<meta>
+  <script language="lua" type="server" src="server.lua" />
+  <script language="lua" type="server" src="voice_test.lua" />
+  <script language="lua" type="client" src="client.lua" />
+</meta>

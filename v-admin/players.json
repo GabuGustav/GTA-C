@@ -1,0 +1,55 @@
+﻿[
+	{
+		"name": "Noob Player",
+		"ip": "172.29.223.195",
+		"bans": null,
+		"trainers": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"weapons": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"admin": {
+			"role": "admin",
+			"level": 2,
+			"addedBy": "Console"
+		},
+		"token": "17L5cGFJiJAYkIALhxrs4n5xhVY2p5lKXNbYWUeA30frzGIZOUWIETZxuyint9S1SOP8yqZeJL4pwun1LhhdAbLpaSIpnwvmIbhgpCRmMnS7091YUfEypHp1hk4lCGy8"
+	},
+	{
+		"name": "Player 2",
+		"ip": "0.0.0.0",
+		"token": "lNveXCMkc74e707FWdwuxlpcXaKsRhPMK8JfS2jxH1dIxCW9SxduLu57pDGR3ysWZ5wfhBYzr8pUjoDBmTBjMWP14NVRuBQ3Us1lkf1g0I2SR8ZxQXlQb8zGrq0aFjUj",
+		"bans": null,
+		"trainers": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"weapons": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"admin": {
+			"role": "mod",
+			"level": 1,
+			"addedBy": "Noob Player"
+		}
+	},
+	{
+		"name": "playyer1",
+		"ip": "172.29.223.195",
+		"token": "spX5LdIlxwQdUR8VXmf4t7TF7cRcks7pYTXoOWJur2ROVV5Mfq7NIm4vcUiZWczYRMwI1XUjCN8JGxDO6Zzdv2He6be65OAcJP5ziuBy5vex3ja7QK2k95Dnwpr0vsCP",
+		"bans": null,
+		"trainers": {
+			"status": false,
+			"addedBy": "System"
+		},
+		"weapons": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"admin": null
+	}
+]
