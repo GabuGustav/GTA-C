@@ -1,6 +1,4 @@
-var JobsRP = JobsRP || {};
-JobsRP.ui = JobsRP.ui || {};
-var mexui = JobsRP.ui;
+var mexui = {};
 
 // data initialization
 mexui.Entity			= {};
@@ -15,12 +13,11 @@ mexui.images			= {};
 
 mexui.focusedControl	= null;
 mexui.hoveredComponent	= null;
-mexui.cursorPos			= new Vec2(0, 0);
 
 // initialization
 mexui.init = function()
 {
-	mexui.native.loadImage('jobsrpui/Images/down-arrow.png', 'downArrow');
+	mexui.native.loadImage('mexui/Images/down-arrow.png', 'downArrow');
 	mexui.bindEvents();
 	mexui.startTimers();
 };
@@ -46,65 +43,8 @@ mexui.bindEvents = function()
 	{
 		if(isAbsolute)
 			return;
-		mexui.cursorPos = new Vec2(position.x, position.y);
+		
 		mexui.triggerEvent('onMouseMove', new Vec2(position.x, position.y), true);
-	});
-
-	// GTA Connected cursor events (IV)
-	addEventHandler('onCursorDown', function(event, x, y, button)
-	{
-		var btn = (button === undefined || button === null) ? 0 : button;
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		var e = mexui.triggerEvent('onMouseDown', {button: btn});
-		if(!e.clickedAControl)
-		{
-			mexui.focusedControl = null;
-		}
-	});
-
-	addEventHandler('OnCursorDown', function(event, x, y, button)
-	{
-		var btn = (button === undefined || button === null) ? 0 : button;
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		var e = mexui.triggerEvent('onMouseDown', {button: btn});
-		if(!e.clickedAControl)
-		{
-			mexui.focusedControl = null;
-		}
-	});
-
-	addEventHandler('onCursorUp', function(event, x, y, button)
-	{
-		var btn = (button === undefined || button === null) ? 0 : button;
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		mexui.triggerEvent('onMouseUp', {button: btn});
-	});
-
-	addEventHandler('OnCursorUp', function(event, x, y, button)
-	{
-		var btn = (button === undefined || button === null) ? 0 : button;
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		mexui.triggerEvent('onMouseUp', {button: btn});
-	});
-
-	addEventHandler('onCursorMove', function(event, x, y)
-	{
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		var pos = mexui.util.getCursorPos();
-		mexui.triggerEvent('onMouseMove', new Vec2(pos.x, pos.y), true);
-	});
-
-	addEventHandler('OnCursorMove', function(event, x, y)
-	{
-		if(typeof x === 'number' && typeof y === 'number')
-			mexui.cursorPos = new Vec2(x, y);
-		var pos = mexui.util.getCursorPos();
-		mexui.triggerEvent('onMouseMove', new Vec2(pos.x, pos.y), true);
 	});
 
 	addEventHandler('onMouseWheel', function(event, mouse, offset, flipped)

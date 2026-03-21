@@ -21,56 +21,7 @@ mexui.util.isPointInRectangle = function(point, position, size)
 
 mexui.util.isCursorInRectangle = function(position, size)
 {
-	return mexui.util.isPointInRectangle(mexui.util.getCursorPos(), position, size);
-};
-
-mexui.util.getCursorPos = function()
-{
-	try
-	{
-		if(mexui.cursorPos && typeof mexui.cursorPos.x === 'number' && typeof mexui.cursorPos.y === 'number')
-		{
-			var cx = mexui.cursorPos.x;
-			var cy = mexui.cursorPos.y;
-			if(cx <= 1.0 && cy <= 1.0)
-			{
-				var size1 = mexui.util.getWindowSize();
-				cx = cx * size1.x;
-				cy = cy * size1.y;
-			}
-			return new Vec2(cx, cy);
-		}
-
-		var pos = null;
-		if(typeof gui !== 'undefined' && gui)
-		{
-			if(typeof gui.cursorPosition === 'function')
-				pos = gui.cursorPosition();
-			else if(gui.cursorPosition)
-				pos = gui.cursorPosition;
-		}
-		
-		if(pos && typeof pos.x === 'number' && typeof pos.y === 'number')
-		{
-			var x = pos.x;
-			var y = pos.y;
-			
-			// Convert normalized coordinates to pixels if needed
-			if(x <= 1.0 && y <= 1.0)
-			{
-				var size2 = mexui.util.getWindowSize();
-				x = x * size2.x;
-				y = y * size2.y;
-			}
-			
-			return new Vec2(x, y);
-		}
-	}
-	catch(e)
-	{
-	}
-	
-	return new Vec2(0, 0);
+	return mexui.util.isPointInRectangle(gui.cursorPosition, position, size);
 };
 
 mexui.util.addVec2 = function(vec2a, vec2b)

@@ -1,10 +1,10 @@
--- Role management commands for jobs_rp using auth_module
--- Following GTA Connected scripting expert patterns
+-- Role management commands for jobs_rp using JSON account store
 
 JobsRP = JobsRP or {}
 JobsRP.RoleCommands = JobsRP.RoleCommands or {}
 
 local RoleCommands = JobsRP.RoleCommands
+local Store = JobsRP.Store
 
 -- Reference: gtac_patterns.md - Console-only commands in server scripts
 -- Reference: gtac_mistakes.md - Proper argument checking and error handling
@@ -55,25 +55,21 @@ function RoleCommands.setRoleCommand(player, accountId, roleName)
         return false
     end
     
-    -- Use enhanced auth_module integration
-    if JobsRP.AuthModule and JobsRP.AuthModule.setRole then
-        local ok, result = JobsRP.AuthModule.setRole(accountId, roleName)
-        if ok then
-            RoleCommands.sendMessage(player, "[RoleManager] Successfully set " .. accountId .. " to " .. roleName, 100, 255, 100)
-            
-            -- Log the action
-            if console and console.log then
-                console.log("[RoleManager] " .. (player.name or "Unknown") .. " set " .. accountId .. " to " .. roleName)
-            end
-            return true
-        else
-            RoleCommands.sendMessage(player, "[RoleManager] Failed to set role: " .. tostring(result), 255, 100, 100)
-            return false
-        end
-    else
-        RoleCommands.sendMessage(player, "[RoleManager] Auth module integration not available", 255, 100, 100)
+    local account = Store and Store.loadAccountById and Store.loadAccountById(accountId) or nil
+    if not account then
+        RoleCommands.sendMessage(player, "[RoleManager] Account not found in JSON store", 255, 100, 100)
         return false
     end
+
+    account.role = roleName
+    Store.markAccountDirty(accountId)
+    Store.saveAccountById(accountId, true)
+
+    RoleCommands.sendMessage(player, "[RoleManager] Successfully set " .. accountId .. " to " .. roleName, 100, 255, 100)
+    if console and console.log then
+        console.log("[RoleManager] " .. (player.name or "Unknown") .. " set " .. accountId .. " to " .. roleName)
+    end
+    return true
 end
 
 -- Get role command
@@ -89,15 +85,14 @@ function RoleCommands.getRoleCommand(player, accountId)
         return false
     end
     
-    -- Use enhanced auth_module integration
-    if JobsRP.AuthModule and JobsRP.AuthModule.getRole then
-        local role = JobsRP.AuthModule.getRole(accountId)
-        RoleCommands.sendMessage(player, "[RoleManager] " .. accountId .. " has role: " .. role, 100, 255, 100)
-        return true
-    else
-        RoleCommands.sendMessage(player, "[RoleManager] Auth module integration not available", 255, 100, 100)
+    local account = Store and Store.loadAccountById and Store.loadAccountById(accountId) or nil
+    if not account then
+        RoleCommands.sendMessage(player, "[RoleManager] Account not found in JSON store", 255, 100, 100)
         return false
     end
+
+    RoleCommands.sendMessage(player, "[RoleManager] " .. accountId .. " has role: " .. tostring(account.role or "player"), 100, 255, 100)
+    return true
 end
 
 -- List roles command
@@ -138,15 +133,15 @@ function RoleCommands.checkRoleCommand(player, accountId, roleName)
         return false
     end
     
-    -- Use enhanced auth_module integration
-    if JobsRP.AuthModule and JobsRP.AuthModule.hasRole then
-        local hasRole = JobsRP.AuthModule.hasRole(player, roleName) -- Note: This would need player object, not accountId
-        RoleCommands.sendMessage(player, "[RoleManager] " .. accountId .. " has " .. roleName .. " role: " .. (hasRole and "YES" or "NO"), 100, 255, 100)
-        return true
-    else
-        RoleCommands.sendMessage(player, "[RoleManager] Auth module integration not available", 255, 100, 100)
+    local account = Store and Store.loadAccountById and Store.loadAccountById(accountId) or nil
+    if not account then
+        RoleCommands.sendMessage(player, "[RoleManager] Account not found in JSON store", 255, 100, 100)
         return false
     end
+
+    local hasRole = tostring(account.role or "player") == roleName
+    RoleCommands.sendMessage(player, "[RoleManager] " .. accountId .. " has " .. roleName .. " role: " .. (hasRole and "YES" or "NO"), 100, 255, 100)
+    return true
 end
 
 -- Register commands

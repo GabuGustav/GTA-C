@@ -444,10 +444,6 @@ addEventHandler("onResourceStart", function() {
         JobsClient.AuthUI.start();
     }
 
-    if (JobsClient.UI && typeof JobsClient.UI.startHud === "function") {
-        JobsClient.UI.startHud();
-    }
-
     if (JobsClient.Zones) {
         JobsClient.Zones.start();
     }

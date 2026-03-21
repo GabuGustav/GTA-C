@@ -11,9 +11,7 @@
   <script language="lua" type="server" src="server/db.lua" />
   <script language="lua" type="server" src="server/store.lua" />
   <script language="lua" type="server" src="server/economy.lua" />
-  <script language="lua" type="server" src="server/auth_module_integration.lua" />
   <script language="lua" type="server" src="server/auth.lua" />
-  <script language="lua" type="server" src="server/auth_console.lua" />
   <script language="lua" type="server" src="server/role_commands.lua" />
   <script language="lua" type="server" src="server/jobadmin.lua" />
   <script language="lua" type="server" src="server/jobs.lua" />
@@ -23,68 +21,69 @@
   <script language="javascript" type="client" src="shared/config.js" />
   <script language="javascript" type="client" src="shared/job_defs.js" />
 
-  <file type="client" src="client/jobsrpui/Images/down-arrow.png" />
+  <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Native.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Utility.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entity/Transition.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entity/StyleableEntity.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entity/Component.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Component/Control.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Component/Entry.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Component/Event.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Component/Window.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entity/ControlAxis.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entity/ControlWithEntries.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/DropDownItem.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/GridColumn.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/GridRow.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/ListRow.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/Tab.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Entry/TreeRow.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Button.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/CheckBox.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/DropDown.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Grid.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Image.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Line.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/List.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/ProgressBar.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/RadioButton.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Rectangle.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/ScrollBar.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Slider.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/TabPanel.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Text.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/TextInput.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Tree.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Character.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Characters.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Day.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Date.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Digit.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Digits.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Hour.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Integer.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Letter.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/LetterDigit.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Letters.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/LettersDigits.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Minute.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Month.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Number.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Password.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/PositiveInteger.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/PositiveNumber.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/RangedInteger.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/RangedNumber.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Second.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/TextArea.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Time.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Week.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/WeekDay.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Control/Year.js" />
-  <script language="javascript" type="client" src="client/jobsrpui/Core/Init.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Utility.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/Transition.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/StyleableEntity.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/Component.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Control.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Entry.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Event.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Window.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/ControlAxis.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/ControlWithEntries.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/DropDownItem.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/GridColumn.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/GridRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/ListRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/Tab.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/TreeRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Button.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/CheckBox.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/DropDown.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Grid.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Image.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Line.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/List.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/ProgressBar.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RadioButton.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Rectangle.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/ScrollBar.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Slider.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TabPanel.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Text.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TextInput.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Tree.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Character.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Characters.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Day.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Date.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Digit.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Digits.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Hour.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Integer.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Letter.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/LetterDigit.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Letters.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/LettersDigits.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Minute.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Month.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Number.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Password.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/PositiveInteger.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/PositiveNumber.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RangedInteger.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RangedNumber.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Second.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TextArea.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Time.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Week.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/WeekDay.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Year.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Init.js" />
+  <script language="javascript" type="client" src="client/jobsrpui_bridge.js" />
 
   <script language="javascript" type="client" src="client/ui.js" />
   <script language="javascript" type="client" src="client/keyboard_service.js" />
@@ -92,5 +91,3 @@
   <script language="javascript" type="client" src="client/zones.js" />
   <script language="javascript" type="client" src="client/main.js" />
 </meta>
-
-

@@ -22,7 +22,9 @@ UI.hud = UI.hud || {
     xpGainAt: 0,
     xpFromPct: 0,
     xpToPct: 0,
-    xpJobId: null
+    xpJobId: null,
+    levelUpAt: 0,
+    levelUpText: ""
 };
 
 function nowMs() {
@@ -353,6 +355,7 @@ function initHudUi() {
 
     var xpBarBg = window.rectangle(0, 0, 10, 10, rectStyles);
     var xpBarFill = window.rectangle(0, 0, 10, 10, xpFillStyles);
+    var xpBarText = window.text(0, 0, 10, 10, "", textStyles);
 
     UI.hud.uiWindow = window;
     UI.hud.uiControls = {
@@ -362,7 +365,8 @@ function initHudUi() {
         rankText: rankText,
         pipRects: pipRects,
         xpBarBg: xpBarBg,
-        xpBarFill: xpBarFill
+        xpBarFill: xpBarFill,
+        xpBarText: xpBarText
     };
     UI.hud.uiReady = true;
     UI.hud.useJobsUi = true;
@@ -455,11 +459,12 @@ function updateHudUi() {
 
     var xpBarBg = UI.hud.uiControls.xpBarBg;
     var xpBarFill = UI.hud.uiControls.xpBarFill;
+    var xpBarText = UI.hud.uiControls.xpBarText;
 
     var duration = cfg.hud_xp_bar_duration_ms || 2500;
     var fade = cfg.hud_xp_bar_fade_ms || 600;
-    var elapsed = now - UI.hud.xpGainAt;
-    if (UI.hud.xpGainAt > 0 && elapsed >= 0 && elapsed <= (duration + fade)) {
+    var elapsed = now - UI.hud.levelUpAt;
+    if (UI.hud.levelUpAt > 0 && elapsed >= 0 && elapsed <= (duration + fade)) {
         var barW = 300 * scale;
         var barH = 18 * scale;
         var barX = rightPx - barW;
@@ -480,9 +485,15 @@ function updateHudUi() {
         xpBarFill.position = new Vec2(barX + 2, barY + barH * 0.2);
         xpBarFill.size = new Vec2((barW - 4) * fillPct, barH * 0.6);
         xpBarFill.styles.main.backgroundColour = toColour(80, 160, 255, alpha);
+
+        xpBarText.shown = true;
+        xpBarText.position = new Vec2(barX, barY - (18 * scale));
+        xpBarText.size = new Vec2(barW, 18 * scale);
+        xpBarText.text = UI.hud.levelUpText || "";
     } else {
         xpBarBg.shown = false;
         xpBarFill.shown = false;
+        xpBarText.shown = false;
     }
 }
 
@@ -564,8 +575,8 @@ function drawHud() {
 
     var duration = cfg.hud_xp_bar_duration_ms || 2500;
     var fade = cfg.hud_xp_bar_fade_ms || 600;
-    var elapsed = now - UI.hud.xpGainAt;
-    if (UI.hud.xpGainAt > 0 && elapsed >= 0 && elapsed <= (duration + fade)) {
+    var elapsed = now - UI.hud.levelUpAt;
+    if (UI.hud.levelUpAt > 0 && elapsed >= 0 && elapsed <= (duration + fade)) {
         var barW = 0.30 * scale;
         var barH = 0.018 * scale;
         var barCx = right - (barW / 2);
@@ -579,6 +590,11 @@ function drawHud() {
         }
         drawRectNorm(barCx, barCy, barW, barH, 0, 0, 0, Math.floor(alpha * 0.7));
         drawRectNorm(barCx - (barW / 2) + (barW * fillPct / 2), barCy, barW * fillPct, barH * 0.6, 80, 160, 255, alpha);
+        if (UI.hud.levelUpText && UI.hud.levelUpText !== "") {
+            var textX = barCx - (barW / 2);
+            var textY = barCy - (0.02 * scale);
+            drawTextSimple(UI.hud.levelUpText, textX, textY, 0xFFFFFFFF);
+        }
     }
 }
 
@@ -598,8 +614,11 @@ UI.startHud = function() {
     if (UI.hud.uiWindow) {
         UI.hud.uiWindow.shown = true;
     }
+    if (UI.hud.useJobsUi) {
+        updateHudUi();
+    }
     UI.hud.drawEventName = attachFirstHandler(
-        ["OnDrawnHUD", "onDrawnHUD", "OnDrawHUD", "onDrawHUD", "OnRender", "onRender"],
+        ["OnBeforeDrawHUD", "onBeforeDrawHUD", "OnDrawnHUD", "onDrawnHUD", "OnDrawHUD", "onDrawHUD", "OnRender", "onRender"],
         onHudDraw
     );
     if (UI.hud.drawEventName === "") {
@@ -691,7 +710,16 @@ UI.handleJobReward = function(jobId, xpGain, xpTotal, gradeBefore, gradeAfter, p
 
     UI.hud.xpFromPct = calcXpPercent(beforeTotal, thresholds);
     UI.hud.xpToPct = calcXpPercent(total, thresholds);
-    UI.hud.xpGainAt = now;
+    if (Number(gradeAfter || 0) > Number(gradeBefore || 0)) {
+        UI.hud.levelUpAt = now;
+        var gainText = (gain >= 0 ? "+" : "") + String(gain) + " XP";
+        UI.hud.levelUpText = "Lvl<" + String(gradeAfter || 0) + ">  " + gainText;
+        UI.hud.xpGainAt = now;
+    } else {
+        UI.hud.levelUpAt = 0;
+        UI.hud.levelUpText = "";
+        UI.hud.xpGainAt = 0;
+    }
     UI.hud.xpJobId = jobId || null;
 
     if (jobId === "police") {

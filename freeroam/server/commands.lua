@@ -158,33 +158,6 @@ local function getPlayerElement(client)
     return client
 end
 
-local function runAuthTest(client)
-    if type(module) ~= "table" or type(module.auth) ~= "table" then
-        outputChat(client, "[Auth] module.auth namespace not available.", 255, 120, 120)
-        return
-    end
-    local player = getPlayerElement(client)
-    if not player then
-        outputChat(client, "[Auth] player element not resolved.", 255, 120, 120)
-        return
-    end
-
-    local okAuth, authResult = pcall(function()
-        return module.auth.authenticate(player, "test_token")
-    end)
-    outputChat(client, "[Auth] authenticate: " .. tostring(okAuth and authResult), 180, 220, 255)
-
-    local okSession, sessionId = pcall(function()
-        return module.auth.createSession(player, {"admin", "player.kick"})
-    end)
-    outputChat(client, "[Auth] createSession: " .. tostring(okSession and sessionId), 180, 220, 255)
-
-    local okPerm, hasPerm = pcall(function()
-        return module.auth.hasPermission(player, "admin")
-    end)
-    outputChat(client, "[Auth] hasPermission(admin): " .. tostring(okPerm and hasPerm), 180, 220, 255)
-end
-
 if addCommandHandler then
     addCommandHandler("rules", function(a, b)
         local client = resolveClientOrFirst(a, b)
@@ -213,15 +186,4 @@ if addCommandHandler then
         showPlayers(client)
     end)
 
-    addCommandHandler("authtest", function(a, b)
-        local client, usedFallback = resolveClientOrFirst(a, b)
-        if not client then
-            print("[freeroam] /authtest ignored: client not resolved")
-            return
-        end
-        if usedFallback then
-            print("[freeroam] /authtest: using first connected client fallback")
-        end
-        runAuthTest(client)
-    end)
 end

@@ -390,32 +390,16 @@ local function handleJobAuth(player, words)
 
     if sub == "force" then
         if JobsRP.Auth and JobsRP.Auth.sendState then
-            -- Force re-check of auth module state
-            local mod = getAuthModule()
-            if mod and mod.isAuthenticated and mod.getAccountId then
-                local okAuth, authResult = callAuthModule("isAuthenticated", player)
-                local okId, accountId = callAuthModule("getAccountId", player)
-                
-                chat(player, "[JobsAuth] Auth module check:", 180, 220, 255)
-                chat(player, "[JobsAuth] Authenticated: " .. tostring(okAuth and authResult == true), 180, 220, 255)
-                chat(player, "[JobsAuth] Account ID: " .. tostring(okId and accountId or "none"), 180, 220, 255)
-                
-                if okAuth and authResult == true and okId and accountId and accountId ~= "" then
-                    chat(player, "[JobsAuth] Forcing session bind...", 255, 200, 100)
-                    local client = resolveClient(player)
-                    if client then
-                        bindAuthenticatedSession(client, accountId)
-                        JobsRP.Auth.sendState(client)
-                        chat(player, "[JobsAuth] Session bound and synced!", 100, 255, 100)
-                    end
-                else
-                    chat(player, "[JobsAuth] Not authenticated in auth module.", 255, 120, 120)
-                end
-            else
-                chat(player, "[JobsAuth] Auth module methods unavailable.", 255, 120, 120)
-            end
+            local client = resolveClient(player)
+            local isAuthed = JobsRP.Auth.isAuthenticated and JobsRP.Auth.isAuthenticated(client)
+            local accountId = JobsRP.Auth.getAccountId and JobsRP.Auth.getAccountId(client)
+            chat(player, "[JobsAuth] Auth check:", 180, 220, 255)
+            chat(player, "[JobsAuth] Authenticated: " .. tostring(isAuthed == true), 180, 220, 255)
+            chat(player, "[JobsAuth] Account ID: " .. tostring(accountId or "none"), 180, 220, 255)
+            JobsRP.Auth.sendState(client)
+            chat(player, "[JobsAuth] Session synced.", 100, 255, 100)
         else
-            chat(player, "[JobsAuth] Auth module unavailable.", 255, 120, 120)
+            chat(player, "[JobsAuth] Auth system unavailable.", 255, 120, 120)
         end
         return
     end
@@ -479,19 +463,12 @@ local function handleJobAuth(player, words)
             if JobsRP.Auth and JobsRP.Auth.isAdmin then
                 isAdminViaAuth = JobsRP.Auth.isAdmin(player)
             end
-            
-            local isAdminViaModule = false
-            if JobsRP.AuthModule and JobsRP.AuthModule.isAdmin then
-                isAdminViaModule = JobsRP.AuthModule.isAdmin(player)
-            end
-            
             local isAdminViaCommand = isAdmin(player)
-            
+
             chat(player, "[Jobs] Auth.isAdmin(): " .. tostring(isAdminViaAuth), 180, 220, 255)
-            chat(player, "[Jobs] AuthModule.isAdmin(): " .. tostring(isAdminViaModule), 180, 220, 255)
             chat(player, "[Jobs] commands.lua isAdmin(): " .. tostring(isAdminViaCommand), 180, 220, 255)
             
-            if isAdminViaAuth or isAdminViaModule or isAdminViaCommand then
+            if isAdminViaAuth or isAdminViaCommand then
                 chat(player, "[Jobs] Admin access confirmed", 100, 255, 100)
             else
                 chat(player, "[Jobs] Admin access denied", 255, 120, 120)
@@ -503,7 +480,7 @@ local function handleJobAuth(player, words)
     end
 
     if sub == "forcesync" then
-        -- Force sync auth module with JSON database
+        -- Force sync auth with JSON database
         local accountId = words[2]
         if not accountId then
             chat(player, "[Jobs] Usage: /jobauth forcesync <accountId>", 255, 120, 120)
@@ -512,38 +489,11 @@ local function handleJobAuth(player, words)
         
         chat(player, "[Jobs] Forcing auth sync for account: " .. accountId, 180, 220, 255)
         
-        -- Try to reload auth module data
-        local mod = JobsRP.AuthModule and JobsRP.AuthModule.getModule and JobsRP.AuthModule.getModule()
-        if mod then
-            -- Check if module has reload function
-            if mod.reload then
-                local ok, result = pcall(mod.reload)
-                if ok then
-                    chat(player, "[Jobs] Auth module reloaded", 100, 255, 100)
-                else
-                    chat(player, "[Jobs] Failed to reload auth module: " .. tostring(result), 255, 120, 120)
-                end
-            end
-            
-            -- Force role check after sync
-            local ok, hasAdminRole = pcall(mod.hasRole, accountId, "admin")
-            if ok then
-                chat(player, "[Jobs] Admin role after sync: " .. tostring(hasAdminRole), 180, 220, 255)
-            else
-                chat(player, "[Jobs] Role check failed: " .. tostring(hasAdminRole), 255, 120, 120)
-            end
-            
-            -- Try to force admin role if needed
-            if mod.setRole and ok and not hasAdminRole then
-                local setOk, setResult = pcall(mod.setRole, accountId, "admin")
-                if setOk then
-                    chat(player, "[Jobs] Forced admin role for: " .. accountId, 100, 255, 100)
-                else
-                    chat(player, "[Jobs] Failed to force admin role: " .. tostring(setResult), 255, 120, 120)
-                end
-            end
+        local account = JobsRP.Store.loadAccountById(accountId)
+        if account then
+            chat(player, "[Jobs] Account exists. Role=" .. tostring(account.role or "player"), 100, 255, 100)
         else
-            chat(player, "[Jobs] Auth module not available", 255, 120, 120)
+            chat(player, "[Jobs] Account not found in JSON store", 255, 120, 120)
         end
         return
     end

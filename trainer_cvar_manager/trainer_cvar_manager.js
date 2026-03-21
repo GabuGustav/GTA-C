@@ -314,23 +314,17 @@ TrainerManager.checkJobsRPState = function() {
     }
 };
 
-// Check if player is admin using auth_module integration
+// Check if player is admin using JSON-backed role data (if available)
 TrainerManager.checkAdminStatus = function() {
     try {
-        // Check if auth_module is available
-        if (typeof module !== 'undefined' && module.auth) {
-            // Reference: gtac_patterns.md - Use apply for API calls
-            const hasAdminRole = Function.prototype.apply.call(module.auth.hasRole, module.auth, [globalThis.localPlayer ? globalThis.localPlayer.getData("accountId") : "", "admin"]);
-            const hasAdminPermission = Function.prototype.apply.call(module.auth.hasPermission, module.auth, [globalThis.localPlayer, "admin"]);
-            
-            TrainerManager.state.isAdmin = hasAdminRole === true || hasAdminPermission === true;
-            TrainerManager.log("Admin status: " + TrainerManager.state.isAdmin);
-        } else {
-            // Fallback: check if player is in admin list (config-based)
-            // This would need server-side implementation
-            TrainerManager.state.isAdmin = false;
-            TrainerManager.log("Auth module not available, admin status: false");
+        let isAdmin = false;
+        if (globalThis.localPlayer && typeof globalThis.localPlayer.getData === "function") {
+            const role = globalThis.localPlayer.getData("role");
+            const isAdminFlag = globalThis.localPlayer.getData("isAdmin");
+            isAdmin = role === "admin" || isAdminFlag === true;
         }
+        TrainerManager.state.isAdmin = isAdmin;
+        TrainerManager.log("Admin status: " + TrainerManager.state.isAdmin);
     } catch (error) {
         TrainerManager.log("Error checking admin status: " + error.toString());
         TrainerManager.state.isAdmin = false;

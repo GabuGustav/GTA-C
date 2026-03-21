@@ -313,6 +313,7 @@ function Store.newAccount(accountId, token, playerName, ip)
         version = JobsRP.Config.version,
         accountId = accountId,
         token = tostring(token or ""),
+        role = "player",
         createdAt = JobsRP.nowSeconds(),
         lastLoginAt = 0,
         lastSeenName = tostring(playerName or ""),
@@ -336,6 +337,7 @@ function Store.ensureAccountShape(record, accountId)
     record.version = JobsRP.toNumber(record.version, fallback.version)
     record.accountId = JobsRP.normalizeName(record.accountId or accountId)
     record.token = tostring(record.token or "")
+    record.role = tostring(record.role or "player")
     record.createdAt = JobsRP.toNumber(record.createdAt, JobsRP.nowSeconds()) or JobsRP.nowSeconds()
     record.lastLoginAt = JobsRP.toNumber(record.lastLoginAt, 0) or 0
     record.lastSeenName = tostring(record.lastSeenName or "")
@@ -618,6 +620,7 @@ function Store.publicAccount(account)
     return JobsRP.deepCopy({
         version = account.version,
         accountId = account.accountId,
+        role = account.role,
         createdAt = account.createdAt,
         lastLoginAt = account.lastLoginAt,
         lastSeenName = account.lastSeenName,

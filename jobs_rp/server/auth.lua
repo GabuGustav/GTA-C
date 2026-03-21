@@ -7,6 +7,7 @@ local Store = JobsRP.Store
 -- Keyed by canonical session key, not raw callback object.
 Auth.sessionsByPlayer = Auth.sessionsByPlayer or {}
 Auth.lastResultByPlayer = Auth.lastResultByPlayer or {}
+Auth.lastActionByPlayer = Auth.lastActionByPlayer or {}
 
 local HEX = {
     "0", "1", "2", "3", "4", "5", "6", "7",
@@ -22,6 +23,19 @@ local function unpackTable(values, index)
         return
     end
     return values[i], unpackTable(values, i + 1)
+end
+
+local function nowMs()
+    if os and os.clock then
+        return math.floor(os.clock() * 1000)
+    end
+    if JobsRP and JobsRP.nowSeconds then
+        return math.floor(JobsRP.nowSeconds() * 1000)
+    end
+    if os and os.time then
+        return os.time() * 1000
+    end
+    return 0
 end
 
 local function resolveClient(actor)
@@ -185,6 +199,27 @@ local function getSessionKey(actor)
     return "obj:" .. tostring(client), client
 end
 
+local function isDuplicateAction(player, action, accountId)
+    local key = nil
+    key, _ = getSessionKey(player)
+    if not key then
+        return false
+    end
+
+    local now = nowMs()
+    local entry = Auth.lastActionByPlayer[key]
+    if entry and entry.action == action and entry.accountId == accountId and (now - (entry.at or 0)) <= 400 then
+        return true
+    end
+
+    Auth.lastActionByPlayer[key] = {
+        action = action,
+        accountId = accountId,
+        at = now
+    }
+    return false
+end
+
 local function sendClientEvent(player, eventName, ...)
     local client = resolveClient(player)
     if not client or not eventName then
@@ -270,9 +305,6 @@ local function randomHex(length)
     return table.concat(out)
 end
 
-local getAuthModule
-
-local callAuthModule
 
 local function parseCsv(text)
     local out = {}
@@ -296,16 +328,6 @@ local function loadAuthDependencies()
         end
     end
 
-    local mod = getAuthModule()
-    if mod and mod.getDependencies then
-        local ok, result = callAuthModule("getDependencies")
-        if ok and type(result) == "string" and result ~= "" then
-            for _, name in ipairs(parseCsv(result)) do
-                deps[#deps + 1] = name
-            end
-        end
-    end
-
     local unique = {}
     for _, name in ipairs(deps) do
         local key = JobsRP.normalizeName(name)
@@ -316,14 +338,9 @@ local function loadAuthDependencies()
 
     for _, name in pairs(unique) do
         if resource and resource.start then
-            local ok, started = pcall(function()
+            pcall(function()
                 return resource.start(name)
             end)
-            if mod and mod.audit then
-                pcall(function()
-                    mod.audit("dependencyLoad", "system", ok and started ~= false, name)
-                end)
-            end
         end
     end
 end
@@ -413,27 +430,6 @@ function Auth.validatePassword(rawPassword)
     return true, password
 end
 
-getAuthModule = function()
-    if type(module) ~= "table" or type(module.auth) ~= "table" then
-        return nil
-    end
-    return module.auth
-end
-
-callAuthModule = function(fn, ...)
-    local mod = getAuthModule()
-    if not mod or type(mod[fn]) ~= "function" then
-        return false, nil
-    end
-    local ok, result = pcall(function(...)
-        return mod[fn](...)
-    end, ...)
-    if not ok then
-        return false, nil
-    end
-    return true, result
-end
-
 local function parseBanString(text)
     if type(text) ~= "string" or text == "" then
         return false, 0, "", ""
@@ -461,47 +457,27 @@ local function parseBanString(text)
 end
 
 local function isModuleAccountBanned(accountId)
-    local mod = getAuthModule()
-    if not mod or not mod.isBanned then
-        return false, 0, "", ""
-    end
-    local ok, result = callAuthModule("isBanned", accountId)
-    if not ok then
-        return false, 0, "", ""
-    end
-    return parseBanString(result)
+    return false, 0, "", ""
 end
 
 local function isModuleNameBanned(name)
-    local mod = getAuthModule()
-    if not mod or not mod.isNameBanned then
-        return false, 0, ""
-    end
-    local ok, result = callAuthModule("isNameBanned", name)
-    if not ok then
-        return false, 0, ""
-    end
-    local banned, untilTs, reason = parseBanString(result)
-    return banned, untilTs, reason
+    return false, 0, ""
 end
 
 local function recordIdentity(accountId, name, ip)
-    local mod = getAuthModule()
-    if not mod then
+    local account = Store.loadAccountById(accountId)
+    if not account then
         return
     end
-    local nameLimit = JobsRP.toNumber(JobsRP.Config.auth_name_history_limit, 10) or 10
-    local ipLimit = JobsRP.toNumber(JobsRP.Config.auth_ip_history_limit, 10) or 10
-    if name and name ~= "" and mod.recordName then
-        pcall(function()
-            mod.recordName(accountId, name, nameLimit)
-        end)
+    if name and name ~= "" then
+        account.lastSeenName = name
     end
-    if JobsRP.Config.auth_ip_history_enabled ~= false and ip and ip ~= "" and mod.recordIp then
-        pcall(function()
-            mod.recordIp(accountId, ip, ipLimit)
-        end)
+    if JobsRP.Config.auth_ip_history_enabled ~= false and ip and ip ~= "" then
+        account.knownIps = account.knownIps or {}
+        addKnownIp(account, ip)
     end
+    Store.markAccountDirty(accountId)
+    Store.saveAccountById(accountId, true)
 end
 
 local function kickClient(client, reason)
@@ -700,18 +676,6 @@ function Auth.getPublicState(player)
         lastMessage = nil
     }
 
-    local mod = getAuthModule()
-    if mod and mod.isAuthenticated and mod.getAccountId then
-        local okAuth, authResult = callAuthModule("isAuthenticated", client or player)
-        local okId, accountId = callAuthModule("getAccountId", client or player)
-        if okAuth and authResult == true then
-            state.authenticated = true
-            if okId and accountId and accountId ~= "" then
-                state.accountId = tostring(accountId)
-            end
-        end
-    end
-
     if result then
         if not result.ok and result.code ~= "" then
             state.lastErrorCode = result.code
@@ -848,47 +812,14 @@ function Auth.getSession(player)
 end
 
 function Auth.isAuthenticated(player)
-    local mod = getAuthModule()
-    if mod and mod.isAuthenticated then
-        local ok, result = callAuthModule("isAuthenticated", player)
-        if ok and result == true then
-            authMessage(player, "Debug: Auth module says authenticated")
-            return true
-        end
-    end
     local session = Auth.getSession(player)
     if session and session.authenticated == true and session.accountId ~= nil then
-        authMessage(player, "Debug: Session says authenticated")
         return true
     end
-    -- Additional check: if auth module has account ID, consider authenticated
-    if mod and mod.getAccountId then
-        local ok, result = callAuthModule("getAccountId", player)
-        if ok and result ~= nil and result ~= "" then
-            authMessage(player, "Debug: Auto-binding session for account: " + tostring(result))
-            -- Auto-bind session if not already bound
-            local session = Auth.getSession(player)
-            if session and not session.authenticated then
-                bindAuthenticatedSession(player, tostring(result))
-            end
-            -- CRITICAL FIX: Auto-attach player account for store access
-            Store.attachPlayerAccount(player, tostring(result))
-            return true
-        end
-    end
-    authMessage(player, "Debug: No authentication found")
     return false
 end
 
 function Auth.getAccountId(player)
-    local mod = getAuthModule()
-    if mod and mod.getAccountId then
-        local ok, result = callAuthModule("getAccountId", player)
-        if ok and result ~= nil and result ~= "" then
-            return tostring(result)
-        end
-        return nil
-    end
     local session = Auth.getSession(player)
     if not session or not session.authenticated then
         return nil
@@ -909,16 +840,6 @@ function Auth.requireAuthenticated(player)
     if isAuth then
         return true
     end
-
-    -- Debug: Show why authentication failed
-    local mod = getAuthModule()
-    if mod and mod.getAccountId then
-        local ok, result = callAuthModule("getAccountId", player)
-        authMessage(player, "Debug - Auth module result: " .. tostring(ok) .. ", ID: " .. tostring(result))
-    end
-    
-    local playerId = JobsRP.Store and JobsRP.Store.getPlayerId and JobsRP.Store.getPlayerId(player)
-    authMessage(player, "Debug - Store player ID: " .. tostring(playerId))
 
     Auth.authHint(player)
     Auth.sendState(player)
@@ -947,6 +868,9 @@ function Auth.register(player, rawAccountId, rawPassword)
     end
 
     local accountId = accountIdOrError
+    if isDuplicateAction(client, "register", accountId) then
+        return false
+    end
 
     local okPassword, passwordOrError = Auth.validatePassword(rawPassword)
     if not okPassword then
@@ -966,23 +890,6 @@ function Auth.register(player, rawAccountId, rawPassword)
         authMessage(client, msg)
         Auth.sendResult(client, false, "name_banned", msg, 0)
         return false
-    end
-
-    local mod = getAuthModule()
-    if mod and mod.register then
-        local okCall, token = callAuthModule("register", client, accountId, password, "player", getPlayerIp(client), getPlayerName(client))
-        if not okCall or not token or token == "" then
-            local msg = "Auth module rejected registration."
-            authMessage(client, msg)
-            Auth.sendResult(client, false, "auth_module_error", msg, 0)
-            return false
-        end
-        bindAuthenticatedSession(client, accountId)
-        recordIdentity(accountId, getPlayerName(client), getPlayerIp(client))
-        sendClientEvent(client, "jobs.authTokenIssued", accountId, token)
-        authMessage(client, "Account registered and logged in as " .. accountId .. ".")
-        Auth.sendResult(client, true, "registered", "Account registered and logged in.", 0)
-        return true
     end
 
     local session = ensureSession(client)
@@ -1029,6 +936,9 @@ function Auth.login(player, rawAccountId, providedSecret)
     end
 
     local accountId = accountIdOrError
+    if isDuplicateAction(client, "login", accountId) then
+        return false
+    end
     local session = ensureSession(client)
     if not session then
         return false
@@ -1044,47 +954,6 @@ function Auth.login(player, rawAccountId, providedSecret)
         authMessage(client, msg)
         Auth.sendResult(client, false, "name_banned", msg, 0)
         return false
-    end
-
-    local mod = getAuthModule()
-    if mod and mod.login then
-        local banned, untilTs, reason = isModuleAccountBanned(accountId)
-        if banned then
-            local msg = "Account is banned."
-            if reason ~= "" then
-                msg = msg .. " (" .. tostring(reason) .. ")"
-            end
-            authMessage(client, msg)
-            Auth.sendResult(client, false, "account_banned", msg, 0)
-            return false
-        end
-
-        local okCall, token = callAuthModule("login", client, accountId, tostring(providedSecret or ""), getPlayerIp(client), getPlayerName(client))
-        if not okCall or not token or token == "" then
-            -- Record failed login with security module
-            if JobsRP.Security then
-                local allowed, reason = JobsRP.Security.recordFailedLogin(accountId, player)
-                if not allowed then
-                    authMessage(client, reason)
-                    Auth.sendResult(client, false, "account_locked", reason, 0)
-                    return false
-                end
-            end
-            local msg = "Auth module rejected login."
-            authMessage(client, msg)
-            Auth.sendResult(client, false, "auth_module_error", msg, 0)
-            return false
-        end
-        bindAuthenticatedSession(client, accountId)
-        recordIdentity(accountId, getPlayerName(client), getPlayerIp(client))
-        
-        -- Clear failed logins on successful authentication
-        if JobsRP.Security then
-            JobsRP.Security.clearFailedLogins(accountId)
-        end
-        
-        Auth.sendResult(client, true, "logged_in", "Logged in as " .. accountId .. ".", 0)
-        return true
     end
 
     local currentAccountId = Auth.getAccountId(client)
@@ -1186,27 +1055,6 @@ function Auth.setPassword(player, rawPassword)
         return false
     end
 
-    local mod = getAuthModule()
-    if mod and mod.setPassword then
-        local okPassword, passwordOrError = Auth.validatePassword(rawPassword)
-        if not okPassword then
-            authMessage(client, passwordOrError)
-            Auth.sendResult(client, false, "invalid_password", passwordOrError, 0)
-            return false
-        end
-        local okCall, result = callAuthModule("setPassword", client, passwordOrError)
-        if not okCall or result ~= true then
-            local msg = "Auth module rejected password update."
-            authMessage(client, msg)
-            Auth.sendResult(client, false, "auth_module_error", msg, 0)
-            return false
-        end
-        local msg = "Password updated."
-        authMessage(client, msg)
-        Auth.sendResult(client, true, "password_updated", msg, 0)
-        return true
-    end
-
     local session = Auth.getSession(client)
     if not session or not session.authenticated or not session.accountId then
         local msg = "Authenticate first."
@@ -1249,20 +1097,6 @@ function Auth.logout(player, silent)
         return false
     end
 
-    local mod = getAuthModule()
-    if mod and mod.logout then
-        callAuthModule("logout", client)
-        clearSession(client)
-        if not silent then
-            local msg = "Logged out."
-            authMessage(client, msg)
-            Auth.sendResult(client, true, "logged_out", msg, 0)
-        else
-            clearResult(client)
-        end
-        return true
-    end
-
     local session = Auth.getSession(client)
     if not session or not session.authenticated then
         if not silent then
@@ -1282,6 +1116,9 @@ function Auth.logout(player, silent)
     end
 
     local accountId = session.accountId
+    if isDuplicateAction(client, "logout", accountId) then
+        return false
+    end
 
     if JobsRP.Jobs and JobsRP.Jobs.onAuthLogout then
         JobsRP.Jobs.onAuthLogout(client, silent and nil or "Logged out.")
@@ -1324,34 +1161,14 @@ function Auth.whoami(player)
 end
 
 function Auth.isAdmin(player)
-    -- Use enhanced auth_module integration
-    if JobsRP.AuthModule and JobsRP.AuthModule.isAdmin then
-        return JobsRP.AuthModule.isAdmin(player)
-    end
-    
-    -- Removed temporary admin_allow_all override - only actual admins can use admin commands
-
-    local mod = getAuthModule()
-    if mod then
-        if mod.hasRole then
-            local ok, result = callAuthModule("hasRole", Auth.getAccountId(player) or "", "admin")
-            if ok and result == true then
-                return true
-            end
-        end
-        if mod.hasPermission then
-            local ok, result = callAuthModule("hasPermission", player, "admin")
-            if ok and result == true then
-                return true
-            end
-        end
-    end
-
     local accountId = Auth.getAccountId(player)
     if not accountId then
         return false
     end
-
+    local account = Store.loadAccountById(accountId)
+    if account and tostring(account.role or "") == "admin" then
+        return true
+    end
     return JobsRP.Config.admin_account_lookup[JobsRP.normalizeName(accountId)] == true
 end
 
@@ -1362,18 +1179,6 @@ function Auth.getAccountInfo(rawAccountId)
     end
 
     local accountId = accountIdOrError
-    local mod = getAuthModule()
-    if mod and mod.getAccountInfo then
-        local okCall, infoText = callAuthModule("getAccountInfo", accountId)
-        if not okCall or type(infoText) ~= "string" or infoText == "" then
-            return false, "Account not found.", nil
-        end
-        local info = parseInfoString(infoText)
-        info.accountId = info.accountId or accountId
-        info.hasToken = info.hasToken == "1"
-        info.hasPassword = info.hasPassword == "1"
-        return true, nil, info
-    end
     local account = Store.loadAccountById(accountId)
     if not account then
         return false, "Account not found.", nil
@@ -1393,14 +1198,6 @@ function Auth.adminResetToken(rawAccountId)
     end
 
     local accountId = accountIdOrError
-    local mod = getAuthModule()
-    if mod and mod.resetToken then
-        local okCall, token = callAuthModule("resetToken", accountId)
-        if not okCall or type(token) ~= "string" or token == "" then
-            return false, "Account not found.", nil
-        end
-        return true, nil, token
-    end
     local account = Store.loadAccountById(accountId)
     if not account then
         return false, "Account not found.", nil
@@ -1430,39 +1227,8 @@ function Auth.handlePlayerJoin(player)
             msg = msg .. " (" .. tostring(reason) .. ")"
         end
         authMessage(client, msg)
-        local mod = getAuthModule()
-        if mod and mod.audit then
-            pcall(function()
-                mod.audit("kick", "name:" .. tostring(name), 1, msg)
-            end)
-        end
         kickClient(client, msg)
         return
-    end
-
-    local mod = getAuthModule()
-    if mod and mod.isAuthenticated and mod.getAccountId then
-        local okAuth, authResult = callAuthModule("isAuthenticated", client)
-        local okId, accountId = callAuthModule("getAccountId", client)
-        if okAuth and authResult == true and okId and accountId and accountId ~= "" then
-            local banned, untilAcc, reasonAcc = isModuleAccountBanned(accountId)
-            if banned then
-                local msg = "Account is banned."
-                if reasonAcc ~= "" then
-                    msg = msg .. " (" .. tostring(reasonAcc) .. ")"
-                end
-                authMessage(client, msg)
-                if mod and mod.audit then
-                    pcall(function()
-                        mod.audit("kick", "account:" .. tostring(accountId), 1, msg)
-                    end)
-                end
-                kickClient(client, msg)
-                return
-            end
-            recordIdentity(accountId, name, getPlayerIp(client))
-            bindAuthenticatedSession(client, accountId)
-        end
     end
 
     if JobsRP.Config.auth_required then
@@ -1506,4 +1272,3 @@ addEventHandler("onResourceStart", function(event, resource)
     seedRandom()
     loadAuthDependencies()
 end)
-

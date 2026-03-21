@@ -321,11 +321,37 @@ function initMexuiAuthUI() {
     JobsAuthUI.mexuiReady = true;
     JobsAuthUI.useMexui = true;
 
+    // Ensure legacy input handlers are disabled to avoid double input
+    try {
+        stopAuthKeyboardService();
+    } catch (eStop) {
+    }
+    try {
+        detachRuntimeHandlers();
+    } catch (eDetach) {
+    }
+    try {
+        if (typeof KeyboardService !== "undefined" && KeyboardService && typeof KeyboardService.setConfig === "function") {
+            KeyboardService.setConfig(null);
+        }
+    } catch (eCfg) {
+    }
+
     try {
         if (typeof ui.setInput === "function") {
             ui.setInput(false);
         }
     } catch (e) {
+    }
+
+    try {
+        if (ui && typeof ui.bindEvents === "function") {
+            ui.bindEvents();
+        }
+        if (ui && typeof ui.startTimers === "function") {
+            ui.startTimers();
+        }
+    } catch (e2) {
     }
 
     updateMexuiMode();
@@ -655,6 +681,14 @@ function setVisible(visible) {
             var ui = getJobsRpUi();
             if (ui && typeof ui.setInput === "function") {
                 ui.setInput(next);
+            }
+            if (next) {
+                if (ui && typeof ui.bindEvents === "function") {
+                    ui.bindEvents();
+                }
+                if (ui && typeof ui.startTimers === "function") {
+                    ui.startTimers();
+                }
             }
         } catch (e0) {
         }
@@ -1567,6 +1601,14 @@ function onAuthState() {
         }
     }
 
+    if (JobsClient && JobsClient.UI) {
+        if (state.authenticated === true && typeof JobsClient.UI.startHud === "function") {
+            JobsClient.UI.startHud();
+        } else if (state.authenticated === false && typeof JobsClient.UI.stopHud === "function") {
+            JobsClient.UI.stopHud();
+        }
+    }
+
     setVisible(shouldShow());
 }
 
@@ -1579,6 +1621,10 @@ function onAuthResult() {
     if (result.ok) {
         if (result.code === "registered" || result.code === "logged_in" || result.code === "already_logged_in") {
             JobsAuthUI.authState.authenticated = true;
+
+            if (JobsClient && JobsClient.UI && typeof JobsClient.UI.startHud === "function") {
+                JobsClient.UI.startHud();
+            }
             
             // Auto-close menu upon successful authentication
             setTimeout(function() {
@@ -1588,6 +1634,9 @@ function onAuthResult() {
         } else if (result.code === "logged_out") {
             JobsAuthUI.authState.authenticated = false;
             JobsAuthUI.waitingTokenAck = false;
+            if (JobsClient && JobsClient.UI && typeof JobsClient.UI.stopHud === "function") {
+                JobsClient.UI.stopHud();
+            }
         }
     }
 
@@ -1835,6 +1884,9 @@ function onKeyDownEvent(ev, key) {
     if (!JobsAuthUI.visible) {
         return;
     }
+    if (JobsAuthUI.useMexui) {
+        return;
+    }
     if (typeof chatInputEnabled !== "undefined" && chatInputEnabled) {
         return;
     }
@@ -1924,6 +1976,9 @@ function onKeyUpEvent(ev) {
 
 function onCharacterEvent(ev, ch) {
     if (!JobsAuthUI.visible || JobsAuthUI.waitingTokenAck) {
+        return;
+    }
+    if (JobsAuthUI.useMexui) {
         return;
     }
     if (typeof chatInputEnabled !== "undefined" && chatInputEnabled) {

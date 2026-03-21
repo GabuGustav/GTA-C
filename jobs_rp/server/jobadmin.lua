@@ -2,6 +2,7 @@ JobsRP = JobsRP or {}
 JobsRP.JobAdmin = JobsRP.JobAdmin or {}
 
 local JobAdmin = JobsRP.JobAdmin
+local Store = JobsRP.Store
 
 JobAdmin.config = JobAdmin.config or nil
 JobAdmin.logFile = "jobadmin_log.json"
@@ -74,6 +75,64 @@ local function toWords(parameters)
         out[#out + 1] = token
     end
     return out
+end
+
+local function trimText(value)
+    if JobsRP and JobsRP.trim then
+        return JobsRP.trim(value)
+    end
+    return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function stripLeadingToken(text, token)
+    local raw = trimText(text)
+    if raw == "" then
+        return ""
+    end
+
+    local compare = raw
+    if string.sub(compare, 1, 1) == "/" then
+        compare = string.sub(compare, 2)
+    end
+
+    local lower = string.lower(compare)
+    local t = string.lower(token or "")
+    if t ~= "" and string.sub(lower, 1, #t) == t then
+        return trimText(string.sub(compare, #t + 1))
+    end
+
+    return raw
+end
+
+local function parseNameAndRest(text)
+    local raw = trimText(text)
+    if raw == "" then
+        return nil, ""
+    end
+
+    local first = string.sub(raw, 1, 1)
+    if first == "\"" then
+        local close = string.find(raw, "\"", 2, true)
+        if close then
+            local name = string.sub(raw, 2, close - 1)
+            local rest = trimText(string.sub(raw, close + 1))
+            return name, rest
+        end
+    elseif first == "<" then
+        local close = string.find(raw, ">", 2, true)
+        if close then
+            local name = string.sub(raw, 2, close - 1)
+            local rest = trimText(string.sub(raw, close + 1))
+            return name, rest
+        end
+    end
+
+    local token = string.match(raw, "^(%S+)")
+    if not token then
+        return nil, ""
+    end
+    local rest = trimText(string.sub(raw, #token + 1))
+    return token, rest
 end
 
 local function resolveClient(actor)
@@ -318,13 +377,6 @@ local function getPlayerAdminLevel(client)
         end
     end
 
-    if JobsRP.AuthModule and JobsRP.AuthModule.isAdmin then
-        local ok, result = pcall(JobsRP.AuthModule.isAdmin, client)
-        if ok and result == true then
-            return 1
-        end
-    end
-
     return 0
 end
 
@@ -487,13 +539,16 @@ function JobAdmin.handleCommand(client, parameters)
     end
 
     if sub == "setcash" then
-        if not words[2] or not words[3] then
-            chat(client, "[JobsAdmin] Usage: /jobadmin setcash <playerName> <amount>", 255, 180, 120)
+        local rawArgs = stripLeadingToken(stripLeadingToken(parameters, JobAdmin.commandRoot), sub)
+        local targetName, rest = parseNameAndRest(rawArgs)
+        if not targetName or rest == "" then
+            chat(client, "[JobsAdmin] Usage: /jobadmin setcash \"Player Name\" <amount>", 255, 180, 120)
             return
         end
 
-        local target = findPlayerByName(words[2])
-        local amount = JobsRP.toNumber(words[3], nil)
+        local restWords = toWords(rest)
+        local amount = JobsRP.toNumber(restWords[1], nil)
+        local target = findPlayerByName(targetName)
         if not target then
             chat(client, "[JobsAdmin] Target player not found.", 255, 120, 120)
             return
@@ -528,14 +583,17 @@ function JobAdmin.handleCommand(client, parameters)
     end
 
     if sub == "setxp" then
-        if not words[2] or not words[3] or not words[4] then
-            chat(client, "[JobsAdmin] Usage: /jobadmin setxp <playerName> <jobId> <amount>", 255, 180, 120)
+        local rawArgs = stripLeadingToken(stripLeadingToken(parameters, JobAdmin.commandRoot), sub)
+        local targetName, rest = parseNameAndRest(rawArgs)
+        local restWords = toWords(rest)
+        if not targetName or not restWords[1] or not restWords[2] then
+            chat(client, "[JobsAdmin] Usage: /jobadmin setxp \"Player Name\" <jobId> <amount>", 255, 180, 120)
             return
         end
 
-        local target = findPlayerByName(words[2])
-        local jobId = JobsRP.normalizeName(words[3])
-        local xpValue = JobsRP.toNumber(words[4], nil)
+        local target = findPlayerByName(targetName)
+        local jobId = JobsRP.normalizeName(restWords[1])
+        local xpValue = JobsRP.toNumber(restWords[2], nil)
 
         if not target then
             chat(client, "[JobsAdmin] Target player not found.", 255, 120, 120)
@@ -577,12 +635,14 @@ function JobAdmin.handleCommand(client, parameters)
     end
 
     if sub == "reset" then
-        if not words[2] then
-            chat(client, "[JobsAdmin] Usage: /jobadmin reset <playerName>", 255, 180, 120)
+        local rawArgs = stripLeadingToken(stripLeadingToken(parameters, JobAdmin.commandRoot), sub)
+        local targetName = parseNameAndRest(rawArgs)
+        if not targetName then
+            chat(client, "[JobsAdmin] Usage: /jobadmin reset \"Player Name\"", 255, 180, 120)
             return
         end
 
-        local target = findPlayerByName(words[2])
+        local target = findPlayerByName(targetName)
         if not target then
             chat(client, "[JobsAdmin] Target player not found.", 255, 120, 120)
             return
@@ -611,12 +671,14 @@ function JobAdmin.handleCommand(client, parameters)
     end
 
     if sub == "security" then
-        if not words[2] then
-            chat(client, "[JobsAdmin] Usage: /jobadmin security <playerName>", 255, 180, 120)
+        local rawArgs = stripLeadingToken(stripLeadingToken(parameters, JobAdmin.commandRoot), sub)
+        local targetName = parseNameAndRest(rawArgs)
+        if not targetName then
+            chat(client, "[JobsAdmin] Usage: /jobadmin security \"Player Name\"", 255, 180, 120)
             return
         end
 
-        local target = findPlayerByName(words[2])
+        local target = findPlayerByName(targetName)
         if not target then
             chat(client, "[JobsAdmin] Target player not found.", 255, 120, 120)
             return
@@ -638,12 +700,14 @@ function JobAdmin.handleCommand(client, parameters)
     end
 
     if sub == "vehicles" then
-        if not words[2] then
-            chat(client, "[JobsAdmin] Usage: /jobadmin vehicles <playerName>", 255, 180, 120)
+        local rawArgs = stripLeadingToken(stripLeadingToken(parameters, JobAdmin.commandRoot), sub)
+        local targetName = parseNameAndRest(rawArgs)
+        if not targetName then
+            chat(client, "[JobsAdmin] Usage: /jobadmin vehicles \"Player Name\"", 255, 180, 120)
             return
         end
 
-        local target = findPlayerByName(words[2])
+        local target = findPlayerByName(targetName)
         if not target then
             chat(client, "[JobsAdmin] Target player not found.", 255, 120, 120)
             return
@@ -767,4 +831,93 @@ if addCommandHandler then
 
         JobAdmin.handleCommand(client, table.concat(fragments, " "))
     end)
+
+    local function makeJobAdminCommand(command, params, client)
+        local isConsole = (client and client.console == true)
+        if not isConsole then
+            chat(client, "[JobsAdmin] Console-only command.", 255, 120, 120)
+            return false
+        end
+
+        local accountId = JobsRP.normalizeName(params or "")
+        if accountId == "" then
+            print("[jobs_rp] [JobAdmin] Usage: /" .. tostring(command) .. " <accountId>")
+            return false
+        end
+
+        if JobsRP.Auth and JobsRP.Auth.validateAccountId then
+            local ok, normalized = JobsRP.Auth.validateAccountId(accountId)
+            if not ok then
+                print("[jobs_rp] [JobAdmin] " .. tostring(normalized))
+                return false
+            end
+            accountId = normalized
+        end
+
+        if not Store or not Store.loadAccountById then
+            print("[jobs_rp] [JobAdmin] Account store unavailable.")
+            return false
+        end
+
+        local account = Store.loadAccountById(accountId)
+        if not account then
+            print("[jobs_rp] [JobAdmin] Account not found: " .. tostring(accountId))
+            return false
+        end
+
+        account.role = "admin"
+        Store.markAccountDirty(accountId)
+        Store.saveAccountById(accountId, true)
+        logAdminAction(client, "makejobadmin", accountId, "Set role admin")
+
+        print("[jobs_rp] [JobAdmin] " .. tostring(accountId) .. " set to admin.")
+        return true
+    end
+
+    addCommandHandler("makejobadmin", makeJobAdminCommand)
+    addCommandHandler("makejobaadmin", makeJobAdminCommand)
+
+    local function demoteJobAdminCommand(command, params, client)
+        local isConsole = (client and client.console == true)
+        if not isConsole then
+            chat(client, "[JobsAdmin] Console-only command.", 255, 120, 120)
+            return false
+        end
+
+        local accountId = JobsRP.normalizeName(params or "")
+        if accountId == "" then
+            print("[jobs_rp] [JobAdmin] Usage: /" .. tostring(command) .. " <accountId>")
+            return false
+        end
+
+        if JobsRP.Auth and JobsRP.Auth.validateAccountId then
+            local ok, normalized = JobsRP.Auth.validateAccountId(accountId)
+            if not ok then
+                print("[jobs_rp] [JobAdmin] " .. tostring(normalized))
+                return false
+            end
+            accountId = normalized
+        end
+
+        if not Store or not Store.loadAccountById then
+            print("[jobs_rp] [JobAdmin] Account store unavailable.")
+            return false
+        end
+
+        local account = Store.loadAccountById(accountId)
+        if not account then
+            print("[jobs_rp] [JobAdmin] Account not found: " .. tostring(accountId))
+            return false
+        end
+
+        account.role = "player"
+        Store.markAccountDirty(accountId)
+        Store.saveAccountById(accountId, true)
+        logAdminAction(client, "demotejobadmin", accountId, "Set role player")
+
+        print("[jobs_rp] [JobAdmin] " .. tostring(accountId) .. " demoted to player.")
+        return true
+    end
+
+    addCommandHandler("demotejobadmin", demoteJobAdminCommand)
 end
