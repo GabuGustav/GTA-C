@@ -24,6 +24,10 @@ root.Config = root.Config or {
     action_rate_limit_ms = 250,
     action_distance = 8.0,
     hub_interact_distance = 5.0,
+    hub_blip_short_range = false,
+    hub_blip_range = 2000.0,
+    hub_blip_min_scale = 0.5,
+    hub_blip_max_scale = 1.0,
     robbery_group_window_sec = 30,
     payout_cap_amount = 1500,
     payout_cap_window_sec = 600,
@@ -51,6 +55,9 @@ root.Config = root.Config or {
         robbery_stash = 0,
         robbery_bag = 0,
         police_dispatch = 0
+    },
+    recorded_coords_file = "data/recorded_coords.json",
+    recorded_coords = {
     },
     auth_required = true,
     auth_token_prefix = "JR-",

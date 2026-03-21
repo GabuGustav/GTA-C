@@ -7,6 +7,11 @@ var Zones = JobsClient.Zones;
 
 Zones.hubBlips = Zones.hubBlips || [];
 Zones.routeBlips = Zones.routeBlips || [];
+Zones.hubMarkers = Zones.hubMarkers || [];
+Zones.targetMarker = Zones.targetMarker || null;
+Zones.markerStateKey = Zones.markerStateKey || "";
+Zones.checkpointTestPending = Zones.checkpointTestPending || false;
+Zones.checkpointTestShown = Zones.checkpointTestShown || false;
 Zones.tickTimer = Zones.tickTimer || null;
 Zones.nearbyHub = Zones.nearbyHub || null;
 Zones.warnedNoBlipApi = Zones.warnedNoBlipApi || false;
@@ -18,6 +23,10 @@ Zones.testBlipDone = Zones.testBlipDone || false;
 Zones.policeBlipIcon = 68; // BLIP_COP_CAR (GTA IV)
 Zones.useNativeBlips = true;
 Zones.propHandles = Zones.propHandles || [];
+Zones.drawEventName = Zones.drawEventName || null;
+Zones.drawMarkersViaRender = Zones.drawMarkersViaRender || false;
+Zones.processEventName = Zones.processEventName || null;
+Zones.renderTimer = Zones.renderTimer || null;
 
 function nowMs() {
     if (typeof Date !== "undefined" && Date.now) {
@@ -161,6 +170,17 @@ function extractCoords(target) {
         return [target[0], target[1], target[2]];
     }
     return null;
+}
+
+function getRecordedCoordsList() {
+    if (typeof JobsRP === "undefined" || !JobsRP || !JobsRP.Config) {
+        return [];
+    }
+    var list = JobsRP.Config.recorded_coords;
+    if (!list || typeof list.length !== "number") {
+        return [];
+    }
+    return list;
 }
 
 function safeDestroy(handle) {
@@ -359,6 +379,225 @@ function warnNoBlipApiOnce() {
     }
 }
 
+function drawCheckpointMarker(entry) {
+    if (!entry || !entry.coords || entry.coords.length < 3) {
+        return;
+    }
+    if (typeof natives === "undefined" || !natives || typeof natives.drawCheckpointWithAlpha !== "function") {
+        return;
+    }
+    try {
+        var zOffset = (entry.zOffset !== undefined) ? Number(entry.zOffset) : 0.0;
+        var vec = new Vec3(entry.coords[0], entry.coords[1], entry.coords[2] + zOffset);
+        var radius = Number(entry.radius || 4.0);
+        var c = entry.color || [255, 255, 0, 200];
+        natives.drawCheckpointWithAlpha(vec, radius, c[0], c[1], c[2], c[3]);
+    } catch (e) {
+    }
+}
+
+function createCheckpointAt(entry) {
+    if (!entry || !entry.coords || entry.coords.length < 3) {
+        return null;
+    }
+    if (typeof natives === "undefined" || !natives || typeof natives.createCheckpoint !== "function") {
+        return null;
+    }
+    try {
+        var vec = new Vec3(entry.coords[0], entry.coords[1], entry.coords[2]);
+        var radius = Number(entry.radius || 4.0);
+        var id = natives.createCheckpoint(1, vec, radius, radius);
+        if (typeof id === "number" && id > 0) {
+            entry.id = id;
+            return id;
+        }
+    } catch (e) {
+    }
+    return null;
+}
+
+function attachFirstHandler(candidates, callback) {
+    if (typeof addEventHandler !== "function" || !candidates || candidates.length === 0) {
+        return null;
+    }
+    for (var i = 0; i < candidates.length; i++) {
+        var name = candidates[i];
+        try {
+            addEventHandler(name, callback);
+            return name;
+        } catch (e) {
+        }
+    }
+    return null;
+}
+
+function detachHandler(eventName, callback) {
+    if (!eventName || typeof removeEventHandler !== "function") {
+        return;
+    }
+    try {
+        removeEventHandler(eventName, callback);
+    } catch (e) {
+    }
+}
+
+function runCheckpointTest(hasUI) {
+    if (!Zones.checkpointTestPending) {
+        return;
+    }
+    var pos = getLocalPlayerPosition();
+    if (pos[0] == null || typeof natives === "undefined") {
+        return;
+    }
+
+    if (typeof natives.createCheckpoint === "function") {
+        try {
+            var vec = new Vec3(pos[0], pos[1], pos[2]);
+            var id = natives.createCheckpoint(1, vec, 4.0, 4.0);
+            if (typeof id === "number" && id > 0) {
+                Zones.targetMarker = { coords: pos, color: [255, 220, 0, 200], radius: 4.0, id: id };
+                if (!Zones.checkpointTestShown) {
+                    Zones.checkpointTestShown = true;
+                    sendClientDiag("checkpoint.test", "created id=" + String(id));
+                    if (hasUI) {
+                        hasUI.showPrompt("Checkpoint test created id=" + String(id), "info", true);
+                    }
+                }
+            }
+            Zones.checkpointTestPending = false;
+            return;
+        } catch (e) {
+            if (!Zones.checkpointTestShown) {
+                Zones.checkpointTestShown = true;
+                sendClientDiag("checkpoint.test", "createCheckpoint exception: " + String(e));
+                if (hasUI) {
+                    hasUI.showPrompt("Checkpoint test error: " + String(e), "warn", true);
+                }
+            }
+            Zones.checkpointTestPending = false;
+            return;
+        }
+    }
+
+    if (typeof natives.drawCheckpointWithAlpha === "function") {
+        try {
+            var vecDraw = new Vec3(pos[0], pos[1], pos[2]);
+            natives.drawCheckpointWithAlpha(vecDraw, 4.0, 255, 220, 0, 200);
+            if (!Zones.checkpointTestShown) {
+                Zones.checkpointTestShown = true;
+                sendClientDiag("checkpoint.test", "drawCheckpointWithAlpha only (no createCheckpoint)");
+                if (hasUI) {
+                    hasUI.showPrompt("Checkpoint test drawn (no createCheckpoint)", "info", true);
+                }
+            }
+        } catch (e2) {
+            if (!Zones.checkpointTestShown) {
+                Zones.checkpointTestShown = true;
+                sendClientDiag("checkpoint.test", "drawCheckpointWithAlpha exception: " + String(e2));
+                if (hasUI) {
+                    hasUI.showPrompt("Checkpoint test error: " + String(e2), "warn", true);
+                }
+            }
+        }
+        Zones.checkpointTestPending = false;
+        return;
+    }
+
+    if (!Zones.checkpointTestShown) {
+        Zones.checkpointTestShown = true;
+        sendClientDiag("checkpoint.test", "checkpoint natives missing");
+        if (hasUI) {
+            hasUI.showPrompt("Checkpoint natives missing", "warn", true);
+        }
+    }
+    Zones.checkpointTestPending = false;
+}
+
+Zones.clearMarkers = function() {
+    if (typeof natives !== "undefined" && natives && typeof natives.deleteCheckpoint === "function") {
+        for (var i = 0; i < Zones.hubMarkers.length; i++) {
+            var entry = Zones.hubMarkers[i];
+            if (entry && typeof entry.id === "number") {
+                try {
+                    natives.deleteCheckpoint(entry.id);
+                } catch (e) {
+                }
+            }
+        }
+        if (Zones.targetMarker && typeof Zones.targetMarker.id === "number") {
+            try {
+                natives.deleteCheckpoint(Zones.targetMarker.id);
+            } catch (e2) {
+            }
+        }
+    }
+    Zones.hubMarkers = [];
+    Zones.targetMarker = null;
+    Zones.markerStateKey = "";
+};
+
+Zones.refreshMarkers = function() {
+    Zones.clearMarkers();
+
+    var cfg = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) ? JobsRP.Config : {};
+    var hubRadius = Number(cfg.hub_interact_distance || 5.0);
+
+    var recorded = getRecordedCoordsList();
+    if (recorded.length > 0) {
+        for (var r = 0; r < recorded.length; r++) {
+            var item = recorded[r];
+            if (!item || !item.coords) {
+                continue;
+            }
+            var coords = extractCoords(item.coords);
+            if (!coords) {
+                continue;
+            }
+            var hubEntry = {
+                coords: coords,
+                color: [255, 220, 0, 200],
+                radius: Math.max(3.0, hubRadius),
+                zOffset: 0.8
+            };
+            createCheckpointAt(hubEntry);
+            Zones.hubMarkers.push(hubEntry);
+        }
+    } else if (JobsRP && JobsRP.JobDefs && JobsRP.JobDefs.list) {
+        for (var j = 0; j < JobsRP.JobDefs.list.length; j++) {
+            var jobDef = JobsRP.JobDefs.list[j];
+            if (!jobDef || jobDef.id !== "police") {
+                continue;
+            }
+            var hubEntry = {
+                coords: jobDef.hub,
+                color: [255, 220, 0, 200],
+                radius: Math.max(3.0, hubRadius),
+                zOffset: 0.8
+            };
+            createCheckpointAt(hubEntry);
+            Zones.hubMarkers.push(hubEntry);
+        }
+    }
+
+    if (JobsClient && JobsClient.session && JobsClient.session.target) {
+        var target = JobsClient.session.target;
+        var coords = extractCoords(target);
+        if (coords) {
+            var stageType = String(target.stageType || "");
+            var label = String(target.label || "");
+            var isEnd = (stageType === "escape") || (stageType === "dropoff") || (label.toLowerCase().indexOf("drop") !== -1) || (label.toLowerCase().indexOf("escape") !== -1);
+            var color = isEnd ? [120, 255, 120, 200] : [100, 160, 255, 200];
+            var targetEntry = {
+                coords: coords,
+                color: color,
+                radius: Math.max(4.0, Number(cfg.action_distance || 8.0))
+            };
+            createCheckpointAt(targetEntry);
+            Zones.targetMarker = targetEntry;
+        }
+    }
+};
+
 function makeVec3(x, y, z) {
     try {
         if (typeof vector3 === "function") {
@@ -513,15 +752,35 @@ function spriteCandidates(kind) {
     return values;
 }
 
+function resolveNativeBlipApi() {
+    var sources = [
+        { obj: (typeof natives !== "undefined") ? natives : null, label: "natives" },
+        { obj: (typeof Native !== "undefined") ? Native : null, label: "Native" },
+        { obj: (typeof gta !== "undefined" && gta && gta.natives) ? gta.natives : null, label: "gta.natives" },
+        { obj: (typeof game !== "undefined" && game && game.natives) ? game.natives : null, label: "game.natives" },
+        { obj: (typeof world !== "undefined" && world && world.natives) ? world.natives : null, label: "world.natives" },
+        { obj: (typeof _G !== "undefined" && _G && _G.natives) ? _G.natives : null, label: "_G.natives" },
+        { obj: (typeof globalThis !== "undefined" && globalThis && globalThis.natives) ? globalThis.natives : null, label: "globalThis.natives" }
+    ];
+
+    for (var i = 0; i < sources.length; i++) {
+        var entry = sources[i];
+        if (entry.obj && typeof entry.obj.addBlipForCoord === "function") {
+            return { obj: entry.obj, label: entry.label };
+        }
+    }
+    return { obj: null, label: null };
+}
+
 function createNativeBlipForCoords(coords, icon, label, shortRange) {
     if (!coords || coords.length < 3) {
         return null;
     }
     
-    var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
-    
     // WORKING PATTERN: Use natives.addBlipForCoord directly (from BetterIV working script)
-    if (globalEnv.natives && typeof globalEnv.natives.addBlipForCoord === "function") {
+    var resolved = resolveNativeBlipApi();
+    var nativeObj = resolved.obj;
+    if (nativeObj && typeof nativeObj.addBlipForCoord === "function") {
         try {
             if (typeof console !== "undefined" && console.log) {
                 console.log("[jobs_rp] Trying natives.addBlipForCoord at coords: " + JSON.stringify(coords));
@@ -529,46 +788,46 @@ function createNativeBlipForCoords(coords, icon, label, shortRange) {
             
             // Create Vec3 exactly like BetterIV script
             var vec = new Vec3(coords[0], coords[1], coords[2]);
-            var blipHandle = globalEnv.natives.addBlipForCoord(vec);
+            var blipHandle = nativeObj.addBlipForCoord(vec);
             
             if (typeof blipHandle === "number" && blipHandle > 0) {
                 if (typeof console !== "undefined" && console.log) {
-                    console.log("[jobs_rp] natives.addBlipForCoord succeeded, id: " + blipHandle);
+                    console.log("[jobs_rp] natives.addBlipForCoord succeeded, id: " + blipHandle + " source=" + String(resolved.label));
                 }
                 
                 // Set blip properties exactly like BetterIV script
-                if (typeof globalEnv.natives.changeBlipSprite === "function" && typeof icon === "number") {
-                    globalEnv.natives.changeBlipSprite(blipHandle, icon);
+                if (typeof nativeObj.changeBlipSprite === "function" && typeof icon === "number") {
+                    nativeObj.changeBlipSprite(blipHandle, icon);
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip sprite set to: " + icon);
                     }
                 }
-                if (typeof globalEnv.natives.changeBlipColour === "function") {
-                    globalEnv.natives.changeBlipColour(blipHandle, 0); // Green color like BetterIV
+                if (typeof nativeObj.changeBlipColour === "function") {
+                    nativeObj.changeBlipColour(blipHandle, 0); // Green color like BetterIV
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip colour set to green");
                     }
                 }
-                if (typeof globalEnv.natives.changeBlipScale === "function") {
-                    globalEnv.natives.changeBlipScale(blipHandle, 1.0); // Normal scale
+                if (typeof nativeObj.changeBlipScale === "function") {
+                    nativeObj.changeBlipScale(blipHandle, 1.0); // Normal scale
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip scale set to 1.0");
                     }
                 }
-                if (typeof globalEnv.natives.changeBlipDisplay === "function") {
-                    globalEnv.natives.changeBlipDisplay(blipHandle, 2); // Show on radar and map
+                if (typeof nativeObj.changeBlipDisplay === "function") {
+                    nativeObj.changeBlipDisplay(blipHandle, 2); // Show on radar and map
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip display set to radar+map");
                     }
                 }
-                if (typeof globalEnv.natives.setBlipAsShortRange === "function") {
-                    globalEnv.natives.setBlipAsShortRange(blipHandle, shortRange === true);
+                if (typeof nativeObj.setBlipAsShortRange === "function") {
+                    nativeObj.setBlipAsShortRange(blipHandle, shortRange === true);
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip short range set to: " + (shortRange === true));
                     }
                 }
-                if (typeof globalEnv.natives.changeBlipNameFromAscii === "function" && label) {
-                    globalEnv.natives.changeBlipNameFromAscii(blipHandle, String(label));
+                if (typeof nativeObj.changeBlipNameFromAscii === "function" && label) {
+                    nativeObj.changeBlipNameFromAscii(blipHandle, String(label));
                     if (typeof console !== "undefined" && console.log) {
                         console.log("[jobs_rp] Blip name set to: " + String(label));
                     }
@@ -640,27 +899,9 @@ function tryNativeBlipForCoords(coords) {
         return { id: null, method: null, error: "coords invalid" };
     }
     
-    var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
-    
-    // Try multiple native access patterns
-    var nativeSources = [
-        { obj: globalEnv.natives, label: "globalEnv.natives" },
-        { obj: globalEnv.Native, label: "globalEnv.Native" },
-        { obj: globalEnv.gta && globalEnv.gta.natives, label: "globalEnv.gta.natives" },
-        { obj: globalEnv.game && globalEnv.game.natives, label: "globalEnv.game.natives" },
-        { obj: globalEnv.world && globalEnv.world.natives, label: "globalEnv.world.natives" }
-    ];
-    
-    var natives = null;
-    var nativesLabel = null;
-    for (var i = 0; i < nativeSources.length; i++) {
-        if (nativeSources[i].obj && typeof nativeSources[i].obj.addBlipForCoord === "function") {
-            natives = nativeSources[i].obj;
-            nativesLabel = nativeSources[i].label;
-            break;
-        }
-    }
-    
+    var resolved = resolveNativeBlipApi();
+    var natives = resolved.obj;
+    var nativesLabel = resolved.label;
     if (!natives) {
         return { id: null, method: null, error: "native addBlipForCoord missing" };
     }
@@ -697,8 +938,9 @@ function createBlipForCoords(coords, kind, label) {
     var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
     if (Zones.useNativeBlips) {
         var icon = (kind === "hub") ? Zones.policeBlipIcon : Zones.policeBlipIcon;
-        // Hub blips should be long-range (always visible), route blips can be short-range
-        var shortRange = (kind !== "hub");
+        // Hub blips should be short-range (visible within range) if configured
+        var cfg = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) ? JobsRP.Config : {};
+        var shortRange = (kind === "hub") ? (cfg.hub_blip_short_range === true) : true;
         created = createNativeBlipForCoords(coords, icon, label, shortRange);
         if (created != null) {
             return created;
@@ -869,28 +1111,123 @@ Zones.setRoute = function(jobId, routePoints) {
 Zones.refreshHubBlips = function() {
     for (var i = 0; i < Zones.hubBlips.length; i++) {
         var blip = Zones.hubBlips[i];
-        if (typeof blip === "number") {
-            Zones.removeNativeBlip(blip);
+        var blipId = (blip && typeof blip === "object" && blip.id !== undefined) ? blip.id : blip;
+        if (typeof blipId === "number") {
+            Zones.removeNativeBlip(blipId);
         } else {
-            safeDestroy(blip);
+            safeDestroy(blipId);
         }
     }
     Zones.hubBlips = [];
 
+    var recorded = getRecordedCoordsList();
+    if (recorded.length > 0) {
+        for (var r = 0; r < recorded.length; r++) {
+            var item = recorded[r];
+            if (!item || !item.coords) {
+                continue;
+            }
+            var coords = extractCoords(item.coords);
+            if (!coords) {
+                continue;
+            }
+            var label = item.name || item.label || "Recorded";
+            var blip = createBlipForCoords(coords, "hub", label);
+            if (blip) {
+                Zones.hubBlips.push({ id: blip, coords: coords });
+            } else if (!Zones.blipDiagShown) {
+                Zones.blipDiagShown = true;
+                sendClientDiag("blip.hub", "Recorded hub blip creation failed for coords=" + JSON.stringify(coords || []));
+            }
+        }
+        return;
+    }
+
     if (JobsRP && JobsRP.JobDefs && JobsRP.JobDefs.list) {
         for (var j = 0; j < JobsRP.JobDefs.list.length; j++) {
             var jobDef = JobsRP.JobDefs.list[j];
+            if (!jobDef || jobDef.id !== "police") {
+                continue;
+            }
             var blip = createBlipForCoords(jobDef.hub, "hub", jobDef.label);
             if (blip) {
-                Zones.hubBlips.push(blip);
+                Zones.hubBlips.push({ id: blip, coords: jobDef.hub });
+            } else if (!Zones.blipDiagShown) {
+                Zones.blipDiagShown = true;
+                sendClientDiag("blip.hub", "Police hub blip creation failed for coords=" + JSON.stringify(jobDef.hub || []));
             }
         }
     }
 };
 
+function updateHubBlipScales() {
+    if (!Zones.hubBlips || Zones.hubBlips.length === 0) {
+        return;
+    }
+    var cfg = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) ? JobsRP.Config : {};
+    var maxDistance = Number(cfg.hub_blip_range || 800);
+    var minScale = Number(cfg.hub_blip_min_scale || 0.5);
+    var maxScale = Number(cfg.hub_blip_max_scale || 1.0);
+    if (!isFinite(maxDistance) || maxDistance <= 0) {
+        maxDistance = 800.0;
+    }
+
+    for (var i = 0; i < Zones.hubBlips.length; i++) {
+        var entry = Zones.hubBlips[i];
+        if (!entry || !entry.coords) {
+            continue;
+        }
+        var distance = vecDistance(entry.coords);
+        if (!isFinite(distance)) {
+            continue;
+        }
+        var scale = maxScale - (distance / maxDistance) * (maxScale - minScale);
+        if (scale < minScale) {
+            scale = minScale;
+        } else if (scale > maxScale) {
+            scale = maxScale;
+        }
+
+        var blipId = (entry && typeof entry === "object" && entry.id !== undefined) ? entry.id : entry;
+        if (typeof blipId === "number") {
+            try {
+                if (typeof natives !== "undefined" && natives && typeof natives.changeBlipScale === "function") {
+                    natives.changeBlipScale(blipId, scale);
+                }
+            } catch (e) {
+            }
+        }
+    }
+}
+
 function getNearestHub() {
     var nearest = null;
     var bestDistance = Infinity;
+    var recorded = getRecordedCoordsList();
+    if (recorded.length > 0) {
+        for (var r = 0; r < recorded.length; r++) {
+            var item = recorded[r];
+            if (!item || !item.coords) {
+                continue;
+            }
+            var coords = extractCoords(item.coords);
+            if (!coords) {
+                continue;
+            }
+            var dist = vecDistance(coords);
+            if (dist < bestDistance) {
+                bestDistance = dist;
+                nearest = {
+                    jobId: item.category || "recorded",
+                    label: item.name || "Recorded",
+                    coords: coords,
+                    distance: dist
+                };
+            }
+        }
+        return nearest;
+    }
+
     if (!JobsRP || !JobsRP.JobDefs || !JobsRP.JobDefs.list) {
         return null;
     }
@@ -927,8 +1264,38 @@ function getSessionTarget() {
     };
 }
 
+function getMarkerStateKey() {
+    var jobId = JobsClient && JobsClient.session ? String(JobsClient.session.jobId || "") : "";
+    var target = JobsClient && JobsClient.session ? JobsClient.session.target : null;
+    if (!target) {
+        return jobId + "|none";
+    }
+    var coords = extractCoords(target) || [];
+    var stage = String(target.stageType || "");
+    return jobId + "|" + stage + "|" + coords.join(",");
+}
+
 Zones.tick = function() {
-    if (!JobsClient.UI) {
+    var hasUI = JobsClient && JobsClient.UI;
+
+    updateHubBlipScales();
+    var markerKey = getMarkerStateKey();
+    if (markerKey !== Zones.markerStateKey) {
+        Zones.markerStateKey = markerKey;
+        Zones.refreshMarkers();
+    }
+
+    if (!Zones.drawMarkersViaRender) {
+        runCheckpointTest(hasUI);
+        for (var i = 0; i < Zones.hubMarkers.length; i++) {
+            drawCheckpointMarker(Zones.hubMarkers[i]);
+        }
+        if (Zones.targetMarker) {
+            drawCheckpointMarker(Zones.targetMarker);
+        }
+    }
+
+    if (!hasUI) {
         return;
     }
 
@@ -936,7 +1303,7 @@ Zones.tick = function() {
         var ts = nowMs();
         if ((ts - (Zones.authPromptAtMs || 0)) >= (Zones.authPromptCooldownMs || 8000)) {
             Zones.authPromptAtMs = ts;
-            JobsClient.UI.showPrompt("Authenticate in the Jobs Auth panel before using jobs.", "warn", false);
+            hasUI.showPrompt("Authenticate in the Jobs Auth panel before using jobs.", "warn", false);
         }
         return;
     }
@@ -999,6 +1366,28 @@ Zones.tick = function() {
         } else {
             JobsClient.UI.showPrompt("Use /job join " + nearestHub.jobId + " to switch to " + nearestHub.label, "warn", false);
         }
+    }
+};
+
+Zones.onRender = function() {
+    var hasUI = JobsClient && JobsClient.UI;
+    runCheckpointTest(hasUI);
+    for (var i = 0; i < Zones.hubMarkers.length; i++) {
+        drawCheckpointMarker(Zones.hubMarkers[i]);
+    }
+    if (Zones.targetMarker) {
+        drawCheckpointMarker(Zones.targetMarker);
+    }
+};
+
+Zones.onProcess = function() {
+    var hasUI = JobsClient && JobsClient.UI;
+    runCheckpointTest(hasUI);
+    for (var i = 0; i < Zones.hubMarkers.length; i++) {
+        drawCheckpointMarker(Zones.hubMarkers[i]);
+    }
+    if (Zones.targetMarker) {
+        drawCheckpointMarker(Zones.targetMarker);
     }
 };
 
@@ -1068,6 +1457,25 @@ Zones.start = function() {
 
     Zones.refreshHubBlips();
     Zones.refreshProps();
+    Zones.refreshMarkers();
+    Zones.checkpointTestPending = true;
+
+    Zones.drawEventName = attachFirstHandler(["OnDrawnHUD", "onDrawnHUD", "OnDrawHUD", "onDrawHUD", "OnRender", "onRender"], Zones.onRender);
+    Zones.processEventName = attachFirstHandler(["OnProcess", "onProcess"], Zones.onProcess);
+
+    Zones.drawMarkersViaRender = false;
+    if (Zones.drawEventName || Zones.processEventName) {
+        Zones.drawMarkersViaRender = true;
+    }
+    if (typeof setInterval === "function") {
+        if (Zones.renderTimer && typeof clearInterval === "function") {
+            clearInterval(Zones.renderTimer);
+        }
+        Zones.renderTimer = setInterval(function() {
+            Zones.onRender();
+        }, 16);
+        Zones.drawMarkersViaRender = true;
+    }
 
     // Initialize keyboard service E key binding
     if (typeof KeyboardService !== "undefined" && KeyboardService.activateEKey) {
@@ -1083,6 +1491,7 @@ Zones.start = function() {
         Zones.testBlipAtPlayer();
     }
 
+
     if (JobsClient.session && JobsClient.session.target) {
         Zones.setRoute(JobsClient.session.jobId, [JobsClient.session.target]);
     }
@@ -1095,16 +1504,36 @@ Zones.start = function() {
 };
 
 Zones.stop = function() {
+    if (Zones.drawEventName) {
+        detachHandler(Zones.drawEventName, Zones.onRender);
+        Zones.drawEventName = null;
+        Zones.drawMarkersViaRender = false;
+    }
+    if (Zones.processEventName) {
+        detachHandler(Zones.processEventName, Zones.onProcess);
+        Zones.processEventName = null;
+    }
+    if (Zones.renderTimer && typeof clearInterval === "function") {
+        clearInterval(Zones.renderTimer);
+        Zones.renderTimer = null;
+    }
     if (Zones.tickTimer && typeof clearInterval === "function") {
         clearInterval(Zones.tickTimer);
         Zones.tickTimer = null;
     }
     Zones.clearRoute();
     for (var i = 0; i < Zones.hubBlips.length; i++) {
-        safeDestroy(Zones.hubBlips[i]);
+        var blip = Zones.hubBlips[i];
+        var blipId = (blip && typeof blip === "object" && blip.id !== undefined) ? blip.id : blip;
+        if (typeof blipId === "number") {
+            Zones.removeNativeBlip(blipId);
+        } else {
+            safeDestroy(blipId);
+        }
     }
     Zones.hubBlips = [];
     Zones.clearProps();
+    Zones.clearMarkers();
 };
 
 // Pattern 16: Capability diagnostics
@@ -1204,10 +1633,16 @@ Zones.testBlipAtPlayer = function() {
     }
 
     pushDiag("player position=" + [x, y, z].join(", "));
-    pushDiag("native api=" + ((natives && typeof natives.addBlipForCoord === "function") ? "yes" : "no"));
+    var resolved = resolveNativeBlipApi();
+    pushDiag("native api=" + ((resolved.obj && typeof resolved.obj.addBlipForCoord === "function") ? "yes" : "no"));
+    if (resolved.label) {
+        pushDiag("native source=" + resolved.label);
+    }
 
     var nativeTry = tryNativeBlipForCoords([x, y, z]);
     if (nativeTry.id != null) {
+        Zones.useNativeBlips = true;
+        Zones.blipSystemWorking = true;
         if (typeof natives.changeBlipSprite === "function") {
             natives.changeBlipSprite(nativeTry.id, Zones.policeBlipIcon);
         }
@@ -1221,6 +1656,7 @@ Zones.testBlipAtPlayer = function() {
             natives.setBlipMarkerLongDistance(nativeTry.id, true);
         }
 
+        Zones.refreshHubBlips();
         Zones.routeBlips.push(nativeTry.id);
         pushDiag("native created id=" + String(nativeTry.id) + " method=" + nativeTry.method);
         if (JobsClient.UI) {
@@ -1267,3 +1703,19 @@ Zones.forceTestBlipAtPlayer = function() {
     Zones.testBlipDone = false;
     Zones.testBlipAtPlayer();
 };
+
+function handleRecordedCoordsUpdate(list) {
+    if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) {
+        JobsRP.Config.recorded_coords = list || [];
+    }
+    Zones.markerStateKey = "";
+    Zones.clearRoute();
+    Zones.refreshHubBlips();
+    Zones.refreshMarkers();
+}
+
+if (typeof addNetworkHandler === "function") {
+    addNetworkHandler("jobs.recordedCoords", function(coords) {
+        handleRecordedCoordsUpdate(coords);
+    });
+}

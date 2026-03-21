@@ -93,6 +93,52 @@ local function toWords(parameters)
     return out
 end
 
+local function trimText(value)
+    return JobsRP.trim(value or "")
+end
+
+local function parseQuotedAndAngle(text)
+    local raw = trimText(text)
+    if raw == "" then
+        return nil, nil
+    end
+
+    local name = nil
+    local category = nil
+    local rest = raw
+
+    local first = string.sub(rest, 1, 1)
+    if first == "\"" then
+        local close = string.find(rest, "\"", 2, true)
+        if close then
+            name = string.sub(rest, 2, close - 1)
+            rest = trimText(string.sub(rest, close + 1))
+        end
+    end
+
+    if not name then
+        local token = string.match(rest, "^(%S+)")
+        if token then
+            name = token
+            rest = trimText(string.sub(rest, #token + 1))
+        end
+    end
+
+    if rest ~= "" then
+        local firstCat = string.sub(rest, 1, 1)
+        if firstCat == "<" then
+            local close = string.find(rest, ">", 2, true)
+            if close then
+                category = string.sub(rest, 2, close - 1)
+            end
+        else
+            category = rest
+        end
+    end
+
+    return name, category
+end
+
 local function outputChat(player, text, r, g, b)
     local messageText = tostring(text or "")
     if messageText == "" then
@@ -138,6 +184,44 @@ local function unpackTable(values, index)
     return values[i], unpackTable(values, i + 1)
 end
 
+local function loadRecordedCoords()
+    if JobsRP.Config.recorded_coords_loaded then
+        return JobsRP.Config.recorded_coords or {}
+    end
+
+    JobsRP.Config.recorded_coords_loaded = true
+    JobsRP.Config.recorded_coords = JobsRP.Config.recorded_coords or {}
+
+    local filePath = JobsRP.Config.recorded_coords_file or "data/recorded_coords.json"
+    if loadTextFile then
+        local ok, raw = pcall(loadTextFile, filePath)
+        if ok and raw and raw ~= "" then
+            local okDecode, decoded = pcall(JobsRP.Json.decode, raw)
+            if okDecode and type(decoded) == "table" then
+                JobsRP.Config.recorded_coords = decoded
+            end
+        end
+    end
+
+    return JobsRP.Config.recorded_coords
+end
+
+local function saveRecordedCoords()
+    local filePath = JobsRP.Config.recorded_coords_file or "data/recorded_coords.json"
+    local list = JobsRP.Config.recorded_coords or {}
+    local okEncode, encoded = pcall(JobsRP.Json.encode, list)
+    if not okEncode then
+        return false, "encode failed"
+    end
+    if saveTextFile then
+        local okSave, result = pcall(saveTextFile, filePath, encoded)
+        if okSave then
+            return result ~= false
+        end
+    end
+    return false, "save failed"
+end
+
 local function pushClientEvent(player, eventName, ...)
     if not player or not eventName then
         return false
@@ -177,6 +261,12 @@ local function chat(player, text, r, g, b)
     end
 
     print("[jobs_rp] " .. messageText)
+end
+
+local function broadcastRecordedCoords(list)
+    for _, client in ipairs(getOnlineClients()) do
+        pushClientEvent(client, "jobs.recordedCoords", list)
+    end
 end
 
 local function getOnlineClients()
@@ -590,6 +680,42 @@ local function handleCommand(root, parameters, client)
         return
     end
 
+    if root == "recordcoord" then
+        local name, category = parseQuotedAndAngle(parameters)
+        if not name or name == "" then
+            chat(client, "[Jobs] Usage: /recordCoord \"Name\" <Category>", 255, 180, 120)
+            return
+        end
+        if not category or category == "" then
+            category = "hub"
+        end
+
+        local pos = client.getPosition and client:getPosition() or nil
+        if not pos or #pos < 3 then
+            chat(client, "[Jobs] Unable to read player position.", 255, 120, 120)
+            return
+        end
+
+        local list = loadRecordedCoords()
+        local entry = {
+            name = tostring(name),
+            category = tostring(category),
+            coords = { pos[1], pos[2], pos[3] }
+        }
+        list[#list + 1] = entry
+        JobsRP.Config.recorded_coords = list
+
+        local okSave, saveErr = saveRecordedCoords()
+        if not okSave then
+            chat(client, "[Jobs] Recorded but failed to save: " .. tostring(saveErr or "unknown"), 255, 120, 120)
+        else
+            chat(client, string.format("[Jobs] Recorded '%s' (%s) at %.2f, %.2f, %.2f", entry.name, entry.category, pos[1], pos[2], pos[3]), 140, 255, 140)
+        end
+
+        broadcastRecordedCoords(list)
+        return
+    end
+
 end
 
 local function isCommandNameToken(token, root)
@@ -715,5 +841,33 @@ if addCommandHandler then
         end
 
         chat(client, "[Jobs] Diagnostic request sent to client.", 180, 220, 255)
+    end)
+
+    addCommandHandler("recordCoord", function(...)
+        local client, parameters = extractClientAndParams("recordcoord", ...)
+        if not client then
+            print("[jobs_rp] [Commands] /recordCoord ignored: client not resolved | args=" .. describeArgs(...))
+            return
+        end
+        handleCommand("recordcoord", parameters, client)
+    end)
+end
+
+if addEventHandler then
+    addEventHandler("OnPlayerJoin", function(player)
+        local client = resolveClient(player)
+        if not client then
+            return
+        end
+        local list = loadRecordedCoords()
+        pushClientEvent(client, "jobs.recordedCoords", list)
+    end)
+
+    addEventHandler("OnResourceStart", function(res)
+        if res and res ~= thisResource then
+            return
+        end
+        local list = loadRecordedCoords()
+        broadcastRecordedCoords(list)
     end)
 end
