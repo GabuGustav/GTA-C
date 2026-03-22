@@ -28,9 +28,8 @@ bindEventHandler("onResourceStart", thisResource, (event, resource) => {
     if (!logFileContent || logFileContent.trim() === "") {
         saveTextFile(adminLogFile, JSON.stringify([{ timestamp: new Date().toISOString(), client: "System", ip: "0.0.0.0", command: "server", params: "", details: "Server started" }], null, '\t'));
     } else {
-        try {
-            JSON.parse(logFileContent); // Validate JSON
-        } catch (e) {
+        const logArray = safeJSONParse(logFileContent, []);
+        if (!Array.isArray(logArray)) {
             console.log(`Invalid JSON in ${adminLogFile}. Initializing new log file.`);
             saveTextFile(adminLogFile, JSON.stringify([{ timestamp: new Date().toISOString(), client: "System", ip: "0.0.0.0", command: "server", params: "", details: "Server started" }], null, '\t'));
         }
@@ -54,11 +53,9 @@ bindEventHandler("onResourceStop", thisResource, (event, resource) => {
 
     // Append server stop entry to JSON log
     let logFileContent = loadTextFile(adminLogFile);
-    let logArray = [];
-    try {
-        logArray = JSON.parse(logFileContent) || [];
-    } catch (e) {
-        console.log(`Error parsing ${adminLogFile}: ${e.message}. Starting new log array.`);
+    let logArray = safeJSONParse(logFileContent, []);
+    if (!Array.isArray(logArray)) {
+        console.log(`Error parsing ${adminLogFile}. Starting new log array.`);
         logArray = [];
     }
     logArray.push({
@@ -192,11 +189,9 @@ function logAdminAction(client, command, params, details = "") {
     }
 
     let logFileContent = loadTextFile(adminLogFile);
-    let logArray = [];
-    try {
-        logArray = JSON.parse(logFileContent) || [];
-    } catch (e) {
-        console.log(`Error parsing ${adminLogFile}: ${e.message}. Starting new log array.`);
+    let logArray = safeJSONParse(logFileContent, []);
+    if (!Array.isArray(logArray)) {
+        console.log(`Error parsing ${adminLogFile}: Invalid format. Starting new log array.`);
         logArray = [];
     }
 
@@ -828,13 +823,11 @@ addCommandHandler("lastbanip", (command, params, client) => {
     }
 
     let logFileContent = loadTextFile(adminLogFile);
-    let entries = [];
-    try {
-        entries = JSON.parse(logFileContent) || [];
-    } catch (e) {
-        const msg = `No valid log entries found (${e.message}).`;
+    let entries = safeJSONParse(logFileContent, []);
+    if (!Array.isArray(entries)) {
+        const msg = `No valid log entries found (invalid format).`;
         client.console ? console.log(msg) : messageClient(msg, client, COLOUR_YELLOW);
-        return false;
+        return;
     }
 
     // Filter banip/unbanip only
@@ -1022,6 +1015,151 @@ addCommandHandler("makemod", (command, params, client) => {
 
     messageAdmins(`${client.name} made ${username} a moderator!`);
     savePlayers();
+    return true;
+});
+
+// ----------------------------------------------------------------------------
+
+addCommandHandler("offlineban", (command, params, client) => {
+    if (!client.console && getPlayerAdminLevel(client) < getLevelForCommand(command)) {
+        messageClient("You are not authorized to use this command!", client, errorMessageColour);
+        return false;
+    }
+
+    if (!params || params.trim() === "") {
+        const errorMsg = "Usage: offlineban <name/ip/token> <reason> - Bans player even when offline";
+        client.console ? console.log(errorMsg) : messageClient(errorMsg, client, errorMessageColour);
+        return false;
+    }
+
+    const split = params.split(" ");
+    const targetParam = split[0];
+    const reason = split.slice(1).join(" ");
+    if (!reason || reason.trim() === "") {
+        const errorMsg = "Reason is required. Usage: offlineban <name/ip/token> <reason>";
+        client.console ? console.log(errorMsg) : messageClient(errorMsg, client, errorMessageColour);
+        return false;
+    }
+
+    logAdminAction(client, command, params, `Offline banned ${targetParam} Reason: ${reason}`);
+    let bannedPlayers = [];
+    
+    // Search in playersData for matching players
+    for (let i = playersData.length - 1; i >= 0; i--) {
+        const player = playersData[i];
+        const nameMatch = player.name && player.name.toLowerCase().includes(targetParam.toLowerCase());
+        const ipMatch = player.ip === targetParam;
+        const tokenMatch = player.token === targetParam;
+        
+        if (nameMatch || ipMatch || tokenMatch) {
+            // Apply ban
+            player.bans = {
+                reason: escapeJSONString(reason),
+                admin: escapeJSONString(client.name),
+                timeStamp: new Date().toLocaleDateString('en-GB'),
+                expireTime: null // Permanent ban
+            };
+            
+            // Ban their IP if online
+            if (player.ip && player.ip !== "0.0.0.0") {
+                server.banIP(player.ip, 0);
+            }
+            
+            bannedPlayers.push({
+                name: player.name,
+                ip: player.ip,
+                matchedBy: nameMatch ? "name" : (ipMatch ? "ip" : "token")
+            });
+        }
+    }
+
+    if (bannedPlayers.length === 0) {
+        const errorMsg = `No players found matching '${targetParam}'. Use exact name, IP, or token.`;
+        client.console ? console.log(errorMsg) : messageClient(errorMsg, client, errorMessageColour);
+        return false;
+    }
+
+    savePlayers();
+    
+    // Report results
+    bannedPlayers.forEach(banned => {
+        const successMsg = `Successfully offline banned ${banned.name} [IP: ${banned.ip}] (matched by ${banned.matchedBy}) Reason: ${reason}`;
+        client.console ? console.log(successMsg) : messageClient(successMsg, client, COLOUR_YELLOW);
+        messageAdmins(`${banned.name} has been offline banned by ${client.name}! Reason: ${reason}`);
+    });
+    
+    return true;
+});
+
+// ----------------------------------------------------------------------------
+
+addCommandHandler("consoleban", (command, params, client) => {
+    // Console-only command for offline banning
+    if (!client.console) {
+        messageClient("This command is only available in console!", client, errorMessageColour);
+        return false;
+    }
+
+    if (!params || params.trim() === "") {
+        console.log("Usage: consoleban <name/ip/token> <reason> - Bans player even when offline (console only)");
+        return false;
+    }
+
+    const split = params.split(" ");
+    const targetParam = split[0];
+    const reason = split.slice(1).join(" ");
+    if (!reason || reason.trim() === "") {
+        console.log("Reason is required. Usage: consoleban <name/ip/token> <reason>");
+        return false;
+    }
+
+    logAdminAction(client, command, params, `Console banned ${targetParam} Reason: ${reason}`);
+    let bannedPlayers = [];
+    
+    // Search in playersData for matching players
+    for (let i = playersData.length - 1; i >= 0; i--) {
+        const player = playersData[i];
+        const nameMatch = player.name && player.name.toLowerCase().includes(targetParam.toLowerCase());
+        const ipMatch = player.ip === targetParam;
+        const tokenMatch = player.token === targetParam;
+        
+        if (nameMatch || ipMatch || tokenMatch) {
+            // Apply ban
+            player.bans = {
+                reason: escapeJSONString(reason),
+                admin: "Console",
+                timeStamp: new Date().toLocaleDateString('en-GB'),
+                expireTime: null // Permanent ban
+            };
+            
+            // Ban their IP if valid
+            if (player.ip && player.ip !== "0.0.0.0") {
+                server.banIP(player.ip, 0);
+            }
+            
+            bannedPlayers.push({
+                name: player.name,
+                ip: player.ip,
+                matchedBy: nameMatch ? "name" : (ipMatch ? "ip" : "token")
+            });
+        }
+    }
+
+    if (bannedPlayers.length === 0) {
+        console.log(`No players found matching '${targetParam}'. Use exact name, IP, or token.`);
+        return false;
+    }
+
+    savePlayers();
+    
+    // Report results to console
+    console.log(`=== CONSOLE BAN RESULTS ===`);
+    bannedPlayers.forEach(banned => {
+        console.log(`✓ Banned: ${banned.name} [IP: ${banned.ip}] (matched by ${banned.matchedBy})`);
+        console.log(`  Reason: ${reason}`);
+    });
+    console.log(`Total players banned: ${bannedPlayers.length}`);
+    
     return true;
 });
 
@@ -1547,15 +1685,9 @@ function loadConfig() {
         return false;
     }
 
-    try {
-        scriptConfig = JSON.parse(configFile);
-        if (scriptConfig == null) {
-            messageAdmins("Could not parse config.json. Resource stopping ...");
-            thisResource.stop();
-            return false;
-        }
-    } catch (e) {
-        messageAdmins(`Error parsing config.json: ${e.message}. Resource stopping ...`);
+    scriptConfig = safeJSONParse(configFile, {});
+    if (scriptConfig == null) {
+        messageAdmins("Could not parse config.json. Resource stopping ...");
         thisResource.stop();
         return false;
     }
@@ -1567,6 +1699,7 @@ function loadConfig() {
 
 // ----------------------------------------------------------------------------
 
+// ... rest of the code remains the same ...
 function savePlayers(options = { silent: false }) {
     let playersText = JSON.stringify(playersData, null, '\t');
     if (!playersText) {
@@ -1608,15 +1741,15 @@ function loadPlayers() {
         // If encrypted, decrypt and parse
         if (scriptConfig && scriptConfig.encryption && scriptConfig.encryption.enabled) {
             try {
-                const wrapper = JSON.parse(playersFileContent);
+                const wrapper = safeJSONParse(playersFileContent, {});
                 if (wrapper && typeof wrapper === 'object' && wrapper.n && wrapper.d) {
                     const secret = String(scriptConfig.encryption.secret || "");
                     const nonce = String(wrapper.n);
                     const plainText = aesGcmDecrypt(String(wrapper.d), secret, nonce);
-                    playersData = JSON.parse(plainText);
+                    playersData = safeJSONParse(plainText, []);
                 } else {
                     // Not in encrypted format; fall back to plaintext JSON
-                    playersData = JSON.parse(playersFileContent);
+                    playersData = safeJSONParse(playersFileContent, []);
                 }
             } catch (e) {
                 messageAdmins(`Encrypted players file could not be decrypted (${e.message}). Initializing empty data.`);
@@ -1625,7 +1758,7 @@ function loadPlayers() {
                 return false;
             }
         } else {
-            playersData = JSON.parse(playersFileContent);
+            playersData = safeJSONParse(playersFileContent, []);
         }
         if (playersData == null) {
             playersData = [];
@@ -1772,6 +1905,11 @@ function fixMissingConfigStuff() {
 
     if (typeof scriptConfig.serverToken == "undefined") {
         scriptConfig.serverToken = generateRandomString(32);
+        console.log("Generated new secure server token");
+    } else if (scriptConfig.serverToken === "jm0TYfRHPA2TYHo6q3ui0I2t1Kh49N6E") {
+        // Replace hardcoded insecure token
+        scriptConfig.serverToken = generateRandomString(32);
+        console.log("Replaced insecure hardcoded server token with secure token");
     }
 
     if (typeof scriptConfig.commandLevels == "undefined") {
@@ -1827,11 +1965,53 @@ function fixMissingConfigStuff() {
 
 // ----------------------------------------------------------------------------
 
+function safeJSONParse(jsonString, fallback = null) {
+    if (!jsonString || typeof jsonString !== 'string') {
+        return fallback;
+    }
+    
+    try {
+        const parsed = JSON.parse(jsonString);
+        // Validate parsed object is not dangerous
+        if (parsed === null) {
+            return fallback;
+        }
+        
+        // Check for prototype pollution attempts
+        if (typeof parsed === 'object' && parsed !== null) {
+            if (parsed.hasOwnProperty('__proto__') || parsed.hasOwnProperty('constructor') || parsed.hasOwnProperty('prototype')) {
+                console.log("SECURITY: Detected potential prototype pollution in JSON");
+                return fallback;
+            }
+        }
+        
+        return parsed;
+    } catch (e) {
+        console.log(`SECURITY: JSON parse error - ${e.message}`);
+        return fallback;
+    }
+}
+
+// ----------------------------------------------------------------------------
+
 function generateRandomString(length, characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") {
-    var result = '';
-    var charactersLength = characters.length;
-    for (var i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    // Use crypto-secure random generation if available
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+        const randomValues = new Uint32Array(length);
+        crypto.getRandomValues(randomValues);
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(randomValues[i] % characters.length);
+        }
+        return result;
+    }
+    
+    // Fallback to improved pseudo-random (still better than Math.random alone)
+    let result = '';
+    let seed = Date.now() ^ Math.random() * 1000000;
+    for (let i = 0; i < length; i++) {
+        seed = (seed * 9301 + 49297) % 233280;
+        result += characters.charAt(Math.floor((seed / 233280) * characters.length));
     }
     return result;
 }

@@ -35,6 +35,8 @@
 		"banlist": 1,
 		"lastbanip": 2,
 		"demote": 2,
+		"offlineban": 2,
+		"consoleban": 0,
 		"emotes": 0
 	},
 	"geoip": {
