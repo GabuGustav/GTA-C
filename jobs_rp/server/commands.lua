@@ -222,7 +222,7 @@ local function saveRecordedCoords()
     return false, "save failed"
 end
 
-local function pushClientEvent(player, eventName, ...)
+pushClientEvent = function(player, eventName, ...)
     if not player or not eventName then
         return false
     end

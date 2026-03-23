@@ -84,7 +84,7 @@
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Year.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Init.js" />
   <script language="javascript" type="client" src="client/jobsrpui_bridge.js" />
-
+  <script language="javascript" type="client" src="client/police_menu.js" />
   <script language="javascript" type="client" src="client/ui.js" />
   <script language="javascript" type="client" src="client/keyboard_service.js" />
   <script language="javascript" type="client" src="client/auth_ui.js" />

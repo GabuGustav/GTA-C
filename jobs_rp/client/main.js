@@ -290,20 +290,45 @@ addNetworkHandler("jobs.walletUpdate", function(a, b, c, d) {
     }
 });
 
-addNetworkHandler("jobs.jobReward", function(a, b, c, d, e, f, g) {
-    var parts = unwrapArgs6(a, b, c, d, e, f, g);
-    var jobId = parts[0];
-    var xpGain = parts[1];
-    var xpTotal = parts[2];
-    var gradeBefore = parts[3];
-    var gradeAfter = parts[4];
-    var payoutGranted = parts[5];
+addNetworkHandler("jobs.jobReward", function(_, jobId, xpGain, xpTotal, gradeBefore, gradeAfter, payoutGranted) {
+    var jobId = jobId;
+    var xpGain = Number(xpGain) || 0;
+    var xpTotal = Number(xpTotal) || 0;
+    var gradeBefore = gradeBefore;
+    var gradeAfter = gradeAfter;
+    var payoutGranted = payoutGranted;
     if (JobsClient.UI && typeof JobsClient.UI.handleJobReward === "function") {
         JobsClient.UI.handleJobReward(jobId, xpGain, xpTotal, gradeBefore, gradeAfter, payoutGranted);
     }
 });
 
+addNetworkHandler("jobs.syncHubElements", function(hubElements) {
+    try {
+        console.log("[jobs_rp] Received hub elements sync: " + JSON.stringify(hubElements));
+        console.log("[jobs_rp] HubElements type: " + typeof hubElements + ", value: " + JSON.stringify(hubElements));
+        if (typeof JobsClient.Zones !== "undefined" && JobsClient.Zones.updateHubElements) {
+            JobsClient.Zones.updateHubElements(hubElements);
+        } else {
+            console.log("[jobs_rp] JobsClient.Zones not available for hub update");
+        }
+    } catch (e) {
+        console.log("[jobs_rp] Error handling hub elements sync: " + String(e));
+    }
+});
+
 addEventHandler("onResourceStart", function() {
+    // Initialize PoliceMenu
+    if (typeof PoliceMenu !== "undefined" && PoliceMenu) {
+        JobsClient.PoliceMenu = PoliceMenu;
+    }
+
+    // Request hub elements from server
+    if (typeof JobsClient.Zones !== "undefined" && JobsClient.Zones.requestHubElements) {
+        setTimeout(function() {
+            JobsClient.Zones.requestHubElements();
+        }, 2000); // Delay 2 seconds to ensure connection
+    }
+
     if (!JobsClient.commandsRegistered && typeof addCommandHandler === "function") {
         JobsClient.commandsRegistered = true;
         addCommandHandler("jobstatue", function(_, x, y, z) {
@@ -429,6 +454,120 @@ addEventHandler("onResourceStart", function() {
                 JobsClient.UI.showPrompt(info, "info", true);
             }
         });
+
+        addCommandHandler("policemenu", function() {
+            console.log("[DEBUG] /policemenu command executed");
+            if (JobsClient.PoliceMenu && typeof JobsClient.PoliceMenu.toggle === "function") {
+                console.log("[DEBUG] Calling PoliceMenu.toggle() via command");
+                JobsClient.PoliceMenu.toggle();
+            } else {
+                console.log("[DEBUG] PoliceMenu not available: " + typeof JobsClient.PoliceMenu);
+                if (JobsClient.UI) {
+                    JobsClient.UI.showPrompt("Police menu not available.", "error", true);
+                }
+            }
+        });
+
+        addCommandHandler("debugmenu", function() {
+            console.log("[DEBUG] Debug menu command - checking PoliceMenu availability");
+            console.log("[DEBUG] typeof PoliceMenu: " + typeof PoliceMenu);
+            console.log("[DEBUG] typeof JobsClient.PoliceMenu: " + typeof JobsClient.PoliceMenu);
+            console.log("[DEBUG] typeof globalThis.PoliceMenu: " + (typeof globalThis !== "undefined" ? typeof globalThis.PoliceMenu : "globalThis undefined"));
+            
+            if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.show === "function") {
+                console.log("[DEBUG] Forcing PoliceMenu.show() - bypassing job check");
+                // Temporarily set police job for testing
+                var originalJob = JobsClient.profile ? JobsClient.profile.currentJobId : null;
+                if (JobsClient.profile) {
+                    JobsClient.profile.currentJobId = "police";
+                }
+                PoliceMenu.show();
+                // Restore original job after 100ms
+                setTimeout(function() {
+                    if (JobsClient.profile && originalJob) {
+                        JobsClient.profile.currentJobId = originalJob;
+                    }
+                }, 100);
+            } else if (typeof JobsClient.PoliceMenu !== "undefined" && JobsClient.PoliceMenu && typeof JobsClient.PoliceMenu.show === "function") {
+                console.log("[DEBUG] Using JobsClient.PoliceMenu instead");
+                var originalJob = JobsClient.profile ? JobsClient.profile.currentJobId : null;
+                if (JobsClient.profile) {
+                    JobsClient.profile.currentJobId = "police";
+                }
+                JobsClient.PoliceMenu.show();
+                setTimeout(function() {
+                    if (JobsClient.profile && originalJob) {
+                        JobsClient.profile.currentJobId = originalJob;
+                    }
+                }, 100);
+            } else {
+                console.log("[DEBUG] No PoliceMenu available for testing");
+            }
+        });
+
+        addCommandHandler("testmenu", function() {
+            console.log("[TEST] Simple menu test");
+            try {
+                if (typeof PoliceMenu !== "undefined") {
+                    console.log("[TEST] PoliceMenu exists, type: " + typeof PoliceMenu);
+                    if (typeof PoliceMenu.toggle === "function") {
+                        console.log("[TEST] Calling PoliceMenu.toggle()");
+                        PoliceMenu.toggle();
+                    } else {
+                        console.log("[TEST] PoliceMenu.toggle is not a function");
+                    }
+                } else {
+                    console.log("[TEST] PoliceMenu is undefined");
+                }
+            } catch (e) {
+                console.log("[TEST] Error: " + String(e));
+            }
+        });
+
+        addCommandHandler("testpatrol", function() {
+            console.log("[TEST] Manual patrol check trigger");
+            try {
+                if (typeof Zones !== "undefined" && Zones.policePatrolCheck) {
+                    Zones.policePatrolCheck();
+                } else {
+                    console.log("[TEST] Zones.policePatrolCheck not available");
+                }
+            } catch (e) {
+                console.log("[TEST] Error in patrol check: " + String(e));
+            }
+        });
+
+        addCommandHandler("requesthub", function() {
+            console.log("[TEST] Manual hub data request");
+            try {
+                if (typeof Zones !== "undefined" && Zones.requestHubData) {
+                    Zones.requestHubData();
+                } else {
+                    console.log("[TEST] Zones.requestHubData not available");
+                }
+            } catch (e) {
+                console.log("[TEST] Error requesting hub data: " + String(e));
+            }
+        });
+
+        addCommandHandler("testprofile", function() {
+            console.log("[TEST] Profile structure test");
+            try {
+                console.log("[TEST] JobsClient.profile: " + JSON.stringify(JobsClient.profile));
+                console.log("[TEST] JobsClient.profile.name: " + (JobsClient.profile ? JobsClient.profile.name : "undefined"));
+                console.log("[TEST] JobsClient.profile.jobs: " + JSON.stringify(JobsClient.profile ? JobsClient.profile.jobs : "null"));
+                
+                // Test manual update
+                if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.updatePlayerInfo === "function") {
+                    console.log("[TEST] Calling PoliceMenu.updatePlayerInfo()");
+                    PoliceMenu.updatePlayerInfo();
+                } else {
+                    console.log("[TEST] PoliceMenu.updatePlayerInfo not available");
+                }
+            } catch (e) {
+                console.log("[TEST] Error testing profile: " + String(e));
+            }
+        });
     }
 
     if (!JobsClient.diagnosticsShown) {
@@ -498,7 +637,41 @@ addNetworkHandler("jobs.diagRequest", function() {
     }
 });
 
+// Frame loop for hub proximity checking
+var hubCheckInterval = null;
+var lastHubCheck = 0;
+
+function startHubProximityCheck() {
+    if (hubCheckInterval) {
+        clearInterval(hubCheckInterval);
+    }
+    
+    hubCheckInterval = setInterval(function() {
+        if (typeof JobsClient.Zones !== "undefined" && JobsClient.Zones.checkHubProximity) {
+            var now = Date.now();
+            if (now - lastHubCheck >= 500) { // Check every 500ms
+                JobsClient.Zones.checkHubProximity();
+                lastHubCheck = now;
+            }
+        }
+    }, 100);
+}
+
+function stopHubProximityCheck() {
+    if (hubCheckInterval) {
+        clearInterval(hubCheckInterval);
+        hubCheckInterval = null;
+    }
+}
+
+// Start proximity checking after a short delay
+setTimeout(function() {
+    startHubProximityCheck();
+}, 3000);
+
 addEventHandler("onResourceStop", function() {
+    stopHubProximityCheck();
+    
     if (JobsClient.AuthUI && typeof JobsClient.AuthUI.stop === "function") {
         JobsClient.AuthUI.stop();
     }
@@ -509,5 +682,9 @@ addEventHandler("onResourceStop", function() {
 
     if (JobsClient.Zones) {
         JobsClient.Zones.stop();
+    }
+
+    if (JobsClient.PoliceMenu && typeof JobsClient.PoliceMenu.hide === "function") {
+        JobsClient.PoliceMenu.hide();
     }
 });

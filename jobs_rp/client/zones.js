@@ -1149,9 +1149,11 @@ Zones.refreshHubBlips = function() {
             if (!jobDef || jobDef.id !== "police") {
                 continue;
             }
+            console.log("[zones] Creating police hub blip at coords: " + JSON.stringify(jobDef.hub));
             var blip = createBlipForCoords(jobDef.hub, "hub", jobDef.label);
             if (blip) {
                 Zones.hubBlips.push({ id: blip, coords: jobDef.hub });
+                console.log("[zones] Police hub blip created successfully at " + JSON.stringify(jobDef.hub));
             } else if (!Zones.blipDiagShown) {
                 Zones.blipDiagShown = true;
                 sendClientDiag("blip.hub", "Police hub blip creation failed for coords=" + JSON.stringify(jobDef.hub || []));
@@ -1713,6 +1715,287 @@ function handleRecordedCoordsUpdate(list) {
     Zones.refreshHubBlips();
     Zones.refreshMarkers();
 }
+
+// Hub checkpoint system using server data
+Zones.hubCheckpoints = Zones.hubCheckpoints || [];
+Zones.hubElements = Zones.hubElements || {};
+
+// Handle hub data sync from server
+if (typeof addNetworkHandler === "function") {
+    addNetworkHandler("jobs.syncHubElements", function(hubElements) {
+        try {
+            console.log("[jobs_rp] Received hub elements data: " + JSON.stringify(hubElements));
+            Zones.updateHubElements(hubElements);
+        } catch (e) {
+            console.log("[jobs_rp] Error handling hub elements sync: " + String(e));
+        }
+    });
+}
+
+// Police patrol point detection for auto-menu
+Zones.policePatrolCheck = function() {
+    console.log("[zones] Patrol check - localPlayer: " + (localPlayer ? "yes" : "no") + 
+              ", position: " + (localPlayer && localPlayer.position ? JSON.stringify(localPlayer.position) : "null") + 
+              ", profile: " + (JobsClient.profile ? "yes" : "no"));
+    
+    if (!localPlayer || !localPlayer.position || !JobsClient.profile) {
+        console.log("[zones] Patrol check aborted - missing requirements");
+        return;
+    }
+    
+    // Only check if player is in police job
+    console.log("[zones] Current job: " + (JobsClient.profile.currentJobId || "none"));
+    if (JobsClient.profile.currentJobId !== "police") {
+        console.log("[zones] Not in police job, skipping patrol check");
+        return;
+    }
+    
+    // Check if near police hub
+    console.log("[zones] Hub elements: " + (Zones.hubElements ? "yes" : "no") + 
+              ", police hub: " + (Zones.hubElements.police ? "yes" : "no"));
+    
+    if (Zones.hubElements && Zones.hubElements.police) {
+        var policeHub = Zones.hubElements.police;
+        
+        // Convert coords object to Vector3D for distance calculation
+        var hubVector = null;
+        try {
+            if (typeof Vec3 !== "undefined") {
+                hubVector = new Vec3(policeHub.coords.x, policeHub.coords.y, policeHub.coords.z);
+            } else if (typeof Vector3 !== "undefined") {
+                hubVector = new Vector3(policeHub.coords.x, policeHub.coords.y, policeHub.coords.z);
+            } else {
+                console.log("[zones] No Vector3D constructor available");
+                return;
+            }
+        } catch (e) {
+            console.log("[zones] Error creating hubVector: " + String(e));
+            return;
+        }
+        
+        var distance = localPlayer.position.distance(hubVector);
+        
+        console.log("[zones] Police hub coords: " + JSON.stringify(policeHub.coords) + 
+                  ", hubVector: " + (hubVector ? JSON.stringify(hubVector) : "null") + 
+                  ", player distance: " + Math.round(distance) + 
+                  ", threshold: 9");
+        
+        // If within 8 units of police hub, show menu
+        if (distance <= 9) {
+            console.log("[zones] Player within range, last menu state: " + JSON.stringify(Zones.lastMenuState));
+            if (!Zones.lastMenuState || !Zones.lastMenuState.shown) {
+                console.log("[zones] Player near police hub, showing police menu");
+                if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.show === "function") {
+                    PoliceMenu.show();
+                    Zones.lastMenuState = { shown: true, time: Date.now() };
+                } else {
+                    console.log("[zones] PoliceMenu not available for auto-show");
+                }
+            }
+        } else {
+            // Clear menu state if far from hub (auto-close)
+            if (Zones.lastMenuState && Zones.lastMenuState.shown) {
+                console.log("[zones] Player left police hub area, hiding police menu");
+                if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.hide === "function") {
+                    PoliceMenu.hide();
+                } else {
+                    console.log("[zones] PoliceMenu.hide not available for auto-close");
+                }
+                Zones.lastMenuState = { shown: false, time: Date.now() };
+            }
+        }
+    } else {
+        console.log("[zones] No police hub data available");
+    }
+};
+
+// Start patrol checking
+Zones.startPolicePatrolCheck = function() {
+    if (Zones.policePatrolInterval) {
+        clearInterval(Zones.policePatrolInterval);
+    }
+    
+    Zones.policePatrolInterval = setInterval(Zones.policePatrolCheck, 1000); // Check every second
+    console.log("[zones] Police patrol checking started");
+};
+
+// Initialize patrol checking when zones load
+Zones.startPolicePatrolCheck();
+
+// Request hub data when available
+Zones.requestHubData = function() {
+    console.log("[zones] Requesting hub data from server");
+    if (typeof triggerNetworkEvent === "function") {
+        triggerNetworkEvent("jobs.requestHubElements");
+    } else if (typeof triggerClientEvent === "function") {
+        triggerClientEvent("jobs.requestHubElements");
+    } else {
+        console.log("[zones] No network event function available");
+    }
+};
+
+// Request hub data when police job is detected
+Zones.checkPoliceJob = function() {
+    if (JobsClient.profile && JobsClient.profile.currentJobId === "police") {
+        if (!Zones.hubElements || !Zones.hubElements.police) {
+            console.log("[zones] Police job detected but no hub data, requesting...");
+            Zones.requestHubData();
+        }
+    }
+};
+
+// Check police job status periodically
+setInterval(Zones.checkPoliceJob, 3000); // Check every 3 seconds
+
+Zones.updateHubElements = function(hubElements) {
+    // Clear existing checkpoints
+    Zones.clearHubCheckpoints();
+    
+    // Store hub data
+    Zones.hubElements = hubElements || {};
+    
+    // Create checkpoints for each hub
+    for (var jobId in Zones.hubElements) {
+        var hubData = Zones.hubElements[jobId];
+        if (hubData && hubData.coords) {
+            Zones.createHubCheckpoint(jobId, hubData);
+        }
+    }
+};
+
+Zones.createHubCheckpoint = function(jobId, hubData) {
+    if (!hubData || !hubData.coords) {
+        console.log("[jobs_rp] Invalid hub data for " + jobId);
+        return;
+    }
+
+    if (!natives || !natives.createCheckpoint) {
+        console.log("[jobs_rp] natives.createCheckpoint not available");
+        return;
+    }
+    
+    // Convert coords object to Vector3D
+    var coords = null;
+    if (typeof Vec3 !== "undefined") {
+        coords = new Vec3(hubData.coords.x, hubData.coords.y, hubData.coords.z);
+    } else if (typeof Vector3 !== "undefined") {
+        coords = new Vector3(hubData.coords.x, hubData.coords.y, hubData.coords.z);
+    } else {
+        // Fallback to array format
+        coords = [hubData.coords.x, hubData.coords.y, hubData.coords.z];
+    }
+    
+    console.log("[jobs_rp] Converting coords: " + JSON.stringify(hubData.coords) + " -> " + JSON.stringify(coords));
+    
+    var checkpointId = natives.createCheckpoint(1, coords, hubData.radius, hubData.radius);
+    if (checkpointId) {
+        Zones.hubCheckpoints.push({
+            jobId: jobId,
+            checkpointId: checkpointId,
+            label: hubData.label,
+            position: hubData.coords,
+            radius: hubData.radius
+        });
+        
+        console.log("[jobs_rp] Created checkpoint for " + (hubData.label || jobId) + " at position: " + 
+                  JSON.stringify(hubData.coords));
+    } else {
+        console.log("[jobs_rp] Failed to create checkpoint for " + (hubData.label || jobId));
+    }
+};
+
+Zones.clearHubCheckpoints = function() {
+    if (natives && natives.deleteCheckpoint) {
+        for (var i = 0; i < Zones.hubCheckpoints.length; i++) {
+            var checkpoint = Zones.hubCheckpoints[i];
+            if (checkpoint.checkpointId) {
+                natives.deleteCheckpoint(checkpoint.checkpointId);
+            }
+        }
+    }
+    Zones.hubCheckpoints = [];
+};
+
+// Check proximity to hub checkpoints (called from main loop)
+Zones.checkHubProximity = function() {
+    if (!localPlayer || !localPlayer.position) {
+        return;
+    }
+    
+    for (var i = 0; i < Zones.hubCheckpoints.length; i++) {
+        var checkpoint = Zones.hubCheckpoints[i];
+        if (checkpoint && checkpoint.position) {
+            // Use math.sqrt for distance calculation as recommended by devs
+            var dx = localPlayer.position.x - checkpoint.position.x;
+            var dy = localPlayer.position.y - checkpoint.position.y;
+            var dz = localPlayer.position.z - checkpoint.position.z;
+            var distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+            
+            if (distance <= checkpoint.radius) {
+                // Player entered hub radius - handle interaction
+                Zones.handleHubProximity(checkpoint.jobId, checkpoint.label, distance);
+            }
+        }
+    }
+};
+
+// Request hub elements from server
+Zones.requestHubElements = function() {
+    if (typeof JobsClient !== "undefined" && JobsClient.sendServer) {
+        JobsClient.sendServer("jobs.requestHubElements");
+    }
+};
+
+// Handle hub proximity interactions
+Zones.handleHubProximity = function(jobId, label, distance) {
+    if (!JobsClient || !JobsClient.UI) {
+        return;
+    }
+
+    var profile = JobsClient.profile;
+    var session = JobsClient.session;
+    var hasUI = JobsClient.UI;
+
+    // Check if player is authenticated
+    if (isAuthBlocked()) {
+        var ts = nowMs();
+        if ((ts - (Zones.authPromptAtMs || 0)) >= (Zones.authPromptCooldownMs || 8000)) {
+            Zones.authPromptAtMs = ts;
+            hasUI.showPrompt("Authenticate in the Jobs Auth panel before using jobs.", "warn", false);
+        }
+        return;
+    }
+
+    if (!profile || !profile.currentJobId) {
+        // No job selected - can join this job
+        if (Zones.interactAvailable !== false) {
+            hasUI.showPrompt("Press E to join " + (label || jobId), "info", false);
+        } else {
+            hasUI.showPrompt("Use /job join " + jobId + " to join " + (label || jobId), "info", false);
+        }
+        return;
+    }
+
+    if (profile.currentJobId === jobId && !session) {
+        // Job selected but no active session - can start
+        if (Zones.interactAvailable !== false) {
+            hasUI.showPrompt("Press E to start " + (label || jobId), "success", false);
+        } else {
+            hasUI.showPrompt("Use /job start to begin " + (label || jobId), "success", false);
+        }
+        return;
+    }
+
+    if (profile.currentJobId !== jobId) {
+        // Different job selected - can switch
+        if (Zones.interactAvailable !== false) {
+            hasUI.showPrompt("Press E to switch to " + (label || jobId), "warn", false);
+        } else {
+            hasUI.showPrompt("Use /job join " + jobId + " to switch to " + (label || jobId), "warn", false);
+        }
+        return;
+    }
+};
 
 if (typeof addNetworkHandler === "function") {
     addNetworkHandler("jobs.recordedCoords", function(coords) {

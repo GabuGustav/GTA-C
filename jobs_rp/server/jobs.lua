@@ -8,6 +8,7 @@ Jobs.actionRateMsById = Jobs.actionRateMsById or {}
 Jobs.groupsById = Jobs.groupsById or {}
 Jobs.groupByPlayerId = Jobs.groupByPlayerId or {}
 Jobs.groupCounter = Jobs.groupCounter or 0
+Jobs.hubElements = Jobs.hubElements or {}
 
 local function unpackTable(values, index)
     local i = index or 1
@@ -97,7 +98,7 @@ local function resolveControlledPlayer(actor)
 end
 
 
-local function pushClientEvent(player, eventName, ...)
+pushClientEvent = function(player, eventName, ...)
     local client = resolveClient(player)
     if not client or not eventName then
         return false
@@ -1448,6 +1449,51 @@ function Jobs.handlePlayerJoin(player)
     pushClientEvent(player, "jobs.syncSession", nil)
 end
 
+function Jobs.selectPoliceDuty(player, dutyId)
+    local playerId = JobsRP.Store.getPlayerId(player)
+    if not playerId then
+        return false, "Player not found"
+    end
+
+    local profile = JobsRP.Store.getProfileByPlayer(player)
+    if not profile or profile.currentJobId ~= "police" then
+        return false, "You must be in the police job to select duties"
+    end
+
+    -- Validate duty ID
+    local validDuties = {
+        patrol = true,
+        traffic = true,
+        response = true,
+        investigation = true
+    }
+
+    if not validDuties[dutyId] then
+        return false, "Invalid duty type"
+    end
+
+    -- Store current duty in profile
+    profile.currentPoliceDuty = dutyId
+    JobsRP.Store.markDirty(playerId)
+    JobsRP.Store.saveProfileById(playerId, true)
+
+    -- Update session if active
+    local session = Jobs.sessionsById[playerId]
+    if session then
+        session.currentDuty = dutyId
+        Jobs.syncSession(player)
+    end
+
+    local dutyNames = {
+        patrol = "Patrol Duty",
+        traffic = "Traffic Control", 
+        response = "Emergency Response",
+        investigation = "Investigation"
+    }
+
+    return true, "Duty selected: " .. (dutyNames[dutyId] or dutyId)
+end
+
 function Jobs.handlePlayerQuit(player)
     local playerId = JobsRP.Store.getPlayerId(player)
 
@@ -1484,9 +1530,117 @@ addEventHandler("onPlayerQuit", function(a, b)
     Jobs.handlePlayerQuit(client)
 end)
 
+-- Hub element management system using available APIs
+local function createHubElements()
+    -- Clear existing hub elements
+    Jobs.clearHubElements()
+
+    for _, jobDef in ipairs(JobsRP.JobDefs.list or {}) do
+        if jobDef.hub then
+            local hubEntry = {
+                coords = jobDef.hub,
+                color = {255, 220, 0, 200}, -- Yellow color for hubs
+                radius = JobsRP.Config.hub_interact_distance or 50,
+                zOffset = 0.8
+            }
+
+            -- Create hub using available APIs
+            local hubData = {
+                type = 1, -- 1 = hub checkpoint type
+                colour = toColour(
+                    hubEntry.color[1], 
+                    hubEntry.color[2], 
+                    hubEntry.color[3], 
+                    hubEntry.color[4]
+                ),
+                radius = hubEntry.radius,
+                jobId = jobDef.id,
+                label = jobDef.label,
+                coords = {
+                    x = hubEntry.coords[1],
+                    y = hubEntry.coords[2], 
+                    z = hubEntry.coords[3] + (hubEntry.zOffset or 0)
+                }
+            }
+
+            -- Store hub data for client-side processing
+            Jobs.hubElements[jobDef.id] = hubData
+            print("[jobs_rp] Created hub data for " .. jobDef.id .. " at " .. table.concat(hubEntry.coords, ", "))
+            
+            -- Create patrol points for police job
+            if jobDef.id == "police" then
+                Jobs.createPolicePatrolPoints(hubEntry.coords)
+            end
+        end
+    end
+end
+
+function Jobs.clearHubElements()
+    Jobs.hubElements = {}
+end
+
+-- Create police patrol points using dummy elements
+function Jobs.createPolicePatrolPoints(hubCoords)
+    if not hubCoords then
+        print("[jobs_rp] No hub coords for patrol points")
+        return
+    end
+    
+    -- Define patrol points around the police station
+    local patrolPoints = {
+        {offset = {0, 5, 0}, radius = 3, label = "Main Entrance"},
+        {offset = {10, 10, 0}, radius = 3, label = "Parking Area"},
+        {offset = {-10, 10, 0}, radius = 3, label = "Briefing Room"},
+        {offset = {0, -10, 0}, radius = 3, label = "Vehicle Garage"},
+        {offset = {15, 0, 0}, radius = 3, label = "Helipad"}
+    }
+    
+    for i, point in ipairs(patrolPoints) do
+        local patrolPos = {
+            hubCoords[1] + point.offset[1],
+            hubCoords[2] + point.offset[2], 
+            hubCoords[3] + point.offset[3]
+        }
+        
+        -- Create dummy element for patrol point
+        if createDummyElement then
+            local patrolElement = createDummyElement(patrolPos[1], patrolPos[2], patrolPos[3])
+            if patrolElement then
+                patrolElement.setData("type", 1, true) -- Patrol point type
+                patrolElement.setData("radius", point.radius, true)
+                patrolElement.setData("label", point.label, true)
+                patrolElement.setData("colour", toColour(0, 150, 255, 200), true) -- Blue color
+                
+                print("[jobs_rp] Created patrol point: " .. point.label .. " at " .. table.concat(patrolPos, ", "))
+            else
+                print("[jobs_rp] Failed to create patrol point: " .. point.label)
+            end
+        else
+            print("[jobs_rp] createDummyElement not available")
+        end
+    end
+    
+    print("[jobs_rp] Created " .. #patrolPoints .. " police patrol points")
+end
+
+function Jobs.getHubElements()
+    local count = 0
+    for _ in pairs(Jobs.hubElements) do
+        count = count + 1
+    end
+    print("[jobs_rp] getHubElements() called, returning " .. count .. " hub elements")
+    for jobId, hubData in pairs(Jobs.hubElements) do
+        print("[jobs_rp] Hub element: " .. jobId .. " -> " .. (hubData.label or "no label"))
+    end
+    return Jobs.hubElements
+end
+
 addEventHandler("onResourceStart", function(event, resource)
     math.randomseed(JobsRP.nowSeconds())
     JobsRP.Store.startAutosave()
+
+    -- Create hub elements
+    createHubElements()
 
     if getClients then
         for _, client in ipairs(getClients()) do
@@ -1506,6 +1660,7 @@ addEventHandler("onResourceStart", function(event, resource)
 end)
 
 addEventHandler("onResourceStop", function(event, resource)
+    Jobs.clearHubElements()
     JobsRP.Store.stopAutosave()
     JobsRP.Store.saveAll(true)
 end)

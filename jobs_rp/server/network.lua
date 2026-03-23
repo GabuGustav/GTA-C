@@ -405,6 +405,49 @@ addNetworkHandler("jobs.authLogout", function(...)
     end
 end)
 
+addNetworkHandler("jobs.police.selectDuty", function(...)
+    local client, dutyId = extractClientAndArgs(...)
+    if not ensureAuth(client) then
+        return
+    end
+
+    local playerId = JobsRP.Store.getPlayerId(client)
+    if not playerId then
+        return
+    end
+
+    local profile = JobsRP.Store.getProfileByPlayer(client)
+    if not profile or profile.currentJobId ~= "police" then
+        pushClientEvent(client, "jobs.police.dutyResult", false, "You must be in the police job to select duties.", dutyId)
+        return
+    end
+
+    -- Handle duty selection
+    local success, message = JobsRP.Jobs.selectPoliceDuty(client, dutyId)
+    pushClientEvent(client, "jobs.police.dutyResult", success, message, dutyId)
+end)
+
+addNetworkHandler("jobs.requestHubElements", function(...)
+    local client = extractClientAndArgs(...)
+    if not client then
+        print("[jobs_rp] No client in requestHubElements")
+        return
+    end
+
+    print("[jobs_rp] Client requested hub elements")
+    
+    -- Send hub elements data to client
+    local hubElements = JobsRP.Jobs.getHubElements()
+    local count = 0
+    for _ in pairs(hubElements or {}) do
+        count = count + 1
+    end
+    print("[jobs_rp] Sending hub elements to client, count: " .. count)
+    
+    pushClientEvent(client, "jobs.syncHubElements", hubElements)
+    print("[jobs_rp] Hub elements sent to client")
+end)
+
 
 
 
