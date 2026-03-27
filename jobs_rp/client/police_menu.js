@@ -220,12 +220,16 @@ PoliceMenu.updatePlayerInfo = function() {
     console.log("[PoliceMenu] Profile.jobs: " + JSON.stringify(JobsClient.profile ? JobsClient.profile.jobs : "null"));
 
     var info = "Officer: ";
-    // Try GTAC API first
-    if (typeof player !== "undefined" && typeof player.name === "function") {
+    // Try GTAC API first - use same method as server
+    if (typeof player !== "undefined" && typeof getPlayerName === "function") {
         try {
-            var playerName = player.name();
+            // Get player index first, then get name (same as server)
+            var playerIndex = player.index || 0;
+            var playerName = getPlayerName(PlayerIndex);
             if (playerName && playerName !== "") {
-                info += playerName;
+                // Remove #0 suffix from player name for cleaner display
+                var cleanName = playerName.replace(/#\d+$/, "");
+                info += cleanName;
             } else {
                 info += "Unknown";
             }
@@ -238,7 +242,7 @@ PoliceMenu.updatePlayerInfo = function() {
     } else {
         // Fallback for testing
         info += "Officer";
-        console.log("[PoliceMenu] Using fallback officer name - player.name API unavailable");
+        console.log("[PoliceMenu] Using fallback officer name - GTAC API unavailable");
     }
 
     info += " | Rank: ";

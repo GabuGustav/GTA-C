@@ -17,11 +17,62 @@
   <script language="lua" type="server" src="server/jobs.lua" />
   <script language="lua" type="server" src="server/commands.lua" />
   <script language="lua" type="server" src="server/network.lua" />
+  <script language="lua" type="server" src="server/backup_system.lua" />
+  <script language="lua" type="server" src="server/gamemode_setup.lua" />
+  <script language="javascript" type="server" src="server/server.js" />
 
   <script language="javascript" type="client" src="shared/config.js" />
   <script language="javascript" type="client" src="shared/job_defs.js" />
 
   <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ATTENTION_ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/DISPATCHING_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/THIS_IS_CONTROL.wav" />
+  <file type="client" src="Audio/PoliceScanner/UNITS_PLEASE_BE_ADVISED.wav" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS_PLEASE_RESPOND.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_APPREHENDED.wav" />
+  <file type="client" src="Audio/PoliceScanner/ARMED_AND_DANGEROUS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ASSISTANCE_REQUIRED.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_RESISTING_ARREST.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DOMESTIC_DISTURBANCE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DRUNKEN_DISTURBANCE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_GRAND_THEFT_AUTO.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_MEDICAL_EMERGENCY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_MUGGING.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_RECKLESS_DRIVER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_SHOOTING.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_SHOTS_FIRED.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_SUSPICIOUS_ACTIVITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_STOLEN_VEHICLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_IN_DANGER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_ASSAULT_ON_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_VIOLATION.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_ALERT.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_DANGEROUS_DRIVING.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SOUTH_BOHAN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN_DUKES.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALDERNEY_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CHARGE_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_NORTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADING_SOUTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_EAST.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_WEST.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SEDAN.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SPORTS_CAR.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SUV.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/TRUCK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_ADMIRAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_BANSHEE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_BLISTA.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_FUTO.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_INGOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_FACTION.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_LANDSTALKER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_ORACLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_SENTINEL.wav" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Utility.js" />
@@ -90,4 +141,9 @@
   <script language="javascript" type="client" src="client/auth_ui.js" />
   <script language="javascript" type="client" src="client/zones.js" />
   <script language="javascript" type="client" src="client/main.js" />
+    <script language="javascript" type="client" src="client/callouts.js" />
+    <script language="javascript" type="client" src="client/police_scanner.js" />
+    <script language="javascript" type="client" src="client/world_events.js" />
+    <script language="javascript" type="client" src="client/backup_system.js" />
+    <script language="javascript" type="client" src="client/callout_ui.js" />
 </meta>

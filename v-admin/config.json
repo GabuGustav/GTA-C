@@ -51,5 +51,5 @@
 		"algorithm": "AES-256-GCM",
 		"prf": "HMAC-SHA512"
 	},
-	"serverToken": "jm0TYfRHPA2TYHo6q3ui0I2t1Kh49N6E"
+	"serverToken": "x5eWozs6OPOFZ50kd3MPpprjaOC2QdaM"
 }

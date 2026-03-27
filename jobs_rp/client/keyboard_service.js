@@ -27,8 +27,60 @@ var KeyboardService = (function() {
         }
         
         hubProximityActive = active;
+    }
+    
+    // Callout keybinds
+    function setupCalloutKeybinds() {
+        if (typeof bindKey !== "undefined") {
+            // B key for manual callout
+            try {
+                bindKey(SDLK_b, KEYSTATE_DOWN, function() {
+                    if (isActive()) {
+                        Callouts.Manager.checkRandomCallout();
+                    }
+                });
+                
+                console.log("[KeyboardService] Callout keybinds setup (B key)");
+            } catch (e) {
+                console.log("[KeyboardService] Failed to setup B keybind: " + String(e));
+            }
+        }
+    }
+    
+    // Initialize keybinds when service is ready
+    setTimeout(setupCalloutKeybinds, 3000);
+    
+    // Callout UI keybinds
+    function setupCalloutUIKeybinds() {
+        if (typeof bindKey !== "undefined") {
+            // Y key to toggle callout UI
+            try {
+                bindKey(SDLK_y, KEYSTATE_DOWN, function() {
+                    if (isActive()) {
+                        if (CalloutUI && CalloutUI.Manager) {
+                            CalloutUI.Manager.show();
+                        }
+                    }
+                });
+                
+                console.log("[KeyboardService] Callout UI keybind setup (Y key)");
+            } catch (e) {
+                console.log("[KeyboardService] Failed to setup Y keybind: " + String(e));
+            }
+        }
+    }
+    
+    // Initialize UI keybinds
+    setTimeout(setupCalloutUIKeybinds, 7000);
+    
+    // Handle E key binding dynamically
+    function setHubProximity(active) {
+        if (hubProximityActive === active) {
+            return;
+        }
         
-        // Handle E key binding dynamically
+        hubProximityActive = active;
+        
         if (active) {
             // Near hub - deactivate E key for text input
             deactivateEKey();

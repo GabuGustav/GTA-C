@@ -599,42 +599,51 @@ Zones.refreshMarkers = function() {
 };
 
 function makeVec3(x, y, z) {
+    // Try different Vector3D creation methods
     try {
         if (typeof vector3 === "function") {
-            return vector3(x, y, z);
+            var vec = vector3(x, y, z);
+            console.log("[makeVec3] Created vector3: " + JSON.stringify(vec));
+            return vec;
         }
     } catch (e1) {
+        console.log("[makeVec3] vector3 failed: " + String(e1));
     }
 
     try {
         if (typeof vec3 === "function") {
-            return vec3(x, y, z);
+            var vec = vec3(x, y, z);
+            console.log("[makeVec3] Created vec3: " + JSON.stringify(vec));
+            return vec;
         }
     } catch (e1b) {
+        console.log("[makeVec3] vec3 failed: " + String(e1b));
     }
 
     try {
         if (typeof vec3 === "object" && typeof vec3.new === "function") {
-            return vec3.new(vec3, x, y, z);
+            var vec = vec3.new(vec3, x, y, z);
+            console.log("[makeVec3] Created vec3.new: " + JSON.stringify(vec));
+            return vec;
         }
     } catch (e1c) {
+        console.log("[makeVec3] vec3.new failed: " + String(e1c));
     }
 
     try {
         if (typeof Vec3 === "function") {
-            return Vec3(x, y, z);
+            var vec = Vec3(x, y, z);
+            console.log("[makeVec3] Created Vec3: " + JSON.stringify(vec));
+            return vec;
         }
     } catch (e2) {
+        console.log("[makeVec3] Vec3 failed: " + String(e2));
     }
 
-    try {
-        if (typeof Vec3 === "object" && typeof Vec3.new === "function") {
-            return Vec3.new(Vec3, x, y, z);
-        }
-    } catch (e3) {
-    }
-
-    return { x: x, y: y, z: z };
+    // Fallback - create simple object with x,y,z properties
+    var fallback = { x: x, y: y, z: z };
+    console.log("[makeVec3] Using fallback object: " + JSON.stringify(fallback));
+    return fallback;
 }
 
 function tryCalls(calls) {
@@ -787,7 +796,12 @@ function createNativeBlipForCoords(coords, icon, label, shortRange) {
             }
             
             // Create Vec3 exactly like BetterIV script
-            var vec = new Vec3(coords[0], coords[1], coords[2]);
+            var vec = null;
+            if (typeof Vec3 !== "undefined") {
+                vec = new Vec3(coords[0], coords[1], coords[2]);
+            } else {
+                vec = { x: coords[0], y: coords[1], z: coords[2] };
+            }
             var blipHandle = nativeObj.addBlipForCoord(vec);
             
             if (typeof blipHandle === "number" && blipHandle > 0) {
@@ -847,13 +861,13 @@ function createNativeBlipForCoords(coords, icon, label, shortRange) {
     }
     
     // FALLBACK: Try gta.createMarker if natives fail
-    if (globalEnv.gta && typeof globalEnv.gta.createMarker === "function") {
+    if (typeof gta !== "undefined" && typeof gta.createMarker === "function") {
         try {
             if (typeof console !== "undefined" && console.log) {
                 console.log("[jobs_rp] Fallback to gta.createMarker at coords: " + JSON.stringify(coords));
             }
             
-            var marker = globalEnv.gta.createMarker(coords[0], coords[1], coords[2]);
+            var marker = gta.createMarker(coords[0], coords[1], coords[2]);
             if (marker && typeof marker.id === "number") {
                 if (typeof console !== "undefined" && console.log) {
                     console.log("[jobs_rp] gta.createMarker succeeded, id: " + marker.id);
@@ -907,8 +921,12 @@ function tryNativeBlipForCoords(coords) {
     }
 
     var candidates = [];
-    var vec = makeVec3(coords[0], coords[1], coords[2]);
-    candidates.push({ label: "makeVec3", value: vec });
+    // Try different Vec3 creation methods
+    var vec = null;
+    if (typeof Vec3 !== "undefined") {
+        vec = new Vec3(coords[0], coords[1], coords[2]);
+        candidates.push({ label: "Vec3", value: vec });
+    }
     candidates.push({ label: "object", value: { x: coords[0], y: coords[1], z: coords[2] } });
     candidates.push({ label: "array", value: [coords[0], coords[1], coords[2]] });
 

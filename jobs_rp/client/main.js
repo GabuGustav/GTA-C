@@ -210,6 +210,20 @@ addNetworkHandler("jobs.syncProfile", function(a, b) {
     if (!profile || typeof profile !== "object") {
         profile = null;
     }
+    
+    // Add player name from GTAC API if not present in profile
+    if (profile && !profile.name && typeof player !== "undefined" && typeof player.name === "function") {
+        try {
+            var playerName = player.name();
+            if (playerName && playerName !== "") {
+                profile.name = playerName;
+                console.log("[JobsClient] Added player name to profile: " + playerName);
+            }
+        } catch (e) {
+            console.log("[JobsClient] Error getting player name: " + String(e));
+        }
+    }
+    
     JobsClient.profile = profile;
     if (JobsClient.UI && typeof JobsClient.UI.setProfile === "function") {
         JobsClient.UI.setProfile(profile);
@@ -578,6 +592,34 @@ addEventHandler("onResourceStart", function() {
             JobsClient.UI.showPrompt(msg, hasBindKey ? "info" : "warn", true);
         }
     }
+    
+    // Initialize callout system
+    if (typeof Callouts !== "undefined" && Callouts.Manager) {
+        setTimeout(function() {
+            Callouts.Manager.init();
+        }, 3000);
+    }
+    
+    // Initialize world events system
+    if (typeof WorldEvents !== "undefined" && WorldEvents.Manager) {
+        setTimeout(function() {
+            WorldEvents.Manager.init();
+        }, 4000);
+    }
+    
+    // Initialize backup system
+    if (typeof BackupSystem !== "undefined" && BackupSystem.Manager) {
+        setTimeout(function() {
+            BackupSystem.Manager.init();
+        }, 5000);
+    }
+    
+    // Initialize callout UI
+    if (typeof CalloutUI !== "undefined" && CalloutUI.Manager) {
+        setTimeout(function() {
+            CalloutUI.Manager.init();
+        }, 6000);
+    }
 
     if (JobsClient.AuthUI && typeof JobsClient.AuthUI.start === "function") {
         JobsClient.AuthUI.start();
@@ -669,21 +711,92 @@ setTimeout(function() {
     startHubProximityCheck();
 }, 3000);
 
+// Handle player death client-side
+addEventHandler("OnPedWasted", function(event) {
+    console.log("[Client] Player died - requesting server respawn");
+    
+    // Tell server to respawn us (no arguments needed)
+    triggerNetworkEvent("requestRespawn");
+});
+
+// Health-based death detection (backup method)
+var playerLastHealth = 100; // Separate variable to track health
+
+// Robust player initialization and health monitoring
+function startHealthMonitoring() {
+    setInterval(function() {
+        if (typeof localPlayer !== "undefined" && localPlayer.health) {
+            if (localPlayer.health <= 0 && playerLastHealth > 0) {
+                console.log("[Client] Health-based death detected - requesting respawn");
+                triggerNetworkEvent("requestRespawn");
+            }
+            playerLastHealth = localPlayer.health;
+        }
+    }, 500);
+}
+
+// Wait for player to be available, then start monitoring
+setTimeout(function() {
+    if (typeof localPlayer !== "undefined") {
+        console.log("[Client] Player available - starting health monitoring");
+        startHealthMonitoring();
+    } else {
+        console.log("[Client] Player not available - retrying in 1 second");
+        setTimeout(startHealthMonitoring, 1000);
+    }
+}, 1000); // Initial check after 1 second
+
+// Delay health monitoring to ensure localPlayer is available
+setTimeout(function() {
+    setInterval(function() {
+        if (typeof localPlayer !== "undefined" && localPlayer.health) {
+            if (localPlayer.health <= 0 && playerLastHealth > 0) {
+                console.log("[Client] Health-based death detected - requesting respawn");
+                triggerNetworkEvent("requestRespawn");
+            }
+            playerLastHealth = localPlayer.health;
+        }
+    }, 500);
+}, 2000); // Start monitoring after 2 seconds delay
+
+// Add respawn command for manual testing
+if (typeof addCommandHandler === "function") {
+    addCommandHandler("respawn", function() {
+        console.log("[Client] Manual respawn requested");
+        triggerNetworkEvent("requestRespawn");
+    });
+    
+    addCommandHandler("kill", function() {
+        console.log("[Client] Suicide command");
+        if (typeof localPlayer !== "undefined" && localPlayer.health) {
+            // Set health to a very low value to ensure death
+            localPlayer.health = -100;
+            console.log("[Client] Health set to -100 to ensure death");
+        }
+    });
+    
+    // Debug respawn command
+    addCommandHandler("debug_respawn", function() {
+        console.log("[Debug] Forcing respawn test");
+        triggerNetworkEvent("requestRespawn");
+    });
+}
+
 addEventHandler("onResourceStop", function() {
     stopHubProximityCheck();
     
     if (JobsClient.AuthUI && typeof JobsClient.AuthUI.stop === "function") {
         JobsClient.AuthUI.stop();
     }
-
+    
     if (JobsClient.UI && typeof JobsClient.UI.stopHud === "function") {
         JobsClient.UI.stopHud();
     }
-
+    
     if (JobsClient.Zones) {
         JobsClient.Zones.stop();
     }
-
+    
     if (JobsClient.PoliceMenu && typeof JobsClient.PoliceMenu.hide === "function") {
         JobsClient.PoliceMenu.hide();
     }
