@@ -154,8 +154,9 @@ function ensureWindow() {
         console.log("[Phone] Jobs built");
         buildText();
         console.log("[Phone] Text built");
-        buildPlaceholder("cars", "Cars");
-        buildPlaceholder("bank", "Bank");
+        // Don't call buildPlaceholder for text app since it's now fully implemented
+        // buildPlaceholder("cars", "Cars");
+        // buildPlaceholder("bank", "Bank");
         console.log("[Phone] All apps built");
 
         showApp("home");
@@ -245,15 +246,17 @@ function buildHome() {
     Phone.controls.home = { buttons: buttons };
     console.log("[Phone] Home controls created with " + buttons.length + " buttons");
     
-    // Test button click directly
-    if (buttons.length > 0) {
-        console.log("[Phone] Testing first button click...");
-        try {
-            buttons[0].onClick();
-        } catch (e) {
-            console.log("[Phone] Button test failed: " + String(e));
+    // Test button click after controls are created
+    setTimeout(function() {
+        if (buttons.length > 0) {
+            console.log("[Phone] Testing first button click after delay...");
+            try {
+                buttons[0].onClick();
+            } catch (e) {
+                console.log("[Phone] Button test failed: " + String(e));
+            }
         }
-    }
+    }, 100);
 }
 
 function buildJobs() {
@@ -379,38 +382,31 @@ function loadPlayerList() {
         console.log("[Phone] getPlayers() failed: " + String(e));
     }
     
-    // Filter out local player
-    var filteredPlayers = [];
-    var localPlayerName = "";
+    // Use whichever API returned data
+    var playerList = players.length > 0 ? players : clients;
     
-    try {
-        if (typeof localClient !== "undefined" && localClient && localClient.name) {
-            localPlayerName = localClient.name;
-        } else if (typeof player !== "undefined" && player && player.name) {
-            localPlayerName = player.name;
-        }
-    } catch (e) {
-        console.log("[Phone] Error getting local player name: " + String(e));
-    }
-    
-    for (var i = 0; i < players.length; i++) {
-        var p = players[i];
-        var playerName = p.name || (p.toString && p.toString()) || "Unknown";
+    if (playerList && Array.isArray(playerList)) {
+        console.log("[Phone] Processing player list with " + playerList.length + " entries");
         
-        // Remove #0 suffix if present
-        playerName = playerName.replace(/#\d+$/, "");
+        var allPlayers = [];
         
-        if (playerName !== localPlayerName) {
-            filteredPlayers.push({
-                id: p.id || i,
-                name: playerName,
-                data: p
-            });
+        for (var i = 0; i < playerList.length; i++) {
+            var player = playerList[i];
+            console.log("[Phone] Processing player: " + JSON.stringify(player));
+            
+            // Add ALL players to list (let server handle filtering)
+            if (player && typeof player === "object" && player.name) {
+                allPlayers.push({
+                    id: player.id,
+                    name: player.name.replace(/#\d+$/, ""), // Remove #numbers from name
+                    data: player
+                });
+            }
         }
+        
+        Phone.textState.playerList = allPlayers;
+        updatePlayerListDisplay();
     }
-    
-    Phone.textState.playerList = filteredPlayers;
-    updatePlayerListDisplay();
 }
 
 function updatePlayerListDisplay() {
