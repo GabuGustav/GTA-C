@@ -19,11 +19,12 @@
   <script language="lua" type="server" src="server/network.lua" />
   <script language="lua" type="server" src="server/backup_system.lua" />
   <script language="lua" type="server" src="server/gamemode_setup.lua" />
-  <script language="javascript" type="server" src="server/server.js" />
-
+<script language="lua" type="server" src="server/phone_events.lua" />
+<script language="javascript" type="server" src="server/server.js" />
   <script language="javascript" type="client" src="shared/config.js" />
   <script language="javascript" type="client" src="shared/job_defs.js" />
 
+  <file type="client" src="client/jobsrpui/mexui/Images/Message.png" />
   <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
   <file type="client" src="Audio/PoliceScanner/ALL_UNITS.wav" />
   <file type="client" src="Audio/PoliceScanner/ATTENTION_ALL_UNITS.wav" />
@@ -73,6 +74,7 @@
   <file type="client" src="Audio/PoliceScanner/Model/MOD_LANDSTALKER.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_ORACLE.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_SENTINEL.wav" />
+  <script language="javascript" type="client" src="client/shared_utils.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Utility.js" />
@@ -143,6 +145,7 @@
   <script language="javascript" type="client" src="client/main.js" />
     <script language="javascript" type="client" src="client/callouts.js" />
     <script language="javascript" type="client" src="client/police_scanner.js" />
+    <script language="javascript" type="client" src="client/phone.js" />
     <script language="javascript" type="client" src="client/world_events.js" />
     <script language="javascript" type="client" src="client/backup_system.js" />
     <script language="javascript" type="client" src="client/callout_ui.js" />

@@ -6,6 +6,7 @@ var BackupSystem = BackupSystem || {};
 BackupSystem.Manager = {
     requests: [],
     activeOfficers: [],
+    officerBlips: {}, // Track officer blips by officer name
     maxBackupDistance: 500,
     requestCooldown: 30000, // 30 seconds
     
@@ -70,6 +71,27 @@ BackupSystem.Manager = {
                 }
             } catch (e) {
                 console.log("[BackupSystem] Error handling callout assignment: " + String(e));
+            }
+        });
+        
+        // Handle officer disconnection
+        addNetworkHandler("police.officerDisconnected", function(a, b) {
+            try {
+                var data = unwrapArgs(a, b)[0];
+                if (data && data.officerName) {
+                    console.log("[BackupSystem] Officer disconnected: " + data.officerName);
+                    BackupSystem.Manager.removeOfficerBlip(data.officerName);
+                    
+                    // Remove from active officers list
+                    var officerIndex = BackupSystem.Manager.activeOfficers.findIndex(function(officer) {
+                        return officer.name === data.officerName;
+                    });
+                    if (officerIndex >= 0) {
+                        BackupSystem.Manager.activeOfficers.splice(officerIndex, 1);
+                    }
+                }
+            } catch (e) {
+                console.log("[BackupSystem] Error handling officer disconnection: " + String(e));
             }
         });
     },
@@ -255,12 +277,37 @@ BackupSystem.Manager = {
     },
     
     startOfficerTracking: function() {
-        // Update officer positions every 5 seconds
-        setInterval(function() {
-            if (BackupSystem.Manager.isOfficerOnDuty()) {
-                BackupSystem.Manager.broadcastPosition();
-            }
-        }, 5000);
+        // Use GTAC's setTimer function
+        if (typeof setTimer === "function") {
+            // Update officer positions every 5 seconds
+            setTimer(function() {
+                if (BackupSystem.Manager.isOfficerOnDuty()) {
+                    BackupSystem.Manager.broadcastPosition();
+                }
+            }, 5000, true); // true = repeating
+            
+            // Cleanup old blips every 30 seconds
+            setTimer(function() {
+                BackupSystem.Manager.cleanupOldBlips();
+            }, 30000, true); // true = repeating
+            
+            console.log("[BackupSystem] Officer tracking started with blip support using GTAC timers");
+        } else if (typeof setInterval === "function") {
+            // Fallback to setInterval if setTimer not available
+            setInterval(function() {
+                if (BackupSystem.Manager.isOfficerOnDuty()) {
+                    BackupSystem.Manager.broadcastPosition();
+                }
+            }, 5000);
+            
+            setInterval(function() {
+                BackupSystem.Manager.cleanupOldBlips();
+            }, 30000);
+            
+            console.log("[BackupSystem] Officer tracking started with setInterval fallback");
+        } else {
+            console.log("[BackupSystem] Warning: No timer function available, cleanup disabled");
+        }
     },
     
     isOfficerOnDuty: function() {
@@ -282,7 +329,7 @@ BackupSystem.Manager = {
         
         // Broadcast position to other officers
         // Only broadcast if there are other officers to avoid unnecessary errors
-        if (this.activeOfficers && Object.keys(this.activeOfficers).length > 0) {
+        if (this.activeOfficers && this.activeOfficers.length > 0) {
             triggerNetworkEvent("police.broadcastPosition", positionData);
         }
     },
@@ -310,6 +357,109 @@ BackupSystem.Manager = {
             
             // Create officer blip
             this.createOfficerBlip(data.position, data.officerName);
+        }
+    },
+    
+    createOfficerBlip: function(position, officerName) {
+        if (!position || !officerName) {
+            return;
+        }
+        
+        console.log("[BackupSystem] Creating blip for officer: " + officerName);
+        
+        // Use zones.js blip creation system
+        if (typeof Zones !== "undefined" && Zones.createPoliceBlipAt) {
+            var blip = Zones.createPoliceBlipAt(
+                [position.x, position.y, position.z], 
+                "Officer" + officerName
+            );
+            
+            if (blip) {
+                this.officerBlips[officerName] = {
+                    blip: blip,
+                    position: position,
+                    lastUpdate: Date.now()
+                };
+                console.log("[BackupSystem] Officer blip created for: " + officerName);
+            } else {
+                console.log("[BackupSystem] Failed to create officer blip for: " + officerName);
+            }
+        } else {
+            console.log("[BackupSystem] Zones.createPoliceBlipAt not available");
+        }
+    },
+    
+    updateOfficerBlip: function(officerName, newPosition) {
+        if (!this.officerBlips[officerName]) {
+            // Create new blip if it doesn't exist
+            this.createOfficerBlip(newPosition, officerName);
+            return;
+        }
+        
+        var officerBlip = this.officerBlips[officerName];
+        officerBlip.position = newPosition;
+        officerBlip.lastUpdate = Date.now();
+        
+        // Update blip position using available zones.js methods
+        if (typeof Zones !== "undefined") {
+            // Try different blip update methods
+            if (typeof Zones.setBlipLabel === "function") {
+                // Update label to refresh position (some games update position on label change)
+                Zones.setBlipLabel(officerBlip.blip, "Officer" + officerName);
+            }
+            
+            // Try to update blip coordinates directly if native functions are available
+            var blipApi = Zones.resolveNativeBlipApi();
+            if (blipApi.obj && typeof blipApi.obj.setBlipCoordinates === "function") {
+                try {
+                    blipApi.obj.setBlipCoordinates(officerBlip.blip, newPosition.x, newPosition.y, newPosition.z);
+                    console.log("[BackupSystem] Updated blip coordinates for: " + officerName);
+                } catch (e) {
+                    console.log("[BackupSystem] Failed to update blip coordinates: " + String(e));
+                }
+            }
+        }
+        
+        console.log("[BackupSystem] Updated blip position for: " + officerName);
+    },
+    
+    removeOfficerBlip: function(officerName) {
+        if (!this.officerBlips[officerName]) {
+            return;
+        }
+        
+        var officerBlip = this.officerBlips[officerName];
+        
+        // Remove blip using zones.js
+        if (typeof Zones !== "undefined" && Zones.removeNativeBlip) {
+            Zones.removeNativeBlip(officerBlip.blip);
+            console.log("[BackupSystem] Removed blip for officer: " + officerName);
+        }
+        
+        delete this.officerBlips[officerName];
+    },
+    
+    cleanupOldBlips: function() {
+        var now = Date.now();
+        var timeout = 60000; // 1 minute timeout
+        
+        // Clean up old blips
+        for (var officerName in this.officerBlips) {
+            var officerBlip = this.officerBlips[officerName];
+            if (now - officerBlip.lastUpdate > timeout) {
+                console.log("[BackupSystem] Cleaning up old blip for: " + officerName);
+                this.removeOfficerBlip(officerName);
+            }
+        }
+        
+        // Clean up old officers from activeOfficers array to prevent memory leaks
+        var originalLength = this.activeOfficers.length;
+        this.activeOfficers = this.activeOfficers.filter(function(officer) {
+            return now - (officer.timestamp || officer.lastUpdate || 0) < timeout;
+        });
+        
+        if (this.activeOfficers.length < originalLength) {
+            console.log("[BackupSystem] Cleaned up " + (originalLength - this.activeOfficers.length) + " old officers from tracking");
         }
     },
     

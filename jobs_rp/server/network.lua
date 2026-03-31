@@ -17,6 +17,11 @@ local function validateHubProximity(client, jobId)
         local pos = client:getPosition()
         if pos and type(pos) == "table" and #pos >= 3 then
             playerPos = { x = pos[1], y = pos[2], z = pos[3] }
+        elseif type(pos) == "number" then
+            local x, y, z = pos, client:getPosition()
+            if x and y and z then
+                playerPos = { x = x, y = y, z = z }
+            end
         end
     end
     
@@ -447,7 +452,6 @@ addNetworkHandler("jobs.requestHubElements", function(...)
     pushClientEvent(client, "jobs.syncHubElements", hubElements)
     print("[jobs_rp] Hub elements sent to client")
 end)
-
 
 
 

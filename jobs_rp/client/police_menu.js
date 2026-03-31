@@ -2,10 +2,20 @@
 
 console.log("[PoliceMenu] Script loading...");
 
+// Load shared utilities
+if (typeof require !== "undefined") {
+    try {
+        require("shared_utils.js");
+    } catch (e) {
+        console.log("[PoliceMenu] Could not load shared utilities: " + String(e));
+    }
+}
+
 var JobsClient = JobsClient || {};
 JobsClient.PoliceMenu = JobsClient.PoliceMenu || {};
 
 var PoliceMenu = JobsClient.PoliceMenu;
+var Utils = JobsClient.Utils || {};
 
 console.log("[PoliceMenu] Basic setup complete");
 
@@ -26,43 +36,11 @@ PoliceMenu.controls = {};
 
 // Helper functions
 function getJobsRpUi() {
-    try {
-        if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.ui) {
-            return JobsRP.ui;
-        }
-    } catch (e) {
-    }
-    if (typeof mexui !== "undefined" && mexui) {
-        return mexui;
-    }
-    return null;
+    return Utils.getJobsRpUi();
 }
 
 function getScreenSize() {
-    var width = 1280;
-    var height = 720;
-
-    try {
-        if (gta && gta.width) {
-            width = Number(gta.width) || width;
-        }
-        if (gta && gta.height) {
-            height = Number(gta.height) || height;
-        }
-    } catch (e) {
-    }
-
-    try {
-        if (screen && screen.width) {
-            width = Number(screen.width) || width;
-        }
-        if (screen && screen.height) {
-            height = Number(screen.height) || height;
-        }
-    } catch (e) {
-    }
-
-    return { width: width, height: height };
+    return Utils.getScreenSize();
 }
 
 function getPoliceRankName(grade) {
@@ -225,7 +203,7 @@ PoliceMenu.updatePlayerInfo = function() {
         try {
             // Get player index first, then get name (same as server)
             var playerIndex = player.index || 0;
-            var playerName = getPlayerName(PlayerIndex);
+            var playerName = getPlayerName(playerIndex);
             if (playerName && playerName !== "") {
                 // Remove #0 suffix from player name for cleaner display
                 var cleanName = playerName.replace(/#\d+$/, "");
@@ -264,13 +242,7 @@ PoliceMenu.updatePlayerInfo = function() {
 PoliceMenu.handleDutyClick = function(duty) {
     console.log("[PoliceMenu] Selected duty: " + duty.label);
     
-    if (typeof triggerNetworkEvent === "function") {
-        triggerNetworkEvent("jobs.police.selectDuty", duty.id);
-    } else if (typeof triggerClientEvent === "function") {
-        triggerClientEvent("jobs.police.selectDuty", duty.id);
-    } else {
-        console.log("[PoliceMenu] No network event function available");
-    }
+    Utils.triggerNetworkEventSafe("jobs.police.selectDuty", duty.id);
 
     if (JobsClient.UI) {
         JobsClient.UI.showPrompt("Selected duty: " + duty.label, "info", true);

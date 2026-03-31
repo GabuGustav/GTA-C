@@ -1,15 +1,30 @@
 let spawn_pos = [39.59, 128.88, 15.63]; // This is somewhere, go guess where
 
 function respawnPlayer(client) {
-    // Spawn aft 5 secs
-    setTimeout(function() {
-        console.log(`Respawning player ${client.name}`);
-         spawnPlayer(client, spawn_pos);
-        console.log(`Player ${client.name} respawned.`);
-    }, 5000);
-    setTimeout(function(){
-        fadeCamera(client, true);
-    },5500)
+    // Spawn after 5 secs using GTAC timer
+    if (typeof setTimer === "function") {
+        setTimer(function() {
+            console.log(`Respawning player ${client.name}`);
+            spawnPlayer(client, spawn_pos);
+            console.log(`Player ${client.name} respawned.`);
+        }, 5000, false); // false = one-time
+        
+        setTimer(function(){
+            fadeCamera(client, true);
+        }, 5500, false); // false = one-time
+    } else if (typeof setTimeout === "function") {
+        // Fallback to setTimeout
+        setTimeout(function() {
+            console.log(`Respawning player ${client.name}`);
+            spawnPlayer(client, spawn_pos);
+            console.log(`Player ${client.name} respawned.`);
+        }, 5000);
+        setTimeout(function(){
+            fadeCamera(client, true);
+        }, 5500);
+    } else {
+        console.log("[Server] Warning: No timer function available for respawn");
+    }
 }
 
 addEventHandler("OnPlayerJoined", (event, client) => {

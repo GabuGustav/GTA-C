@@ -20,7 +20,8 @@ Zones.authPromptAtMs = Zones.authPromptAtMs || 0;
 Zones.authPromptCooldownMs = Zones.authPromptCooldownMs || 8000;
 Zones.blipDiagShown = Zones.blipDiagShown || false;
 Zones.testBlipDone = Zones.testBlipDone || false;
-Zones.policeBlipIcon = 68; // BLIP_COP_CAR (GTA IV)
+Zones.policeBlipIcon = (typeof JobsRP !== "undefined" && JobsRP.Config) ? JobsRP.Config.custom_police_blip_sprite : 100; // Custom police badge sprite from config
+// Zones.policeBlipColor = {r: 0, g: 100, b: 255}; // Blue color (RGB) - REMOVED to show custom sprite colors
 Zones.useNativeBlips = true;
 Zones.propHandles = Zones.propHandles || [];
 Zones.drawEventName = Zones.drawEventName || null;
@@ -813,13 +814,21 @@ function createNativeBlipForCoords(coords, icon, label, shortRange) {
                 if (typeof nativeObj.changeBlipSprite === "function" && typeof icon === "number") {
                     nativeObj.changeBlipSprite(blipHandle, icon);
                     if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip sprite set to: " + icon);
+                        console.log("[jobs_rp] Blip sprite set to: " + icon + " (Custom Police Badge)");
                     }
                 }
+                // REMOVED: Blue color override to show custom sprite original colors
                 if (typeof nativeObj.changeBlipColour === "function") {
-                    nativeObj.changeBlipColour(blipHandle, 0); // Green color like BetterIV
+                    // Don't force color - let custom sprite show its original colors
                     if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip colour set to green");
+                        console.log("[jobs_rp] Using custom sprite original colors (no color override)");
+                    }
+                    
+                    // Debug: Check if we can control transparency
+                    if (typeof nativeObj.changeBlipAlpha === "function") {
+                        var alpha = (typeof JobsRP !== "undefined" && JobsRP.Config) ? JobsRP.Config.custom_police_blip_alpha : 255;
+                        nativeObj.changeBlipAlpha(blipHandle, alpha);
+                        console.log("[jobs_rp] Set blip alpha to: " + alpha + " (from config)");
                     }
                 }
                 if (typeof nativeObj.changeBlipScale === "function") {
@@ -1036,11 +1045,12 @@ Zones.createPoliceBlipAt = function(coords, label) {
 
     if (Zones.useNativeBlips && vec) {
         blip = createNativeBlipForCoords(coords, Zones.policeBlipIcon, label || "Police Blip", false);
+        console.log("[jobs_rp] Creating custom police badge blip (ID: " + Zones.policeBlipIcon + ")");
     }
 
     if (!blip) {
         // Fallback to generic blip creation with police icon if supported by backend
-        blip = createBlipForCoords(coords, "route", label || "Police Blip");
+        blip = createBlipForCoords(coords, "police", label || "Police Blip");
     }
 
     if (blip) {
@@ -1665,9 +1675,10 @@ Zones.testBlipAtPlayer = function() {
         Zones.blipSystemWorking = true;
         if (typeof natives.changeBlipSprite === "function") {
             natives.changeBlipSprite(nativeTry.id, Zones.policeBlipIcon);
+            console.log("[jobs_rp] Testing custom police badge sprite (ID: " + Zones.policeBlipIcon + ")");
         }
         if (typeof natives.changeBlipNameFromAscii === "function") {
-            natives.changeBlipNameFromAscii(nativeTry.id, "Native Test Blip");
+            natives.changeBlipNameFromAscii(nativeTry.id, "Custom Police Badge Test");
         }
         if (typeof natives.setBlipAsShortRange === "function") {
             natives.setBlipAsShortRange(nativeTry.id, false);

@@ -42,6 +42,7 @@ var JobsAuthUI = {
     cursorX: 0,
     cursorY: 0,
     toggleButton: null,
+    forgotButton: null,
     drawEventName: "",
     keyDownEventName: "",
     keyUpEventName: "",
@@ -834,6 +835,15 @@ function getCursorNorm() {
 
 function setToggleButtonRect(cx, cy, w, h) {
     JobsAuthUI.toggleButton = {
+        cx: cx,
+        cy: cy,
+        w: w,
+        h: h
+    };
+}
+
+function setForgotButtonRect(cx, cy, w, h) {
+    JobsAuthUI.forgotButton = {
         cx: cx,
         cy: cy,
         w: w,
@@ -1789,6 +1799,38 @@ function drawAuthUI() {
     var btnTextY = Math.floor(btnCy * height - px(12));
     okText = renderText(btnLabel, btnTextX, btnTextY, textSize(16), Hex.White, 0.5) && okText;
 
+    // Forgot Password button
+    console.log("[Debug] Drawing forgot password button...");
+    JobsAuthUI.forgotBtnCy = btnCy + px(45); // Position below toggle button
+    JobsAuthUI.forgotBtnW = 0.20;
+    JobsAuthUI.forgotBtnH = 0.035;
+    var forgotHover = isCursorInside({
+        x: btnCx,
+        y: JobsAuthUI.forgotBtnCy,
+        width: JobsAuthUI.forgotBtnW,
+        height: JobsAuthUI.forgotBtnH
+    });
+    console.log("[Debug] Forgot button positioned at: " + JobsAuthUI.forgotBtnCy + "x" + JobsAuthUI.forgotBtnW + "x" + JobsAuthUI.forgotBtnH);
+    
+    // Forgot password button styling
+    if (forgotHover) {
+        drawRectNorm(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW + 0.005, JobsAuthUI.forgotBtnH + 0.005, 0, 0, 0, 100); // Shadow
+        drawRectNorm(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW, JobsAuthUI.forgotBtnH, 100, 100, 255, 255); // Hover background
+    } else {
+        drawRectNorm(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW + 0.005, JobsAuthUI.forgotBtnH + 0.005, 0, 0, 0, 50); // Shadow
+        drawRectNorm(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW, JobsAuthUI.forgotBtnH, 60, 60, 150, 255); // Normal background
+    }
+    
+    var forgotBtnLabel = "🔐 Forgot Password";
+    var forgotBtnTextX = Math.floor(btnCx * width - (JobsAuthUI.forgotBtnW * width / 2) + px(10));
+    var forgotBtnTextY = Math.floor(JobsAuthUI.forgotBtnCy * height - px(8));
+    console.log("[Debug] Rendering forgot button text at: " + forgotBtnTextX + ", " + forgotBtnTextY);
+    okText = renderText(forgotBtnLabel, forgotBtnTextX, forgotBtnTextY, textSize(14), Hex.White, 0.5) && okText;
+    console.log("[Debug] Forgot button text rendered: " + (okText ? "success" : "failed"));
+    
+    // Set forgot button rect for click detection
+    setForgotButtonRect(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW, JobsAuthUI.forgotBtnH);
+
     // Enhanced input field labels with icons - properly aligned with better spacing
     var accountLabel = (JobsAuthUI.activeField === "account") ? "👤 > Account ID:" : "👤   Account ID:";
     var accountDisplay = JobsAuthUI.accountInput;
@@ -2033,6 +2075,25 @@ function onCursorDownEvent(ev, x, y) {
         toggleMode();
         consumeEvent(ev);
     }
+    
+    // Check forgot password button click
+    console.log("[Debug] Checking forgot button click...");
+    console.log("[Debug] forgotButton exists: " + (JobsAuthUI.forgotButton ? "yes" : "no"));
+    console.log("[Debug] cursor position: " + (JobsAuthUI.cursorX || 0) + ", " + (JobsAuthUI.cursorY || 0));
+    
+    if (JobsAuthUI.forgotButton && isCursorInside(JobsAuthUI.forgotButton)) {
+        console.log("[Debug] Forgot button clicked!");
+        if (typeof triggerNetworkEvent === "function") {
+            triggerNetworkEvent("jobs.authForgotPassword");
+            console.log("[Auth] Password reset requested from UI");
+            setStatus("Sending password reset request...", "info");
+        } else {
+            console.log("[Debug] triggerNetworkEvent not available!");
+        }
+        consumeEvent(ev);
+    } else {
+        console.log("[Debug] Forgot button not clicked or not initialized");
+    }
 }
 
 function attachRuntimeHandlers() {
@@ -2217,5 +2278,29 @@ addNetworkHandler("jobs.authDebugUI", function() {
         JobsAuthUI.debugForceShow = forceShow;
         setVisible(shouldShow());
         sendDiag("auth_ui.debug", "debugForceShow set to " + String(forceShow), true);
+    }
+});
+
+// Forgot password command
+if (typeof addCommandHandler === "function") {
+    addCommandHandler("forgotpass", function() {
+        if (typeof triggerNetworkEvent === "function") {
+            triggerNetworkEvent("jobs.authForgotPassword");
+            console.log("[Auth] Password reset requested");
+        }
+    });
+}
+
+// Handle forgot password result from server
+addNetworkHandler("jobs.authForgotPasswordResult", function() {
+    var success = arguments[0];
+    var message = arguments[1];
+    
+    if (success) {
+        setStatus("Password reset code sent! Check your API.", "success");
+        console.log("[Auth] Password reset successful: " + message);
+    } else {
+        setStatus("Password reset failed: " + message, "error");
+        console.log("[Auth] Password reset failed: " + message);
     }
 });

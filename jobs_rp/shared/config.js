@@ -35,6 +35,8 @@ JobsRP.Config = JobsRP.Config || {
     grade_bonus_per_level: 0.08,
     hub_blip_sprite: 1,
     route_blip_sprite: 2,
+    custom_police_blip_sprite: 101,
+    custom_police_blip_alpha: 255,  
     route_blips_show_all: false,
     hud_cash_enabled: true,
     hud_use_native_cash: false,
@@ -81,6 +83,7 @@ JobsRP.Config = JobsRP.Config || {
     admin_command_root: "admin",
     legacy_admin_command_root: "jobadmin",
     mod_command_root: "mod",
+    auth_forgot_password_enabled: false,
     admin_accounts: ["your_account_id"],
     mod_accounts: [],
     auth_reserved_ids: [
@@ -96,7 +99,7 @@ JobsRP.Config = JobsRP.Config || {
     auto_ban_lockouts: 3,
     auto_ban_duration_sec: 1800,
     admins: ["homepc", "admin"],
-    debug_quick_test: true,
+    debug_quick_test: false,
     admin_allow_all: false,
     debug: false
 };

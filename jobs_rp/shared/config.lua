@@ -35,6 +35,8 @@ root.Config = root.Config or {
     grade_bonus_per_level = 0.08,
     hub_blip_sprite = 1,
     route_blip_sprite = 2,
+    custom_police_blip_sprite = 101,
+    custom_police_blip_alpha = 0,  -- Full opacity (255) or 0-255 for transparency
     route_blips_show_all = false,
     hud_cash_enabled = true,
     hud_use_native_cash = false,
@@ -83,6 +85,8 @@ root.Config = root.Config or {
     admin_command_root = "admin",
     legacy_admin_command_root = "jobadmin",
     mod_command_root = "mod",
+    auth_forgot_password_enabled = false,
+    auth_forgot_password_api_key = "",
     admin_accounts = {
         "your_account_id"
     },
@@ -104,7 +108,7 @@ root.Config = root.Config or {
         "homepc",
         "admin"
     },
-    debug_quick_test = true,
+    debug_quick_test = false,
     admin_allow_all = false,
     debug = false
 }

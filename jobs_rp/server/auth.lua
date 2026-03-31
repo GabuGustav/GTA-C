@@ -305,6 +305,31 @@ local function randomHex(length)
     return table.concat(out)
 end
 
+local secretsLoaded = false
+local function loadAuthSecrets()
+    if secretsLoaded then
+        return
+    end
+    secretsLoaded = true
+
+    local filePath = "data/secrets.json"
+    if loadTextFile then
+        local ok, raw = pcall(loadTextFile, filePath)
+        if ok and raw and raw ~= "" then
+            local okDecode, decoded = pcall(JobsRP.Json.decode, raw)
+            if okDecode and type(decoded) == "table" then
+                if decoded.auth_forgot_password_enabled ~= nil then
+                    JobsRP.Config.auth_forgot_password_enabled = decoded.auth_forgot_password_enabled == true
+                end
+                if type(decoded.auth_forgot_password_api_key) == "string" then
+                    JobsRP.Config.auth_forgot_password_api_key = decoded.auth_forgot_password_api_key
+                end
+                print("[Auth] Loaded auth secrets from data/secrets.json")
+            end
+        end
+    end
+end
+
 
 local function parseCsv(text)
     local out = {}
@@ -364,15 +389,50 @@ local function normalizeSecretForCompare(value)
     return secret
 end
 
-local function hashPassword(accountId, password)
-    local source = tostring(JobsRP.normalizeName(accountId or "")) .. ":" .. tostring(password or "")
+local function hashCore(source)
     local hash = 0
-
     for i = 1, #source do
         hash = ((hash * 131) + string.byte(source, i)) % 2147483647
     end
+    return hash
+end
 
+local function hashPasswordV1(accountId, password)
+    local source = tostring(JobsRP.normalizeName(accountId or "")) .. ":" .. tostring(password or "")
+    local hash = hashCore(source)
     return string.format("jpw:%08x", hash)
+end
+
+local function hashPasswordV2(accountId, password, salt)
+    local normalized = tostring(JobsRP.normalizeName(accountId or ""))
+    local s = tostring(salt or "")
+    if s == "" then
+        s = randomHex(16)
+    end
+    local base = normalized .. ":" .. tostring(password or "") .. ":" .. s
+    local hash = hashCore(base)
+    for _ = 1, 10000 do
+        hash = hashCore(tostring(hash) .. ":" .. base)
+    end
+    return "jpw2:" .. s .. ":" .. string.format("%08x", hash)
+end
+
+local function verifyPasswordHash(accountId, password, storedHash)
+    if type(storedHash) ~= "string" or storedHash == "" then
+        return false, nil
+    end
+    if string.sub(storedHash, 1, 5) == "jpw2:" then
+        local rest = string.sub(storedHash, 6)
+        local salt, hash = string.match(rest, "^([^:]+):([0-9a-fA-F]+)$")
+        if not salt or not hash then
+            return false, nil
+        end
+        return hashPasswordV2(accountId, password, salt) == ("jpw2:" .. salt .. ":" .. hash), "v2"
+    end
+    if string.sub(storedHash, 1, 4) == "jpw:" then
+        return hashPasswordV1(accountId, password) == storedHash, "v1"
+    end
+    return false, nil
 end
 
 function Auth.normalizeAccountId(raw)
@@ -907,7 +967,7 @@ function Auth.register(player, rawAccountId, rawPassword)
 
     local token = generateToken()
     local account = Store.newAccount(accountId, token, getPlayerName(client), getPlayerIp(client))
-    account.passwordHash = hashPassword(accountId, password)
+    account.passwordHash = hashPasswordV2(accountId, password)
     account.passwordUpdatedAt = JobsRP.nowSeconds()
 
     Store.replaceAccountById(accountId, account)
@@ -1000,7 +1060,13 @@ function Auth.login(player, rawAccountId, providedSecret)
 
     local storedPasswordHash = tostring(account.passwordHash or "")
     if storedPasswordHash ~= "" then
-        valid = (storedPasswordHash == hashPassword(accountId, secret))
+        local okPass, version = verifyPasswordHash(accountId, secret, storedPasswordHash)
+        valid = okPass
+        if okPass and version == "v1" then
+            -- Upgrade legacy hash to v2 on successful login
+            account.passwordHash = hashPasswordV2(accountId, secret)
+            account.passwordUpdatedAt = JobsRP.nowSeconds()
+        end
     end
 
     if not valid then
@@ -1079,7 +1145,7 @@ function Auth.setPassword(player, rawPassword)
         return false
     end
 
-    account.passwordHash = hashPassword(accountId, passwordOrError)
+    account.passwordHash = hashPasswordV2(accountId, passwordOrError)
     account.passwordUpdatedAt = JobsRP.nowSeconds()
 
     Store.markAccountDirty(accountId)
@@ -1271,4 +1337,41 @@ end
 addEventHandler("onResourceStart", function(event, resource)
     seedRandom()
     loadAuthDependencies()
+    loadAuthSecrets()
+end)
+
+-- Handle forgot password requests
+addNetworkHandler("jobs.authForgotPassword", function(client)
+    local player = resolveClient(client)
+    if not player then
+        return
+    end
+    
+    loadAuthSecrets()
+
+    if not (JobsRP.Config and JobsRP.Config.auth_forgot_password_enabled) then
+        print("[Auth] Forgot password requested but feature disabled")
+        pushClientEvent(client, "jobs.authForgotPasswordResult", false, "Password reset is disabled on this server.")
+        return
+    end
+
+    local apiKey = JobsRP.Config and JobsRP.Config.auth_forgot_password_api_key or ""
+    if apiKey == "" then
+        print("[Auth] Forgot password requested but API key not configured")
+        pushClientEvent(client, "jobs.authForgotPasswordResult", false, "Password reset is not configured.")
+        return
+    end
+
+    print("[Auth] Password reset requested by: " .. tostring(player.name or "Unknown"))
+    
+    -- Generate OTP and send to API
+    local otpId = "reset_" .. tostring(math.random(100000, 999999))
+    local apiUrl = "https://bgfr-gta-connected.netlify.app/.netlify/functions/forgot-password?otp_id=" .. otpId .. "&api_key=" .. apiKey
+    
+    -- Send HTTP request to OTP API (GTAC doesn't have http, so we'll simulate)
+    print("[Auth] OTP generated: " .. otpId)
+    print("[Auth] API URL would be: " .. apiUrl)
+    
+    -- Simulate API call (replace with actual HTTP if available)
+    pushClientEvent(client, "jobs.authForgotPasswordResult", true, "Password reset code: " .. otpId .. " sent to API")
 end)

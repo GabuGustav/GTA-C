@@ -49,8 +49,8 @@ function BackupSystem.handleBackupRequest(client, data)
     print("[BackupSystem] Backup request from " .. (data.officerName or "Unknown") .. 
           " at " .. tostring(data.position.x) .. "," .. tostring(data.position.y) .. "," .. tostring(data.position.z))
     
-    -- Store request
-    local requestId = data.requestId or ("req_" .. os.time() .. "_" .. math.random(1000))
+    -- Store request with collision-resistant ID
+    local requestId = data.requestId or ("req_" .. os.time() .. "_" .. math.random(1000000) .. "_" .. tostring(client):sub(-3))
     BackupSystem.requests[requestId] = {
         officerName = data.officerName,
         position = data.position,
@@ -76,6 +76,7 @@ end
 -- Handle backup response from officer
 function BackupSystem.handleBackupResponse(client, data)
     if not data or not data.requestId then
+        print("[BackupSystem] ERROR: Invalid backup response from " .. (client.name or "Unknown") .. " - missing requestId")
         return
     end
     
@@ -85,6 +86,7 @@ function BackupSystem.handleBackupResponse(client, data)
     -- Find the original request
     local request = BackupSystem.requests[data.requestId]
     if not request then
+        print("[BackupSystem] ERROR: Request not found: " .. (data.requestId or "Unknown") .. " from " .. (client.name or "Unknown"))
         return
     end
     
@@ -267,10 +269,75 @@ else
     print("[BackupSystem] Warning: No timer function available, cleanup disabled")
 end
 
--- Initialize when resource starts
-addEventHandler("onResourceStart", function()
-    if BackupSystem.init then
-        -- Initialize immediately
-        BackupSystem.init()
+-- Handle player disconnection
+addEventHandler("onPlayerQuit", function(event, player)
+    if not player then
+        return
+    end
+    
+    -- Check if player was an active officer
+    local playerName = player.name or "Unknown"
+    local officerData = BackupSystem.activeOfficers[playerName]
+    
+    if officerData then
+        print("[BackupSystem] Officer " .. playerName .. " disconnected, removing from tracking")
+        
+        -- Remove from active officers
+        BackupSystem.activeOfficers[playerName] = nil
+        
+        -- Notify all other officers about disconnection
+        local disconnectData = {
+            officerName = playerName,
+            timestamp = os.time()
+        }
+        
+        for client, clientData in pairs(getElementsByType("player")) do
+            if client ~= player then
+                -- Check if this client is an officer
+                for officerName, officerInfo in pairs(BackupSystem.activeOfficers) do
+                    if officerName == client.name then
+                        pushClientEvent(client, "police.officerDisconnected", disconnectData)
+                        break
+                    end
+                end
+            end
+        end
     end
 end)
+
+-- Initialize when resource starts
+addEventHandler("onResourceStart", function(event, resourceName)
+    print("[BackupSystem] Resource start event triggered for: " .. tostring(resourceName or "unknown"))
+    -- Try different ways to detect jobs_rp resource
+    local isJobsRp = false
+    if type(resourceName) == "string" then
+        isJobsRp = (resourceName == "jobs_rp")
+    elseif type(resourceName) == "nil" then
+        -- If resourceName is nil, assume this is jobs_rp starting
+        isJobsRp = true
+    else
+        -- If resourceName is a resource object or memory address, try to get name
+        local success, name = pcall(function() return resourceName.name end)
+        if success and name == "jobs_rp" then
+            isJobsRp = true
+        end
+    end
+    
+    if isJobsRp and BackupSystem.init then
+        print("[BackupSystem] Initializing backup system for jobs_rp resource")
+        -- Initialize immediately
+        BackupSystem.init()
+    else
+        print("[BackupSystem] Resource name doesn't match or BackupSystem.init not available")
+        print("[BackupSystem] resourceName type: " .. type(resourceName))
+        print("[BackupSystem] resourceName value: " .. tostring(resourceName))
+    end
+end)
+
+-- Direct initialization as fallback
+print("[BackupSystem] Attempting direct initialization...")
+if BackupSystem and BackupSystem.init then
+    BackupSystem.init()
+else
+    print("[BackupSystem] ERROR: BackupSystem or init function not available")
+end

@@ -326,6 +326,17 @@ local function isAdmin(player)
     return JobsRP.Auth.isAdmin(player)
 end
 
+local function requireAdmin(player)
+    if not requireAuth(player) then
+        return false
+    end
+    if not isAdmin(player) then
+        chat(player, "[JobsAuth] Admin access required.", 255, 120, 120)
+        return false
+    end
+    return true
+end
+
 local function showJobHelp(player)
     local lines = {
         "/job list",
@@ -495,6 +506,9 @@ local function handleJobAuth(player, words)
     end
 
     if sub == "debugui" then
+        if not requireAdmin(player) then
+            return
+        end
         local forceShow = (words[2] == "on" or words[2] == "true")
         local client = resolveClient(player)
         if client then
@@ -539,6 +553,9 @@ local function handleJobAuth(player, words)
     end
 
     if sub == "admincheck" then
+        if not requireAdmin(player) then
+            return
+        end
         local client = resolveClient(player)
         if client then
             local playerId = JobsRP.Store.getPlayerId(player)
@@ -570,6 +587,9 @@ local function handleJobAuth(player, words)
     end
 
     if sub == "forcesync" then
+        if not requireAdmin(player) then
+            return
+        end
         -- Force sync auth with JSON database
         local accountId = words[2]
         if not accountId then
@@ -707,12 +727,104 @@ local function handleCommand(root, parameters, client)
 
         local okSave, saveErr = saveRecordedCoords()
         if not okSave then
-            chat(client, "[Jobs] Recorded but failed to save: " .. tostring(saveErr or "unknown"), 255, 120, 120)
-        else
-            chat(client, string.format("[Jobs] Recorded '%s' (%s) at %.2f, %.2f, %.2f", entry.name, entry.category, pos[1], pos[2], pos[3]), 140, 255, 140)
+            chat(client, "[Jobs] Failed to save coordinates: " .. tostring(saveErr), 255, 120, 120)
+            return
         end
 
-        broadcastRecordedCoords(list)
+        chat(client, "[Jobs] Coordinate recorded: " .. entry.name .. " (" .. entry.category .. ")", 120, 255, 120)
+        return
+    end
+
+    if root == "phone" then
+        -- Handle phone commands (like sendMessage)
+        if words[1] == "sendMessage" then
+            -- Extract message data from parameters
+            local data = {}
+            for i = 2, #words do
+                local key, value = string.match(words[i], "([^=]+)=([^=]+)")
+                if key and value then
+                    data[key] = value
+                end
+            end
+            
+            -- Validate input
+            if not data or not data.recipientId or not data.content or not data.messageId then
+                chat(client, "[Phone] Invalid message data", 255, 120, 120)
+                return
+            end
+            
+            if string.len(data.content) > 160 then
+                chat(client, "[Phone] Message too long (max 160 characters)", 255, 120, 120)
+                return
+            end
+            
+            -- Find recipient player
+            local recipient = nil
+            
+            -- Try to find recipient by ID first
+            if data.recipientId then
+                for _, player in ipairs(getClients()) do
+                    if player.id == tonumber(data.recipientId) then
+                        recipient = player
+                        break
+                    end
+                end
+            end
+            
+            -- Fallback to name search if ID doesn't work
+            if not recipient and data.recipientName then
+                for _, player in ipairs(getClients()) do
+                    local cleanName = string.gsub(player.name or "", "#%d+$", "")
+                    if cleanName == data.recipientName then
+                        recipient = player
+                        break
+                    end
+                end
+            end
+            
+            -- Check if recipient found and online
+            if not recipient then
+                chat(client, "[Phone] Player '" .. (data.recipientName or "Unknown") .. "' is not online", 255, 120, 120)
+                return
+            end
+            
+            -- Create message object
+            local message = {
+                id = data.messageId,
+                senderId = client.id,
+                senderName = string.gsub(client.name or "", "#%d+$", ""),
+                recipientId = recipient.id,
+                recipientName = data.recipientName,
+                content = data.content,
+                timestamp = os.time(),
+                status = "delivered"
+            }
+            
+            -- Send to recipient using triggerNetworkEvent
+            if triggerNetworkEvent then
+                triggerNetworkEvent("phone.messageReceived", recipient, {
+                    messageId = message.id,
+                    senderId = message.senderId,
+                    senderName = message.senderName,
+                    content = message.content,
+                    timestamp = message.timestamp
+                })
+            end
+            
+            -- Confirm delivery to sender
+            if triggerNetworkEvent then
+                triggerNetworkEvent("phone.messageDelivered", client, {
+                    messageId = message.id,
+                    recipientId = message.recipientId,
+                    status = "sent"
+                })
+            end
+            
+            print("[Phone] Message routed: " .. message.senderName .. " -> " .. message.recipientName)
+            return
+        end
+        
+        chat(client, "[Phone] Usage: /phone sendMessage recipientId=<id> recipientName=<name> content=<message> messageId=<id>", 255, 180, 120)
         return
     end
 
@@ -850,6 +962,16 @@ if addCommandHandler then
             return
         end
         handleCommand("recordcoord", parameters, client)
+    end)
+
+    addCommandHandler("phone", function(...)
+        local client, parameters = extractClientAndParams("phone", ...)
+        if not client then
+            print("[jobs_rp] [Commands] /phone ignored: client not resolved | args=" .. describeArgs(...))
+            return
+        end
+
+        handleCommand("phone", parameters, client)
     end)
 end
 

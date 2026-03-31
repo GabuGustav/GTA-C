@@ -1304,10 +1304,14 @@ function Jobs.requestAction(player, actionType, payload, forced)
 
     local forced = false
     if type(payload) == "table" and payload.__force == true and JobsRP.Config.debug_quick_test == true then
-        forced = true
+        if JobsRP.Auth and JobsRP.Auth.isAdmin and JobsRP.Auth.isAdmin(player) then
+            forced = true
+        else
+            Jobs.prompt(player, "Force actions are admin-only.", "warn")
+        end
     end
 
-    if actionId ~= "progress" then
+    if actionType ~= "progress" then
         Jobs.prompt(player, "Unsupported action.", "error")
         return false
     end
@@ -1664,7 +1668,6 @@ addEventHandler("onResourceStop", function(event, resource)
     JobsRP.Store.stopAutosave()
     JobsRP.Store.saveAll(true)
 end)
-
 
 
 
