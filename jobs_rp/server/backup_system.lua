@@ -306,31 +306,59 @@ addEventHandler("onPlayerQuit", function(event, player)
 end)
 
 -- Initialize when resource starts
-addEventHandler("onResourceStart", function(event, resourceName)
-    print("[BackupSystem] Resource start event triggered for: " .. tostring(resourceName or "unknown"))
-    -- Try different ways to detect jobs_rp resource
-    local isJobsRp = false
+local function resolveResourceName(resourceName)
+    if resourceName == nil then
+        return nil
+    end
     if type(resourceName) == "string" then
-        isJobsRp = (resourceName == "jobs_rp")
-    elseif type(resourceName) == "nil" then
-        -- If resourceName is nil, assume this is jobs_rp starting
-        isJobsRp = true
-    else
-        -- If resourceName is a resource object or memory address, try to get name
-        local success, name = pcall(function() return resourceName.name end)
-        if success and name == "jobs_rp" then
-            isJobsRp = true
+        return resourceName
+    end
+    if thisResource and resourceName == thisResource then
+        return "jobs_rp"
+    end
+    if type(getResourceName) == "function" then
+        local ok, name = pcall(getResourceName, resourceName)
+        if ok and type(name) == "string" and name ~= "" then
+            return name
         end
     end
-    
+    local okName, nameProp = pcall(function() return resourceName.name end)
+    if okName and type(nameProp) == "string" and nameProp ~= "" then
+        return nameProp
+    end
+    local okMethod, nameMethod = pcall(function()
+        if resourceName.getName then
+            return resourceName:getName()
+        end
+        return nil
+    end)
+    if okMethod and type(nameMethod) == "string" and nameMethod ~= "" then
+        return nameMethod
+    end
+    return nil
+end
+
+addEventHandler("onResourceStart", function(event, resourceName)
+    print("[BackupSystem] Resource start event triggered for: " .. tostring(resourceName or "unknown"))
+    local resolvedName = resolveResourceName(resourceName)
+    local isJobsRp = false
+    if resolvedName then
+        isJobsRp = (resolvedName == "jobs_rp")
+    else
+        -- If we cannot resolve a name, assume this is jobs_rp when starting inside this resource
+        isJobsRp = true
+    end
+
     if isJobsRp and BackupSystem.init then
         print("[BackupSystem] Initializing backup system for jobs_rp resource")
-        -- Initialize immediately
         BackupSystem.init()
     else
         print("[BackupSystem] Resource name doesn't match or BackupSystem.init not available")
         print("[BackupSystem] resourceName type: " .. type(resourceName))
         print("[BackupSystem] resourceName value: " .. tostring(resourceName))
+        if resolvedName then
+            print("[BackupSystem] resolved resource name: " .. resolvedName)
+        end
     end
 end)
 

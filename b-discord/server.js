@@ -4,8 +4,8 @@ Developed By SirCryptic - Enjoy :)
 */
 
 // Configuration
-const WEBHOOK_URL = "your_discord_webhook_url"; // Your Discord webhook URL
-const PROXY_URL = "your_render_url"; // Replace with your Render URL
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1487434395743682691/BNnXJ6F1Swk_QJBONOxfhrzsrnEiIORVMqp9mowCOl1KGDXNZRa30wP80sxD8k7v6ksd"; // Your Discord webhook URL
+const PROXY_URL = "https://bgfr-sever-relay-to-in-game.onrender.com"; // Replace with your Render URL
 const EMOTES = {
     ":)": "😊",
     ":D": "😃",

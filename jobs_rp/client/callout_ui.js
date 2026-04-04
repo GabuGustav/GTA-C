@@ -1,5 +1,20 @@
 "use strict";
 
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
 var CalloutUI = CalloutUI || {};
 
 // Callout Acceptance UI
@@ -9,7 +24,7 @@ CalloutUI.Manager = {
     currentCallout: null,
     
     init: function() {
-        console.log("[CalloutUI] Initializing callout acceptance UI");
+        debugLog("[CalloutUI] Initializing callout acceptance UI");
         
         // Create UI window
         this.createWindow();
@@ -17,7 +32,7 @@ CalloutUI.Manager = {
         // Setup network handlers
         this.setupNetworkHandlers();
         
-        console.log("[CalloutUI] Callout UI initialized");
+        debugLog("[CalloutUI] Callout UI initialized");
     },
     
     createWindow: function() {
@@ -166,7 +181,7 @@ CalloutUI.Manager = {
                     CalloutUI.Manager.handleCalloutAssignment(data);
                 }
             } catch (e) {
-                console.log("[CalloutUI] Error handling callout assignment: " + String(e));
+                debugLog("[CalloutUI] Error handling callout assignment: " + String(e));
             }
         });
         
@@ -178,7 +193,7 @@ CalloutUI.Manager = {
                     CalloutUI.Manager.handleBackupRequest(data);
                 }
             } catch (e) {
-                console.log("[CalloutUI] Error handling backup request: " + String(e));
+                debugLog("[CalloutUI] Error handling backup request: " + String(e));
             }
         });
     },
@@ -187,7 +202,7 @@ CalloutUI.Manager = {
         if (this.window) {
             this.window.setShown(true);
             this.visible = true;
-            console.log("[CalloutUI] Callout window shown");
+            debugLog("[CalloutUI] Callout window shown");
         }
     },
     
@@ -195,7 +210,7 @@ CalloutUI.Manager = {
         if (this.window) {
             this.window.setShown(false);
             this.visible = false;
-            console.log("[CalloutUI] Callout window hidden");
+            debugLog("[CalloutUI] Callout window hidden");
         }
     },
     
@@ -228,11 +243,11 @@ CalloutUI.Manager = {
         if (this.declineButton) this.declineButton.shown = true;
         if (this.endButton) this.endButton.shown = true;
         
-        console.log("[CalloutUI] Updated callout info: " + callout.name);
+        debugLog("[CalloutUI] Updated callout info: " + callout.name);
     },
     
     handleCalloutAssignment: function(data) {
-        console.log("[CalloutUI] Received callout assignment: " + JSON.stringify(data));
+        debugLog("[CalloutUI] Received callout assignment: " + JSON.stringify(data));
         
         if (data.officerName === this.getPlayerName()) {
             // This assignment is for us
@@ -256,7 +271,7 @@ CalloutUI.Manager = {
     },
     
     handleBackupRequest: function(data) {
-        console.log("[CalloutUI] Received backup request: " + JSON.stringify(data));
+        debugLog("[CalloutUI] Received backup request: " + JSON.stringify(data));
         
         // Show backup request notification
         if (JobsClient && JobsClient.UI) {
@@ -332,7 +347,7 @@ CalloutUI.Manager = {
             return;
         }
         
-        console.log("[CalloutUI] Accepting callout: " + this.currentCallout.name);
+        debugLog("[CalloutUI] Accepting callout: " + this.currentCallout.name);
         
         // Start the callout
         if (Callouts && Callouts.Manager) {
@@ -353,7 +368,7 @@ CalloutUI.Manager = {
             return;
         }
         
-        console.log("[CalloutUI] Declining callout: " + this.currentCallout.name);
+        debugLog("[CalloutUI] Declining callout: " + this.currentCallout.name);
         
         // Hide UI
         this.hide();
@@ -369,7 +384,7 @@ CalloutUI.Manager = {
             return;
         }
         
-        console.log("[CalloutUI] Ending current callout");
+        debugLog("[CalloutUI] Ending current callout");
         
         // End the active callout
         Callouts.Manager.endCallout();
@@ -392,7 +407,7 @@ CalloutUI.Manager = {
                     return playerName.replace(/#\d+$/, "");
                 }
             } catch (e) {
-                console.log("[CalloutUI] Error getting player name: " + String(e));
+                debugLog("[CalloutUI] Error getting player name: " + String(e));
             }
         } else if (JobsClient.profile && JobsClient.profile.name) {
             return JobsClient.profile.name;

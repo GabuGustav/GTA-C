@@ -7,7 +7,7 @@
 	<!-- mexui -->
 	<file type="client" src="mexui/Images/down-arrow.png" />
 	
-
+	<script language="javascript" type="client" src="mexui/mexui.js" />
 	
 	<script language="javascript" type="client" src="mexui/Core/Native.js" />
 	<script language="javascript" type="client" src="mexui/Core/Utility.js" />

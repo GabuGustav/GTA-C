@@ -1017,6 +1017,24 @@ function Jobs.joinJob(player, jobId)
     profile.version = JobsRP.Config.version
     JobsRP.Store.markDirty(playerId)
 
+    -- Validate character for job requirements
+    if JobsRP.Config.character_enabled and JobsRP.CharacterManager then
+        local client = resolveClient(player)
+        if client then
+            local valid, message = JobsRP.CharacterManager.validateForJob(client, normalizedJobId)
+            if not valid then
+                Jobs.prompt(player, "Character requirement: " .. message, "warn")
+                -- Open character selector with job context
+                local success, selectorMessage = JobsRP.CharacterManager.openSelector(client, "jobs")
+                if success then
+                    Jobs.prompt(player, selectorMessage, "info")
+                end
+            else
+                Jobs.prompt(player, "Character valid for " .. jobDef.label, "success")
+            end
+        end
+    end
+
     Jobs.syncProfile(player)
     Jobs.prompt(player, "Joined job: " .. jobDef.label .. ". Use /job start or press E at the hub.", "success")
     return true
@@ -1589,6 +1607,9 @@ function Jobs.createPolicePatrolPoints(hubCoords)
         print("[jobs_rp] No hub coords for patrol points")
         return
     end
+
+    local createdCount = 0
+    local warnedMissingDummy = false
     
     -- Define patrol points around the police station
     local patrolPoints = {
@@ -1616,15 +1637,23 @@ function Jobs.createPolicePatrolPoints(hubCoords)
                 patrolElement.setData("colour", toColour(0, 150, 255, 200), true) -- Blue color
                 
                 print("[jobs_rp] Created patrol point: " .. point.label .. " at " .. table.concat(patrolPos, ", "))
+                createdCount = createdCount + 1
             else
                 print("[jobs_rp] Failed to create patrol point: " .. point.label)
             end
         else
-            print("[jobs_rp] createDummyElement not available")
+            if not warnedMissingDummy then
+                print("[jobs_rp] createDummyElement not available")
+                warnedMissingDummy = true
+            end
         end
     end
     
-    print("[jobs_rp] Created " .. #patrolPoints .. " police patrol points")
+    if createdCount > 0 then
+        print("[jobs_rp] Created " .. createdCount .. " police patrol points")
+    else
+        print("[jobs_rp] Created 0 police patrol points")
+    end
 end
 
 function Jobs.getHubElements()
@@ -1668,7 +1697,6 @@ addEventHandler("onResourceStop", function(event, resource)
     JobsRP.Store.stopAutosave()
     JobsRP.Store.saveAll(true)
 end)
-
 
 
 

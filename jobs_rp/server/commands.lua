@@ -139,6 +139,61 @@ local function parseQuotedAndAngle(text)
     return name, category
 end
 
+local function findNextKeyPos(text, startIndex)
+    local keys = { "recipientId=", "recipientName=", "messageId=" }
+    local nextPos = nil
+    for _, key in ipairs(keys) do
+        local pos = string.find(text, key, startIndex, true)
+        if pos and (not nextPos or pos < nextPos) then
+            nextPos = pos
+        end
+    end
+    return nextPos
+end
+
+local function parsePhoneMessageParams(raw)
+    local data = {}
+    local text = trimText(raw)
+    if text == "" then
+        return data
+    end
+
+    -- Extract content=... allowing spaces or quoted text
+    local contentPos = string.find(text, "content=", 1, true)
+    if contentPos then
+        local valueStart = contentPos + #"content="
+        local firstChar = string.sub(text, valueStart, valueStart)
+        if firstChar == "\"" then
+            local close = string.find(text, "\"", valueStart + 1, true)
+            if close then
+                data.content = string.sub(text, valueStart + 1, close - 1)
+                text = string.sub(text, 1, contentPos - 1) .. " " .. string.sub(text, close + 1)
+            else
+                data.content = trimText(string.sub(text, valueStart + 1))
+                text = string.sub(text, 1, contentPos - 1)
+            end
+        else
+            local nextPos = findNextKeyPos(text, valueStart)
+            if nextPos then
+                data.content = trimText(string.sub(text, valueStart, nextPos - 1))
+                text = string.sub(text, 1, contentPos - 1) .. " " .. string.sub(text, nextPos)
+            else
+                data.content = trimText(string.sub(text, valueStart))
+                text = string.sub(text, 1, contentPos - 1)
+            end
+        end
+    end
+
+    for token in string.gmatch(text, "%S+") do
+        local key, value = string.match(token, "([^=]+)=([^=]+)")
+        if key and value then
+            data[key] = value
+        end
+    end
+
+    return data
+end
+
 local function outputChat(player, text, r, g, b)
     local messageText = tostring(text or "")
     if messageText == "" then
@@ -738,14 +793,12 @@ local function handleCommand(root, parameters, client)
     if root == "phone" then
         -- Handle phone commands (like sendMessage)
         if words[1] == "sendMessage" then
-            -- Extract message data from parameters
-            local data = {}
-            for i = 2, #words do
-                local key, value = string.match(words[i], "([^=]+)=([^=]+)")
-                if key and value then
-                    data[key] = value
-                end
+            -- Extract message data from parameters (preserve spaces in content)
+            local rawParams = trimText(parameters or "")
+            if rawParams ~= "" and string.sub(rawParams, 1, 11) == "sendMessage" then
+                rawParams = trimText(string.sub(rawParams, 12))
             end
+            local data = parsePhoneMessageParams(rawParams)
             
             -- Validate input
             if not data or not data.recipientId or not data.content or not data.messageId then
@@ -825,6 +878,42 @@ local function handleCommand(root, parameters, client)
         end
         
         chat(client, "[Phone] Usage: /phone sendMessage recipientId=<id> recipientName=<name> content=<message> messageId=<id>", 255, 180, 120)
+        return
+    end
+
+    if root == "character" then
+        -- Handle character commands
+        if not JobsRP.Config.character_enabled then
+            chat(client, "[Character] Character system is disabled", 255, 120, 120)
+            return
+        end
+        
+        if not words[1] or words[1] == "help" then
+            chat(client, "[Character] Commands:", 180, 220, 255)
+            chat(client, "[Character] /character - Open character selector", 180, 220, 255)
+            chat(client, "[Character] /character info - Show current character info", 180, 220, 255)
+            return
+        end
+        
+        if words[1] == "info" then
+            local characterInfo = JobsRP.CharacterManager.getPlayerCharacter(client)
+            if characterInfo then
+                chat(client, "[Character] Current: " .. (characterInfo.model.name or "Unknown"), 120, 255, 120)
+                chat(client, "[Character] Last changed: " .. os.date("%Y-%m-%d %H:%M:%S", characterInfo.lastChanged), 120, 255, 120)
+                chat(client, "[Character] Context: " .. characterInfo.context, 120, 255, 120)
+            else
+                chat(client, "[Character] No character selected", 255, 180, 120)
+            end
+            return
+        end
+        
+        -- Default: open character selector
+        local success, message = JobsRP.CharacterManager.openSelector(client, "freeroam")
+        if success then
+            chat(client, "[Character] " .. message, 120, 255, 120)
+        else
+            chat(client, "[Character] " .. message, 255, 120, 120)
+        end
         return
     end
 
@@ -972,6 +1061,25 @@ if addCommandHandler then
         end
 
         handleCommand("phone", parameters, client)
+    end)
+
+    -- Character system commands
+    addCommandHandler("character", function(...)
+        local client, parameters = extractClientAndParams("character", ...)
+        if not client then
+            print("[jobs_rp] [Commands] /character ignored: client not resolved | args=" .. describeArgs(...))
+            return
+        end
+        handleCommand("character", parameters, client)
+    end)
+
+    addCommandHandler("char", function(...)
+        local client, parameters = extractClientAndParams("char", ...)
+        if not client then
+            print("[jobs_rp] [Commands] /char ignored: client not resolved | args=" .. describeArgs(...))
+            return
+        end
+        handleCommand("character", parameters, client)
     end)
 end
 

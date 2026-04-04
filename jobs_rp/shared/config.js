@@ -93,7 +93,7 @@ JobsRP.Config = JobsRP.Config || {
         "system",
         "jobs_rp"
     ],
-    ip_access_mode: "off",
+    ip_access_mode: "on",
     ip_security_file: "data/security/ip_security.json",
     auto_ban_window_sec: 600,
     auto_ban_lockouts: 3,

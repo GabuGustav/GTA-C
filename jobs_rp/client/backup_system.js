@@ -1,5 +1,20 @@
 "use strict";
 
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
 var BackupSystem = BackupSystem || {};
 
 // Backup Request System
@@ -11,7 +26,7 @@ BackupSystem.Manager = {
     requestCooldown: 30000, // 30 seconds
     
     init: function() {
-        console.log("[BackupSystem] Initializing backup request system");
+        debugLog("[BackupSystem] Initializing backup request system");
         
         // Setup network handlers
         this.setupNetworkHandlers();
@@ -22,7 +37,7 @@ BackupSystem.Manager = {
         // Start officer tracking
         this.startOfficerTracking();
         
-        console.log("[BackupSystem] Backup system initialized");
+        debugLog("[BackupSystem] Backup system initialized");
     },
     
     setupNetworkHandlers: function() {
@@ -34,7 +49,7 @@ BackupSystem.Manager = {
                     BackupSystem.Manager.handleBackupRequest(data);
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error handling backup request: " + String(e));
+                debugLog("[BackupSystem] Error handling backup request: " + String(e));
             }
         });
         
@@ -46,7 +61,7 @@ BackupSystem.Manager = {
                     BackupSystem.Manager.handleBackupResponse(data);
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error handling backup response: " + String(e));
+                debugLog("[BackupSystem] Error handling backup response: " + String(e));
             }
         });
         
@@ -58,7 +73,7 @@ BackupSystem.Manager = {
                     BackupSystem.Manager.updateOfficerPosition(data);
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error handling position broadcast: " + String(e));
+                debugLog("[BackupSystem] Error handling position broadcast: " + String(e));
             }
         });
         
@@ -70,7 +85,7 @@ BackupSystem.Manager = {
                     BackupSystem.Manager.handleCalloutAssignment(data);
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error handling callout assignment: " + String(e));
+                debugLog("[BackupSystem] Error handling callout assignment: " + String(e));
             }
         });
         
@@ -79,7 +94,7 @@ BackupSystem.Manager = {
             try {
                 var data = unwrapArgs(a, b)[0];
                 if (data && data.officerName) {
-                    console.log("[BackupSystem] Officer disconnected: " + data.officerName);
+                    debugLog("[BackupSystem] Officer disconnected: " + data.officerName);
                     BackupSystem.Manager.removeOfficerBlip(data.officerName);
                     
                     // Remove from active officers list
@@ -91,7 +106,7 @@ BackupSystem.Manager = {
                     }
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error handling officer disconnection: " + String(e));
+                debugLog("[BackupSystem] Error handling officer disconnection: " + String(e));
             }
         });
     },
@@ -106,9 +121,9 @@ BackupSystem.Manager = {
                     }
                 });
                 
-                console.log("[BackupSystem] Backup keybind setup (N key)");
+                debugLog("[BackupSystem] Backup keybind setup (N key)");
             } catch (e) {
-                console.log("[BackupSystem] Failed to setup N keybind: " + String(e));
+                debugLog("[BackupSystem] Failed to setup N keybind: " + String(e));
             }
         }
     },
@@ -165,11 +180,11 @@ BackupSystem.Manager = {
             JobsClient.UI.showPrompt("Backup requested at your location", "success", true);
         }
         
-        console.log("[BackupSystem] Backup requested: " + JSON.stringify(requestData));
+        debugLog("[BackupSystem] Backup requested: " + JSON.stringify(requestData));
     },
     
     handleBackupRequest: function(data) {
-        console.log("[BackupSystem] Received backup request: " + JSON.stringify(data));
+        debugLog("[BackupSystem] Received backup request: " + JSON.stringify(data));
         
         // Check if we can respond
         if (!this.canRespondToBackup(data)) {
@@ -213,11 +228,11 @@ BackupSystem.Manager = {
             JobsClient.UI.showPrompt(message, accept ? "success" : "info", false);
         }
         
-        console.log("[BackupSystem] Backup response: " + JSON.stringify(response));
+        debugLog("[BackupSystem] Backup response: " + JSON.stringify(response));
     },
     
     handleBackupResponse: function(data) {
-        console.log("[BackupSystem] Received backup response: " + JSON.stringify(data));
+        debugLog("[BackupSystem] Received backup response: " + JSON.stringify(data));
         
         // Find the original request
         var request = this.requests.find(function(req) {
@@ -291,7 +306,7 @@ BackupSystem.Manager = {
                 BackupSystem.Manager.cleanupOldBlips();
             }, 30000, true); // true = repeating
             
-            console.log("[BackupSystem] Officer tracking started with blip support using GTAC timers");
+            debugLog("[BackupSystem] Officer tracking started with blip support using GTAC timers");
         } else if (typeof setInterval === "function") {
             // Fallback to setInterval if setTimer not available
             setInterval(function() {
@@ -304,9 +319,9 @@ BackupSystem.Manager = {
                 BackupSystem.Manager.cleanupOldBlips();
             }, 30000);
             
-            console.log("[BackupSystem] Officer tracking started with setInterval fallback");
+            debugLog("[BackupSystem] Officer tracking started with setInterval fallback");
         } else {
-            console.log("[BackupSystem] Warning: No timer function available, cleanup disabled");
+            debugLog("[BackupSystem] Warning: No timer function available, cleanup disabled");
         }
     },
     
@@ -365,7 +380,7 @@ BackupSystem.Manager = {
             return;
         }
         
-        console.log("[BackupSystem] Creating blip for officer: " + officerName);
+        debugLog("[BackupSystem] Creating blip for officer: " + officerName);
         
         // Use zones.js blip creation system
         if (typeof Zones !== "undefined" && Zones.createPoliceBlipAt) {
@@ -380,12 +395,12 @@ BackupSystem.Manager = {
                     position: position,
                     lastUpdate: Date.now()
                 };
-                console.log("[BackupSystem] Officer blip created for: " + officerName);
+                debugLog("[BackupSystem] Officer blip created for: " + officerName);
             } else {
-                console.log("[BackupSystem] Failed to create officer blip for: " + officerName);
+                debugLog("[BackupSystem] Failed to create officer blip for: " + officerName);
             }
         } else {
-            console.log("[BackupSystem] Zones.createPoliceBlipAt not available");
+            debugLog("[BackupSystem] Zones.createPoliceBlipAt not available");
         }
     },
     
@@ -413,14 +428,14 @@ BackupSystem.Manager = {
             if (blipApi.obj && typeof blipApi.obj.setBlipCoordinates === "function") {
                 try {
                     blipApi.obj.setBlipCoordinates(officerBlip.blip, newPosition.x, newPosition.y, newPosition.z);
-                    console.log("[BackupSystem] Updated blip coordinates for: " + officerName);
+                    debugLog("[BackupSystem] Updated blip coordinates for: " + officerName);
                 } catch (e) {
-                    console.log("[BackupSystem] Failed to update blip coordinates: " + String(e));
+                    debugLog("[BackupSystem] Failed to update blip coordinates: " + String(e));
                 }
             }
         }
         
-        console.log("[BackupSystem] Updated blip position for: " + officerName);
+        debugLog("[BackupSystem] Updated blip position for: " + officerName);
     },
     
     removeOfficerBlip: function(officerName) {
@@ -433,7 +448,7 @@ BackupSystem.Manager = {
         // Remove blip using zones.js
         if (typeof Zones !== "undefined" && Zones.removeNativeBlip) {
             Zones.removeNativeBlip(officerBlip.blip);
-            console.log("[BackupSystem] Removed blip for officer: " + officerName);
+            debugLog("[BackupSystem] Removed blip for officer: " + officerName);
         }
         
         delete this.officerBlips[officerName];
@@ -447,7 +462,7 @@ BackupSystem.Manager = {
         for (var officerName in this.officerBlips) {
             var officerBlip = this.officerBlips[officerName];
             if (now - officerBlip.lastUpdate > timeout) {
-                console.log("[BackupSystem] Cleaning up old blip for: " + officerName);
+                debugLog("[BackupSystem] Cleaning up old blip for: " + officerName);
                 this.removeOfficerBlip(officerName);
             }
         }
@@ -459,12 +474,12 @@ BackupSystem.Manager = {
         });
         
         if (this.activeOfficers.length < originalLength) {
-            console.log("[BackupSystem] Cleaned up " + (originalLength - this.activeOfficers.length) + " old officers from tracking");
+            debugLog("[BackupSystem] Cleaned up " + (originalLength - this.activeOfficers.length) + " old officers from tracking");
         }
     },
     
     handleCalloutAssignment: function(data) {
-        console.log("[BackupSystem] Received callout assignment: " + JSON.stringify(data));
+        debugLog("[BackupSystem] Received callout assignment: " + JSON.stringify(data));
         
         if (data.officerName === this.getPlayerName()) {
             // This assignment is for us
@@ -488,19 +503,19 @@ BackupSystem.Manager = {
     
     createBackupBlip: function(position, requestId) {
         // This would create a blip for backup request location
-        console.log("[BackupSystem] Creating backup blip at: " + JSON.stringify(position));
+        debugLog("[BackupSystem] Creating backup blip at: " + JSON.stringify(position));
         // Implementation depends on your blip system
     },
     
     createOfficerBlip: function(position, officerName) {
         // This would create a blip for officer position
-        console.log("[BackupSystem] Creating officer blip for: " + officerName + " at " + JSON.stringify(position));
+        debugLog("[BackupSystem] Creating officer blip for: " + officerName + " at " + JSON.stringify(position));
         // Implementation depends on your blip system
     },
     
     updateOfficerBlip: function(officerName, position) {
         // This would update existing officer blip position
-        console.log("[BackupSystem] Updating officer blip for: " + officerName + " to " + JSON.stringify(position));
+        debugLog("[BackupSystem] Updating officer blip for: " + officerName + " to " + JSON.stringify(position));
         // Implementation depends on your blip system
     },
     
@@ -513,7 +528,7 @@ BackupSystem.Manager = {
                     return playerName.replace(/#\d+$/, ""); // Remove #0 suffix
                 }
             } catch (e) {
-                console.log("[BackupSystem] Error getting player name: " + String(e));
+                debugLog("[BackupSystem] Error getting player name: " + String(e));
             }
         } else if (JobsClient.profile && JobsClient.profile.name) {
             return JobsClient.profile.name;

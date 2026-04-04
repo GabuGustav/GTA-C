@@ -1,5 +1,20 @@
 "use strict";
 
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
 var Callouts = Callouts || {};
 
 // Callout Manager
@@ -15,7 +30,7 @@ Callouts.Manager = {
     },
     
     init: function() {
-        console.log("[Callouts] Initializing callout system");
+        debugLog("[Callouts] Initializing callout system");
         
         // Register callout types
         this.register(new ShootingCallout());
@@ -27,22 +42,22 @@ Callouts.Manager = {
             bindKey(SDLK_b, KEYSTATE_DOWN, function() {
                 // Check if player is on duty as police (bypass UI context)
                 if (JobsClient.profile && JobsClient.profile.currentJobId === "police") {
-                    console.log("[KeyboardService] B key pressed - checking for callout");
-                    console.log("[KeyboardService] JobsClient.profile: " + (JobsClient.profile ? "exists" : "null"));
-                    console.log("[KeyboardService] currentJobId: " + (JobsClient.profile ? JobsClient.profile.currentJobId : "unknown"));
-                    console.log("[KeyboardService] Callouts.Manager: " + (Callouts.Manager ? "exists" : "null"));
-                    console.log("[KeyboardService] Active callout: " + (Callouts.Manager.active ? Callouts.Manager.active.name : "none"));
-                    console.log("[KeyboardService] KeyboardService active: " + (KeyboardService && KeyboardService.isActive ? KeyboardService.isActive() : "false"));
+                    debugLog("[KeyboardService] B key pressed - checking for callout");
+                    debugLog("[KeyboardService] JobsClient.profile: " + (JobsClient.profile ? "exists" : "null"));
+                    debugLog("[KeyboardService] currentJobId: " + (JobsClient.profile ? JobsClient.profile.currentJobId : "unknown"));
+                    debugLog("[KeyboardService] Callouts.Manager: " + (Callouts.Manager ? "exists" : "null"));
+                    debugLog("[KeyboardService] Active callout: " + (Callouts.Manager.active ? Callouts.Manager.active.name : "none"));
+                    debugLog("[KeyboardService] KeyboardService active: " + (KeyboardService && KeyboardService.isActive ? KeyboardService.isActive() : "false"));
                     
                     Callouts.Manager.checkRandomCallout();
                 } else {
-                    console.log("[KeyboardService] B key pressed - not on duty as police");
+                    debugLog("[KeyboardService] B key pressed - not on duty as police");
                 }
             });
             
-            console.log("[KeyboardService] Callout keybinds setup (B key)");
+            debugLog("[KeyboardService] Callout keybinds setup (B key)");
         } catch (e) {
-            console.log("[KeyboardService] Failed to setup B keybind: " + String(e));
+            debugLog("[KeyboardService] Failed to setup B keybind: " + String(e));
         }
         
         // Start periodic callout checks
@@ -50,29 +65,29 @@ Callouts.Manager = {
             Callouts.Manager.checkRandomCallout();
         }, 30000); // Check every 30 seconds
         
-        console.log("[Callouts] Callout system initialized with " + this.callouts.length + " callouts");
+        debugLog("[Callouts] Callout system initialized with " + this.callouts.length + " callouts");
     },
     
     register: function(callout) {
         this.callouts.push(callout);
-        console.log("[Callouts] Registered callout: " + callout.name);
+        debugLog("[Callouts] Registered callout: " + callout.name);
     },
     
     checkRandomCallout: function() {
-        console.log("[Callouts] checkRandomCallout called");
-        console.log("[Callouts] Active callout: " + (Callouts.Manager.active ? Callouts.Manager.active.name : "none"));
-        console.log("[Callouts] JobsClient.profile: " + (JobsClient.profile ? "exists" : "null"));
-        console.log("[Callouts] currentJobId: " + (JobsClient.profile ? JobsClient.profile.currentJobId : "unknown"));
-        console.log("[Callouts] KeyboardService active: " + (KeyboardService && KeyboardService.isActive ? KeyboardService.isActive() : "false"));
+        debugLog("[Callouts] checkRandomCallout called");
+        debugLog("[Callouts] Active callout: " + (Callouts.Manager.active ? Callouts.Manager.active.name : "none"));
+        debugLog("[Callouts] JobsClient.profile: " + (JobsClient.profile ? "exists" : "null"));
+        debugLog("[Callouts] currentJobId: " + (JobsClient.profile ? JobsClient.profile.currentJobId : "unknown"));
+        debugLog("[Callouts] KeyboardService active: " + (KeyboardService && KeyboardService.isActive ? KeyboardService.isActive() : "false"));
         
         if (Callouts.Manager.active) {
-            console.log("[Callouts] Already have active callout, returning");
+            debugLog("[Callouts] Already have active callout, returning");
             return; // Already have active callout
         }
         
         // Only generate callouts if player is on duty as police
         if (!JobsClient.profile || JobsClient.profile.currentJobId !== "police") {
-            console.log("[Callouts] Not on duty as police, returning");
+            debugLog("[Callouts] Not on duty as police, returning");
             return;
         }
         
@@ -84,7 +99,7 @@ Callouts.Manager = {
             if (roll <= cumulative) {
                 var callout = this.getCalloutByType(type);
                 if (callout && callout.canStart()) {
-                    console.log("[Callouts] Starting random callout: " + type + " (roll: " + roll.toFixed(2) + ")");
+                    debugLog("[Callouts] Starting random callout: " + type + " (roll: " + roll.toFixed(2) + ")");
                     callout.start();
                     return;
                 }
@@ -132,20 +147,20 @@ ShootingCallout.prototype.canStart = function() {
 };
 
 ShootingCallout.prototype.start = function() {
-    console.log("[ShootingCallout] Starting: " + this.message);
+    debugLog("[ShootingCallout] Starting: " + this.message);
     this.active = true;
     
     // Create blip at random location near player
     var position = this.getRandomPositionNearPlayer(200, 400);
-    console.log("[ShootingCallout] Creating blip at position: " + JSON.stringify(position));
+    debugLog("[ShootingCallout] Creating blip at position: " + JSON.stringify(position));
     
     // Use working fallback method from zones.js
     this.blip = createBlipForCoords(position, "shooting", "Shooting");
     
     if (!this.blip) {
-        console.log("[ShootingCallout] Failed to create blip");
+        debugLog("[ShootingCallout] Failed to create blip");
     } else {
-        console.log("[ShootingCallout] Blip created successfully with ID: " + this.blip.id);
+        debugLog("[ShootingCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
     // Play police scanner audio
@@ -166,7 +181,7 @@ ShootingCallout.prototype.start = function() {
 };
 
 ShootingCallout.prototype.end = function() {
-    console.log("[ShootingCallout] Ending");
+    debugLog("[ShootingCallout] Ending");
     this.active = false;
     
     // Play completion audio
@@ -208,10 +223,10 @@ ShootingCallout.prototype.spawnCriminals = function(position) {
         };
         
         // Placeholder for criminal spawning (would need GTAC ped API)
-        console.log("[ShootingCallout] Criminal spawning placeholder - would spawn " + 
+        debugLog("[ShootingCallout] Criminal spawning placeholder - would spawn " + 
             (numCriminals) + " criminals at " + JSON.stringify(position) + 
             " with models: " + criminalModels.slice(0, Math.min(numCriminals, criminalModels.length)).join(", "));
-        console.log("[ShootingCallout] TODO: Implement GTAC ped spawning API");
+        debugLog("[ShootingCallout] TODO: Implement GTAC ped spawning API");
     }
 };
 
@@ -240,20 +255,20 @@ PursuitCallout.prototype.canStart = function() {
 };
 
 PursuitCallout.prototype.start = function() {
-    console.log("[PursuitCallout] Starting: " + this.message);
+    debugLog("[PursuitCallout] Starting: " + this.message);
     this.active = true;
     
     // Create pursuit scenario
     var position = this.getRandomPositionNearPlayer(150, 300);
-    console.log("[PursuitCallout] Creating blip at position: " + JSON.stringify(position));
+    debugLog("[PursuitCallout] Creating blip at position: " + JSON.stringify(position));
     
     // Use working fallback method from zones.js
     this.blip = createBlipForCoords(position, "pursuit", "Pursuit");
     
     if (!this.blip) {
-        console.log("[PursuitCallout] Failed to create blip");
+        debugLog("[PursuitCallout] Failed to create blip");
     } else {
-        console.log("[PursuitCallout] Blip created successfully with ID: " + this.blip.id);
+        debugLog("[PursuitCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
     // Play police scanner audio
@@ -266,13 +281,13 @@ PursuitCallout.prototype.start = function() {
     }
     
     // This would spawn suspect vehicle and ped
-    console.log("[PursuitCallout] Would spawn pursuit at: " + JSON.stringify(position));
+    debugLog("[PursuitCallout] Would spawn pursuit at: " + JSON.stringify(position));
     
     this.setupHandlers();
 };
 
 PursuitCallout.prototype.end = function() {
-    console.log("[PursuitCallout] Ending");
+    debugLog("[PursuitCallout] Ending");
     this.active = false;
     
     // Play completion audio
@@ -314,19 +329,19 @@ BrawlCallout.prototype.canStart = function() {
 };
 
 BrawlCallout.prototype.start = function() {
-    console.log("[BrawlCallout] Starting: " + this.message);
+    debugLog("[BrawlCallout] Starting: " + this.message);
     this.active = true;
     
     var position = this.getRandomPositionNearPlayer(50, 150);
-    console.log("[BrawlCallout] Creating blip at position: " + JSON.stringify(position));
+    debugLog("[BrawlCallout] Creating blip at position: " + JSON.stringify(position));
     
     // Use working fallback method from zones.js
     this.blip = createBlipForCoords(position, "brawl", "Brawl");
     
     if (!this.blip) {
-        console.log("[BrawlCallout] Failed to create blip");
+        debugLog("[BrawlCallout] Failed to create blip");
     } else {
-        console.log("[BrawlCallout] Blip created successfully with ID: " + this.blip.id);
+        debugLog("[BrawlCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
     // Play police scanner audio
@@ -339,13 +354,13 @@ BrawlCallout.prototype.start = function() {
     }
     
     // This would spawn fighting civilians
-    console.log("[BrawlCallout] Would spawn brawl at: " + JSON.stringify(position));
+    debugLog("[BrawlCallout] Would spawn brawl at: " + JSON.stringify(position));
     
     this.setupHandlers();
 };
 
 BrawlCallout.prototype.end = function() {
-    console.log("[BrawlCallout] Ending");
+    debugLog("[BrawlCallout] Ending");
     this.active = false;
     
     // Play completion audio

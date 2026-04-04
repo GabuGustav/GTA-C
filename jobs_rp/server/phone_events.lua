@@ -1,11 +1,11 @@
 -- Phone UI event handlers for GTAC phone system
--- Handles UI-based network events for text messaging
+-- Uses triggerNetworkEvent for client-server communication
 
 print("[PhoneEvents] Loading phone UI event handlers...");
 
 -- Handle message sending from phone UI
 if triggerNetworkEvent then
-    -- Register network event handler
+    -- Register network event handler using the correct GTAC pattern
     local function handleMessage(client, data)
         print("[PhoneEvents] Message send request from " .. (client.name or "Unknown") .. 
               " to " .. (data.recipientName or "Unknown") .. ": " .. (data.content or ""));
@@ -86,31 +86,36 @@ if triggerNetworkEvent then
         print("[PhoneEvents] Message routed: " .. message.senderName .. " -> " .. message.recipientName);
     end
     
-    -- Try to register the event handler using different GTAC patterns
-    local registered = false
-    
-    -- Try addEventHandler first
-    if addEventHandler then
-        local success, err = pcall(function()
-            addEventHandler("phone.sendMessage", handleMessage)
+    if addNetworkHandler then
+        addNetworkHandler("phone.sendMessage", function(client, data)
+            handleMessage(client, data)
         end)
-        if success then
-            registered = true
-            print("[PhoneEvents] Registered phone.sendMessage event with addEventHandler")
-        else
-            print("[PhoneEvents] addEventHandler failed: " .. tostring(err))
-        end
+        print("[PhoneEvents] Registered phone.sendMessage event with addNetworkHandler");
+    else
+        print("[PhoneEvents] addNetworkHandler not available; phone.sendMessage not registered");
     end
-    
-    -- Try alternative registration methods if addEventHandler failed
-    if not registered then
-        -- Try using the jobs.lua network system
-        if Jobs and Jobs.sendEvent then
-            Jobs.sendEvent("phone.sendMessage", handleMessage)
-            registered = true
-            print("[PhoneEvents] Registered phone.sendMessage event with Jobs.sendEvent")
-        end
+    if addNetworkHandler then
+        addNetworkHandler("phone.requestPlayerList", function(client)
+            if not client then
+                return
+            end
+            local list = {}
+            if getClients then
+                for _, player in ipairs(getClients()) do
+                    if JobsRP and JobsRP.Auth and JobsRP.Auth.isAuthenticated and JobsRP.Auth.isAuthenticated(player) then
+                        list[#list + 1] = {
+                            id = player.id,
+                            name = string.gsub(player.name or "", "#%d+$", "")
+                        }
+                    end
+                end
+            end
+            triggerNetworkEvent("phone.playerList", client, list)
+        end)
+        print("[PhoneEvents] Registered phone.requestPlayerList")
     end
+else
+    print("[PhoneEvents] triggerNetworkEvent not available");
 end
 
 print("[PhoneEvents] Phone UI event handlers loaded");

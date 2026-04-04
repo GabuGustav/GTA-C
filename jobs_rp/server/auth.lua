@@ -9,6 +9,12 @@ Auth.sessionsByPlayer = Auth.sessionsByPlayer or {}
 Auth.lastResultByPlayer = Auth.lastResultByPlayer or {}
 Auth.lastActionByPlayer = Auth.lastActionByPlayer or {}
 
+-- Token management
+Auth.sessionTokens = Auth.sessionTokens or {}  -- accountId -> {token, expiresAt, ip, deviceFingerprint}
+Auth.refreshTokens = Auth.refreshTokens or {}    -- accountId -> {token, expiresAt, deviceFingerprint, lastUsed}
+Auth.serverToken = Auth.serverToken or nil      -- Per-session server token
+Auth.tokenRefreshRateLimit = Auth.tokenRefreshRateLimit or {}  -- IP -> {count, windowStart}
+
 local HEX = {
     "0", "1", "2", "3", "4", "5", "6", "7",
     "8", "9", "a", "b", "c", "d", "e", "f"
@@ -374,6 +380,175 @@ local function generateToken()
     return tostring(JobsRP.Config.auth_token_prefix or "JR-") .. randomHex(JobsRP.Config.auth_token_hex_len or 48)
 end
 
+local function generateServerToken()
+    -- Generate new server token for each server session
+    Auth.serverToken = "SRV-" .. randomHex(32)
+    return Auth.serverToken
+end
+
+local function getDeviceFingerprint(client)
+    -- Create device fingerprint from available client data
+    local ip = getPlayerIp(client) or "unknown"
+    local name = JobsRP.normalizeName(getPlayerName(client)) or "unknown"
+    local index = getPlayerIndex(client) or 0
+    return JobsRP.hashString(ip .. ":" .. name .. ":" .. tostring(index))
+end
+
+local function generateSessionToken(accountId, client)
+    local now = JobsRP.nowSeconds()
+    local deviceFingerprint = getDeviceFingerprint(client)
+    local ip = getPlayerIp(client)
+    
+    local token = "SES-" .. randomHex(32)
+    local expiresAt = now + (JobsRP.Config.auth_session_token_expire_sec or 7200) -- 2 hours default
+    
+    Auth.sessionTokens[accountId] = {
+        token = token,
+        expiresAt = expiresAt,
+        ip = ip,
+        deviceFingerprint = deviceFingerprint,
+        createdAt = now
+    }
+    
+    return token, expiresAt
+end
+
+local function generateRefreshToken(accountId, client)
+    local now = JobsRP.nowSeconds()
+    local deviceFingerprint = getDeviceFingerprint(client)
+    
+    local token = "REF-" .. randomHex(48)
+    local expiresAt = now + (JobsRP.Config.auth_refresh_token_expire_sec or 604800) -- 7 days default
+    
+    Auth.refreshTokens[accountId] = {
+        token = token,
+        expiresAt = expiresAt,
+        deviceFingerprint = deviceFingerprint,
+        lastUsed = now,
+        createdAt = now
+    }
+    
+    return token, expiresAt
+end
+
+local function validateSessionToken(accountId, token, client)
+    local sessionData = Auth.sessionTokens[accountId]
+    if not sessionData then
+        return false, "No session token found"
+    end
+    
+    local now = JobsRP.nowSeconds()
+    if sessionData.expiresAt < now then
+        Auth.sessionTokens[accountId] = nil
+        return false, "Session token expired"
+    end
+    
+    if sessionData.token ~= token then
+        return false, "Invalid session token"
+    end
+    
+    -- Validate IP binding (optional, based on config)
+    if JobsRP.Config.auth_session_token_bind_ip ~= false then
+        local currentIp = getPlayerIp(client)
+        if sessionData.ip ~= currentIp then
+            Auth.sessionTokens[accountId] = nil
+            return false, "IP address changed"
+        end
+    end
+    
+    -- Validate device fingerprint
+    local currentFingerprint = getDeviceFingerprint(client)
+    if sessionData.deviceFingerprint ~= currentFingerprint then
+        Auth.sessionTokens[accountId] = nil
+        return false, "Device fingerprint mismatch"
+    end
+    
+    return true, nil
+end
+
+local function validateRefreshToken(accountId, token, client)
+    local refreshData = Auth.refreshTokens[accountId]
+    if not refreshData then
+        return false, "No refresh token found"
+    end
+    
+    local now = JobsRP.nowSeconds()
+    if refreshData.expiresAt < now then
+        Auth.refreshTokens[accountId] = nil
+        return false, "Refresh token expired"
+    end
+    
+    if refreshData.token ~= token then
+        return false, "Invalid refresh token"
+    end
+    
+    -- Validate device fingerprint
+    local currentFingerprint = getDeviceFingerprint(client)
+    if refreshData.deviceFingerprint ~= currentFingerprint then
+        Auth.refreshTokens[accountId] = nil
+        return false, "Device fingerprint mismatch"
+    end
+    
+    -- Update last used time
+    refreshData.lastUsed = now
+    
+    return true, nil
+end
+
+local function cleanupExpiredTokens()
+    local now = JobsRP.nowSeconds()
+    
+    -- Clean expired session tokens
+    for accountId, sessionData in pairs(Auth.sessionTokens) do
+        if sessionData.expiresAt < now then
+            Auth.sessionTokens[accountId] = nil
+        end
+    end
+    
+    -- Clean expired refresh tokens
+    for accountId, refreshData in pairs(Auth.refreshTokens) do
+        if refreshData.expiresAt < now then
+            Auth.refreshTokens[accountId] = nil
+        end
+    end
+end
+
+local function revokeTokens(accountId)
+    Auth.sessionTokens[accountId] = nil
+    Auth.refreshTokens[accountId] = nil
+end
+
+local function checkTokenRefreshRateLimit(client)
+    if not JobsRP.Config.auth_token_refresh_rate_limit or JobsRP.Config.auth_token_refresh_rate_limit <= 0 then
+        return true, nil
+    end
+    
+    local ip = getPlayerIp(client)
+    local now = JobsRP.nowSeconds()
+    local window = JobsRP.Config.auth_token_refresh_window_sec or 60
+    local limit = JobsRP.Config.auth_token_refresh_rate_limit
+    
+    local rateData = Auth.tokenRefreshRateLimit[ip] or {count = 0, windowStart = now}
+    
+    -- Reset window if expired
+    if now - rateData.windowStart >= window then
+        rateData.count = 0
+        rateData.windowStart = now
+    end
+    
+    -- Check limit
+    if rateData.count >= limit then
+        local remaining = window - (now - rateData.windowStart)
+        return false, "Rate limit exceeded. Try again in " .. remaining .. "s."
+    end
+    
+    -- Increment counter
+    rateData.count = rateData.count + 1
+    Auth.tokenRefreshRateLimit[ip] = rateData
+    
+    return true, nil
+end
+
 local function normalizeTokenForCompare(value)
     local token = tostring(value or "")
     token = string.gsub(token, "^%s+", "")
@@ -395,6 +570,16 @@ local function hashCore(source)
         hash = ((hash * 131) + string.byte(source, i)) % 2147483647
     end
     return hash
+end
+
+-- Add hashString function to JobsRP if it doesn't exist
+if not JobsRP.hashString then
+    function JobsRP.hashString(source)
+        if type(source) ~= "string" then
+            source = tostring(source or "")
+        end
+        return string.format("%08x", hashCore(source))
+    end
 end
 
 local function hashPasswordV1(accountId, password)
@@ -866,6 +1051,120 @@ local function bindAuthenticatedSession(player, accountId)
     return true
 end
 
+function Auth.authenticateWithTokens(player, sessionToken, refreshToken)
+    -- Check if token system is enabled
+    if not JobsRP.Config.auth_tokens_enabled then
+        return false, "Token system disabled"
+    end
+    
+    local client = resolveClient(player)
+    if not client then
+        return false, "Client not resolved"
+    end
+    
+    -- Check rate limiting for refresh token usage
+    if refreshToken and refreshToken ~= "" then
+        local rateLimitOk, rateLimitError = checkTokenRefreshRateLimit(client)
+        if not rateLimitOk then
+            authMessage(client, rateLimitError or "Rate limit exceeded")
+            return false, rateLimitError
+        end
+    end
+    
+    -- Try session token first (fast path)
+    if sessionToken and sessionToken ~= "" then
+        -- Extract accountId from session token by searching all tokens
+        for accountId, sessionData in pairs(Auth.sessionTokens) do
+            if sessionData.token == sessionToken then
+                local valid, error = validateSessionToken(accountId, sessionToken, client)
+                if valid then
+                    -- Valid session token, authenticate user
+                    bindAuthenticatedSession(client, accountId)
+                    authMessage(client, "Auto-authenticated with session token.")
+                    Auth.sendResult(client, true, "auto_login", "Authenticated with session token", 0)
+                    return true, "Session token authentication successful"
+                else
+                    print("[Auth] Session token validation failed: " .. tostring(error))
+                end
+            end
+        end
+    end
+    
+    -- Try refresh token (slower path, generates new session token)
+    if refreshToken and refreshToken ~= "" then
+        for accountId, refreshData in pairs(Auth.refreshTokens) do
+            if refreshData.token == refreshToken then
+                local valid, error = validateRefreshToken(accountId, refreshToken, client)
+                if valid then
+                    -- Valid refresh token, create new session token
+                    local newSessionToken, expiresAt = generateSessionToken(accountId, client)
+                    
+                    -- Authenticate user
+                    bindAuthenticatedSession(client, accountId)
+                    authMessage(client, "Auto-authenticated with refresh token.")
+                    Auth.sendResult(client, true, "auto_login", "Authenticated with refresh token", 0)
+                    
+                    -- Send new session token to client
+                    sendClientEvent(client, "jobs.authSessionToken", newSessionToken, expiresAt)
+                    return true, "Refresh token authentication successful"
+                else
+                    print("[Auth] Refresh token validation failed: " .. tostring(error))
+                end
+            end
+        end
+    end
+    
+    return false, "No valid tokens provided"
+end
+
+function Auth.sendTokensToClient(player)
+    -- Check if token system is enabled
+    if not JobsRP.Config.auth_tokens_enabled then
+        return false
+    end
+    
+    local client = resolveClient(player)
+    if not client then
+        return false
+    end
+    
+    local session = Auth.getSession(client)
+    if not session or not session.authenticated or not session.accountId then
+        return false
+    end
+    
+    local accountId = session.accountId
+    
+    -- Generate or refresh session token
+    local sessionToken, sessionExpiresAt = generateSessionToken(accountId, client)
+    
+    -- Generate refresh token if user doesn't have one
+    local refreshToken = nil
+    local refreshExpiresAt = nil
+    if not Auth.refreshTokens[accountId] then
+        refreshToken, refreshExpiresAt = generateRefreshToken(accountId, client)
+    else
+        refreshToken = Auth.refreshTokens[accountId].token
+        refreshExpiresAt = Auth.refreshTokens[accountId].expiresAt
+    end
+    
+    -- Send tokens to client
+    sendClientEvent(client, "jobs.authTokens", {
+        serverToken = Auth.serverToken,
+        sessionToken = sessionToken,
+        sessionExpiresAt = sessionExpiresAt,
+        refreshToken = refreshToken,
+        refreshExpiresAt = refreshExpiresAt
+    })
+    
+    return true
+end
+
+function Auth.revokeAllTokens(accountId)
+    revokeTokens(accountId)
+    return true
+end
+
 function Auth.getSession(player)
     local session = getSessionEntry(player)
     return session
@@ -977,6 +1276,72 @@ function Auth.register(player, rawAccountId, rawPassword)
 
     authMessage(client, "Account registered and logged in as " .. accountId .. ".")
     Auth.sendResult(client, true, "registered", "Account registered and logged in.", 0)
+
+    -- Send tokens to client for auto-login
+    Auth.sendTokensToClient(client)
+
+    -- Create website account if integration is enabled
+    if JobsRP.Config.web_integration_enabled and JobsRP.HttpClient then
+        local playerName = getPlayerName(client)
+        local playerIp = getPlayerIp(client)
+        
+        JobsRP.HttpClient.createWebsiteAccount(accountId, password, playerName, playerIp, function(success, response, status)
+            if success then
+                print("[Auth] Website account created for " .. accountId)
+                authMessage(client, "Website account created successfully!")
+            else
+                print("[Auth] Failed to create website account for " .. accountId .. ": " .. tostring(response))
+                authMessage(client, "Website account creation failed, but game account works fine.")
+            end
+        end)
+    end
+
+    -- Open character selector for new authenticated players
+    if JobsRP.Config.character_enabled and JobsRP.CharacterManager then
+        -- Check if player already has a character
+        local profile = nil
+        if JobsRP.Store and JobsRP.Store.getProfile then
+            profile = JobsRP.Store.getProfile(accountId)
+        end
+        
+        local hasCharacter = profile and profile.character and profile.character.current
+        
+        if hasCharacter then
+            -- Player has existing character, spawn them immediately
+            authMessage(client, "Welcome back! Using your saved character.")
+            
+            -- Apply existing character
+            if JobsRP.CharacterManager and JobsRP.CharacterManager.getPlayerCharacter then
+                local characterInfo = JobsRP.CharacterManager.getPlayerCharacter(client)
+                if characterInfo and characterInfo.model then
+                    triggerNetworkEvent("characterSelector_select", client, {
+                        modelId = characterInfo.modelId,
+                        modelHash = characterInfo.model.hash,
+                        modelName = characterInfo.model.name
+                    })
+                end
+            end
+            
+            -- Spawn the player
+            if spawnPlayerAfterCharacterSelection then
+                spawnPlayerAfterCharacterSelection(client)
+            else
+                -- Fallback spawn
+                if spawnPlayer then
+                    spawnPlayer(client, {39.59, 128.88, 15.63})
+                    fadeCamera(client, true)
+                end
+            end
+        else
+            -- No character saved, open selector
+            if JobsRP.CharacterManager and JobsRP.CharacterManager.openSelector then
+                local success, message = JobsRP.CharacterManager.openSelector(client, "freeroam")
+                if success then
+                    authMessage(client, "[Character] " .. message)
+                end
+            end
+        end
+    end
 
     return true
 end
@@ -1108,8 +1473,58 @@ function Auth.login(player, rawAccountId, providedSecret)
     authMessage(client, msg)
     Auth.sendResult(client, true, "logged_in", msg, 0)
 
+    -- Send tokens to client for auto-login
+    Auth.sendTokensToClient(client)
+
     if usedLegacyToken and tostring(account.passwordHash or "") == "" then
         authMessage(client, "Legacy token login used. Set a password: /jobauth setpass <newPassword>")
+    end
+
+    -- Open character selector for returning authenticated players
+    if JobsRP.Config.character_enabled and JobsRP.CharacterManager then
+        -- Check if player already has a character
+        local profile = nil
+        if JobsRP.Store and JobsRP.Store.getProfile then
+            profile = JobsRP.Store.getProfile(accountId)
+        end
+        
+        local hasCharacter = profile and profile.character and profile.character.current
+        
+        if hasCharacter then
+            -- Player has existing character, spawn them immediately
+            authMessage(client, "Welcome back! Using your saved character.")
+            
+            -- Apply existing character
+            if JobsRP.CharacterManager and JobsRP.CharacterManager.getPlayerCharacter then
+                local characterInfo = JobsRP.CharacterManager.getPlayerCharacter(client)
+                if characterInfo and characterInfo.model then
+                    triggerNetworkEvent("characterSelector_select", client, {
+                        modelId = characterInfo.modelId,
+                        modelHash = characterInfo.model.hash,
+                        modelName = characterInfo.model.name
+                    })
+                end
+            end
+            
+            -- Spawn the player
+            if spawnPlayerAfterCharacterSelection then
+                spawnPlayerAfterCharacterSelection(client)
+            else
+                -- Fallback spawn
+                if spawnPlayer then
+                    spawnPlayer(client, {39.59, 128.88, 15.63})
+                    fadeCamera(client, true)
+                end
+            end
+        else
+            -- No character saved, open selector
+            if JobsRP.CharacterManager and JobsRP.CharacterManager.openSelector then
+                local success, message = JobsRP.CharacterManager.openSelector(client, "freeroam")
+                if success then
+                    authMessage(client, "[Character] " .. message)
+                end
+            end
+        end
     end
 
     return true
@@ -1184,6 +1599,11 @@ function Auth.logout(player, silent)
     local accountId = session.accountId
     if isDuplicateAction(client, "logout", accountId) then
         return false
+    end
+
+    -- Revoke all tokens for this account
+    if accountId then
+        revokeTokens(accountId)
     end
 
     if JobsRP.Jobs and JobsRP.Jobs.onAuthLogout then
@@ -1297,6 +1717,55 @@ function Auth.handlePlayerJoin(player)
         return
     end
 
+    -- Initialize server token if not set
+    if not Auth.serverToken then
+        generateServerToken()
+    end
+
+    -- Send server token to client for token-based authentication
+    print("[Auth] Sending server token to " .. (getPlayerName(client) or "Unknown") .. ": " .. tostring(Auth.serverToken))
+    
+    -- Delay sending to ensure client has time to register network handlers
+    setTimeout(function()
+        -- Try GTAC's standard triggerNetworkEvent pattern
+        local sent = false
+        
+        if triggerNetworkEvent then
+            local ok, result = pcall(function()
+                -- GTAC standard: triggerNetworkEvent(eventName, client, data)
+                return triggerNetworkEvent("jobs.authServerToken", client, Auth.serverToken)
+            end)
+            if ok and result ~= false then
+                sent = true
+                print("[Auth] Server token sent via triggerNetworkEvent (eventName, client, data)")
+            end
+        end
+        
+        if not sent and triggerClientEvent then
+            local ok, result = pcall(function()
+                return triggerClientEvent(client, "jobs.authServerToken", Auth.serverToken)
+            end)
+            if ok and result ~= false then
+                sent = true
+                print("[Auth] Server token sent via triggerClientEvent")
+            end
+        end
+        
+        if not sent and messageClient then
+            local ok, result = pcall(function()
+                return messageClient("[Auth] Server Token: " .. tostring(Auth.serverToken), client, 0, 255, 0)
+            end)
+            if ok and result ~= false then
+                sent = true
+                print("[Auth] Server token sent via messageClient (fallback)")
+            end
+        end
+        
+        if not sent then
+            print("[Auth] ERROR: Could not send server token - no network method available")
+        end
+    end, 2000) -- 2 second delay to ensure client is ready
+
     if JobsRP.Config.auth_required then
         if not Auth.isAuthenticated(client) then
             Auth.authHint(client)
@@ -1338,6 +1807,68 @@ addEventHandler("onResourceStart", function(event, resource)
     seedRandom()
     loadAuthDependencies()
     loadAuthSecrets()
+    
+    -- Load token system configuration
+    local tokenConfigPath = "auth_tokens_config.lua"
+    if loadTextFile then
+        local ok, configContent = pcall(loadTextFile, tokenConfigPath)
+        if ok and configContent then
+            local okRun, err = pcall(function()
+                return load(configContent)()
+            end)
+            if okRun then
+                print("[Auth] Token configuration loaded successfully")
+            else
+                print("[Auth] Failed to load token config: " .. tostring(err))
+            end
+        else
+            print("[Auth] Token configuration file not found, using defaults")
+        end
+    end
+    
+    -- Initialize token system
+    generateServerToken()
+    
+    -- Start token cleanup timer (every 5 minutes)
+    if setInterval then
+        setInterval(cleanupExpiredTokens, 300000) -- 5 minutes
+    end
+end)
+
+-- Network handlers for token-based authentication
+addNetworkHandler("jobs.authWithTokens", function(client, sessionToken, refreshToken)
+    local player = resolveClient(client)
+    if not player then
+        print("[Auth] Token auth: Client not resolved")
+        return
+    end
+    
+    print("[Auth] Token auth request from " .. (getPlayerName(client) or "Unknown") .. 
+          " - Session: " .. (sessionToken and "Yes" or "No") .. 
+          ", Refresh: " .. (refreshToken and "Yes" or "No"))
+    
+    -- Check if token system is enabled
+    if not JobsRP.Config.auth_tokens_enabled then
+        print("[Auth] Token system disabled")
+        return
+    end
+
+    local success, message = Auth.authenticateWithTokens(player, sessionToken, refreshToken)
+    if not success then
+        print("[Auth] Token authentication failed: " .. tostring(message))
+    end
+end)
+
+addNetworkHandler("jobs.authRequestTokens", function(client)
+    local player = resolveClient(client)
+    if not player then
+        return
+    end
+    
+    -- Only send tokens to authenticated users
+    if Auth.isAuthenticated(player) then
+        Auth.sendTokensToClient(player)
+    end
 end)
 
 -- Handle forgot password requests

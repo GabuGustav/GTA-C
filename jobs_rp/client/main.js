@@ -721,10 +721,14 @@ addEventHandler("OnPedWasted", function(event) {
 
 // Health-based death detection (backup method)
 var playerLastHealth = 100; // Separate variable to track health
+var healthMonitorTimer = null;
 
 // Robust player initialization and health monitoring
 function startHealthMonitoring() {
-    setInterval(function() {
+    if (healthMonitorTimer && typeof clearInterval === "function") {
+        clearInterval(healthMonitorTimer);
+    }
+    healthMonitorTimer = setInterval(function() {
         if (typeof localPlayer !== "undefined" && localPlayer.health) {
             if (localPlayer.health <= 0 && playerLastHealth > 0) {
                 console.log("[Client] Health-based death detected - requesting respawn");
@@ -745,19 +749,6 @@ setTimeout(function() {
         setTimeout(startHealthMonitoring, 1000);
     }
 }, 1000); // Initial check after 1 second
-
-// Delay health monitoring to ensure localPlayer is available
-setTimeout(function() {
-    setInterval(function() {
-        if (typeof localPlayer !== "undefined" && localPlayer.health) {
-            if (localPlayer.health <= 0 && playerLastHealth > 0) {
-                console.log("[Client] Health-based death detected - requesting respawn");
-                triggerNetworkEvent("requestRespawn");
-            }
-            playerLastHealth = localPlayer.health;
-        }
-    }, 500);
-}, 2000); // Start monitoring after 2 seconds delay
 
 // Add respawn command for manual testing
 if (typeof addCommandHandler === "function") {
@@ -783,6 +774,10 @@ if (typeof addCommandHandler === "function") {
 }
 
 addEventHandler("onResourceStop", function() {
+    if (healthMonitorTimer && typeof clearInterval === "function") {
+        clearInterval(healthMonitorTimer);
+        healthMonitorTimer = null;
+    }
     stopHubProximityCheck();
     
     if (JobsClient.AuthUI && typeof JobsClient.AuthUI.stop === "function") {

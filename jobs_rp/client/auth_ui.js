@@ -1,5 +1,23 @@
 "use strict";
 
+console.log("[Auth] auth_ui.js starting execution...");
+debugLog("[Auth] auth_ui.js starting execution...");
+
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
 var JobsAuthUI = {
     started: false,
     visible: false,
@@ -23,6 +41,14 @@ var JobsAuthUI = {
         lockRemainingSec: 0,
         lastMessage: ""
     },
+    // Dual-token system
+    serverToken: "",
+    sessionToken: "",
+    sessionExpiresAt: 0,
+    refreshToken: "",
+    refreshExpiresAt: 0,
+    tokensLoaded: false,
+    autoLoginAttempted: false,
     font: null,
     fontTried: false,
     cursorBlink: true,
@@ -1629,12 +1655,15 @@ function onAuthResult() {
     }
 
     if (result.ok) {
-        if (result.code === "registered" || result.code === "logged_in" || result.code === "already_logged_in") {
+        if (result.code === "registered" || result.code === "logged_in" || result.code === "already_logged_in" || result.code === "auto_login") {
             JobsAuthUI.authState.authenticated = true;
 
             if (JobsClient && JobsClient.UI && typeof JobsClient.UI.startHud === "function") {
                 JobsClient.UI.startHud();
             }
+            
+            // Reset auto-login flag on successful authentication
+            JobsAuthUI.autoLoginAttempted = true;
             
             // Auto-close menu upon successful authentication
             setTimeout(function() {
@@ -1644,9 +1673,19 @@ function onAuthResult() {
         } else if (result.code === "logged_out") {
             JobsAuthUI.authState.authenticated = false;
             JobsAuthUI.waitingTokenAck = false;
+            JobsAuthUI.autoLoginAttempted = false;
+            
+            // Clear tokens on logout
+            clearTokens();
+            
             if (JobsClient && JobsClient.UI && typeof JobsClient.UI.stopHud === "function") {
                 JobsClient.UI.stopHud();
             }
+        }
+    } else {
+        // Reset auto-login attempt on failed authentication
+        if (result.code === "auto_login") {
+            JobsAuthUI.autoLoginAttempted = false;
         }
     }
 
@@ -1800,7 +1839,7 @@ function drawAuthUI() {
     okText = renderText(btnLabel, btnTextX, btnTextY, textSize(16), Hex.White, 0.5) && okText;
 
     // Forgot Password button
-    console.log("[Debug] Drawing forgot password button...");
+    debugLog("[Debug] Drawing forgot password button...");
     JobsAuthUI.forgotBtnCy = btnCy + px(45); // Position below toggle button
     JobsAuthUI.forgotBtnW = 0.20;
     JobsAuthUI.forgotBtnH = 0.035;
@@ -1810,7 +1849,7 @@ function drawAuthUI() {
         width: JobsAuthUI.forgotBtnW,
         height: JobsAuthUI.forgotBtnH
     });
-    console.log("[Debug] Forgot button positioned at: " + JobsAuthUI.forgotBtnCy + "x" + JobsAuthUI.forgotBtnW + "x" + JobsAuthUI.forgotBtnH);
+    debugLog("[Debug] Forgot button positioned at: " + JobsAuthUI.forgotBtnCy + "x" + JobsAuthUI.forgotBtnW + "x" + JobsAuthUI.forgotBtnH);
     
     // Forgot password button styling
     if (forgotHover) {
@@ -1824,9 +1863,9 @@ function drawAuthUI() {
     var forgotBtnLabel = "🔐 Forgot Password";
     var forgotBtnTextX = Math.floor(btnCx * width - (JobsAuthUI.forgotBtnW * width / 2) + px(10));
     var forgotBtnTextY = Math.floor(JobsAuthUI.forgotBtnCy * height - px(8));
-    console.log("[Debug] Rendering forgot button text at: " + forgotBtnTextX + ", " + forgotBtnTextY);
+    debugLog("[Debug] Rendering forgot button text at: " + forgotBtnTextX + ", " + forgotBtnTextY);
     okText = renderText(forgotBtnLabel, forgotBtnTextX, forgotBtnTextY, textSize(14), Hex.White, 0.5) && okText;
-    console.log("[Debug] Forgot button text rendered: " + (okText ? "success" : "failed"));
+    debugLog("[Debug] Forgot button text rendered: " + (okText ? "success" : "failed"));
     
     // Set forgot button rect for click detection
     setForgotButtonRect(btnCx, JobsAuthUI.forgotBtnCy, JobsAuthUI.forgotBtnW, JobsAuthUI.forgotBtnH);
@@ -2077,22 +2116,22 @@ function onCursorDownEvent(ev, x, y) {
     }
     
     // Check forgot password button click
-    console.log("[Debug] Checking forgot button click...");
-    console.log("[Debug] forgotButton exists: " + (JobsAuthUI.forgotButton ? "yes" : "no"));
-    console.log("[Debug] cursor position: " + (JobsAuthUI.cursorX || 0) + ", " + (JobsAuthUI.cursorY || 0));
+    debugLog("[Debug] Checking forgot button click...");
+    debugLog("[Debug] forgotButton exists: " + (JobsAuthUI.forgotButton ? "yes" : "no"));
+    debugLog("[Debug] cursor position: " + (JobsAuthUI.cursorX || 0) + ", " + (JobsAuthUI.cursorY || 0));
     
     if (JobsAuthUI.forgotButton && isCursorInside(JobsAuthUI.forgotButton)) {
-        console.log("[Debug] Forgot button clicked!");
+        debugLog("[Debug] Forgot button clicked!");
         if (typeof triggerNetworkEvent === "function") {
             triggerNetworkEvent("jobs.authForgotPassword");
-            console.log("[Auth] Password reset requested from UI");
+            debugLog("[Auth] Password reset requested from UI");
             setStatus("Sending password reset request...", "info");
         } else {
-            console.log("[Debug] triggerNetworkEvent not available!");
+            debugLog("[Debug] triggerNetworkEvent not available!");
         }
         consumeEvent(ev);
     } else {
-        console.log("[Debug] Forgot button not clicked or not initialized");
+        debugLog("[Debug] Forgot button not clicked or not initialized");
     }
 }
 
@@ -2262,6 +2301,19 @@ attachFirstHandler(["OnResourceStop", "onResourceStop"], onResourceStopInternal)
 
 addNetworkHandler("jobs.authState", function() {
     onAuthState.apply(null, arguments);
+    
+    // Fallback: Try auto-login if we have tokens but aren't authenticated
+    var authRequired = arguments[0] && arguments[0].authRequired;
+    var authenticated = arguments[0] && arguments[0].authenticated;
+    
+    debugLog("[Auth] State update - required: " + authRequired + ", authenticated: " + authenticated + ", autoLoginAttempted: " + JobsAuthUI.autoLoginAttempted);
+    
+    if (authRequired && !authenticated && !JobsAuthUI.autoLoginAttempted && JobsAuthUI.serverToken) {
+        setTimeout(function() {
+            debugLog("[Auth] Fallback auto-login attempt from auth state handler");
+            attemptAutoLogin();
+        }, 1500);
+    }
 });
 
 addNetworkHandler("jobs.authResult", function() {
@@ -2281,12 +2333,31 @@ addNetworkHandler("jobs.authDebugUI", function() {
     }
 });
 
-// Forgot password command
+// Debug command for token system
+if (typeof addCommandHandler === "function") {
+    addCommandHandler("authtokens", function() {
+        var status = "=== AUTH TOKEN STATUS ===\n";
+        status += "Server Token: " + (JobsAuthUI.serverToken ? "Yes (" + JobsAuthUI.serverToken.substring(0, 8) + "...)" : "No") + "\n";
+        status += "Session Token: " + (JobsAuthUI.sessionToken ? "Yes (expires: " + new Date(JobsAuthUI.sessionExpiresAt * 1000).toLocaleString() + ")" : "No") + "\n";
+        status += "Refresh Token: " + (JobsAuthUI.refreshToken ? "Yes (expires: " + new Date(JobsAuthUI.refreshExpiresAt * 1000).toLocaleString() + ")" : "No") + "\n";
+        status += "Auto-Login Attempted: " + (JobsAuthUI.autoLoginAttempted ? "Yes" : "No") + "\n";
+        status += "Tokens Loaded: " + (JobsAuthUI.tokensLoaded ? "Yes" : "No") + "\n";
+        status += "Authenticated: " + (JobsAuthUI.authState.authenticated ? "Yes" : "No") + "\n";
+        status += "========================";
+        
+        if (typeof console !== "undefined" && console.log) {
+            console.log(status);
+        }
+        debugLog(status);
+    });
+}
+
+// Handle forgot password command
 if (typeof addCommandHandler === "function") {
     addCommandHandler("forgotpass", function() {
         if (typeof triggerNetworkEvent === "function") {
             triggerNetworkEvent("jobs.authForgotPassword");
-            console.log("[Auth] Password reset requested");
+            debugLog("[Auth] Password reset requested");
         }
     });
 }
@@ -2298,9 +2369,191 @@ addNetworkHandler("jobs.authForgotPasswordResult", function() {
     
     if (success) {
         setStatus("Password reset code sent! Check your API.", "success");
-        console.log("[Auth] Password reset successful: " + message);
+        debugLog("[Auth] Password reset successful: " + message);
     } else {
         setStatus("Password reset failed: " + message, "error");
-        console.log("[Auth] Password reset failed: " + message);
+        debugLog("[Auth] Password reset failed: " + message);
     }
+});
+
+// ============================================================================
+// DUAL-TOKEN SYSTEM
+// ============================================================================
+
+function loadTokensFromFile() {
+    try {
+        if (typeof loadTextFile === "function") {
+            var tokenData = loadTextFile("jobs_auth_tokens.json");
+            if (tokenData && tokenData.trim() !== "") {
+                var parsed = JSON.parse(tokenData);
+                if (parsed && typeof parsed === "object") {
+                    JobsAuthUI.serverToken = parsed.serverToken || "";
+                    JobsAuthUI.sessionToken = parsed.sessionToken || "";
+                    JobsAuthUI.sessionExpiresAt = parsed.sessionExpiresAt || 0;
+                    JobsAuthUI.refreshToken = parsed.refreshToken || "";
+                    JobsAuthUI.refreshExpiresAt = parsed.refreshExpiresAt || 0;
+                    JobsAuthUI.tokensLoaded = true;
+                    debugLog("[Auth] Tokens loaded from file");
+                    return true;
+                }
+            }
+        }
+    } catch (e) {
+        debugLog("[Auth] Failed to load tokens: " + e.message);
+    }
+    
+    // Initialize empty tokens if loading fails
+    JobsAuthUI.serverToken = "";
+    JobsAuthUI.sessionToken = "";
+    JobsAuthUI.sessionExpiresAt = 0;
+    JobsAuthUI.refreshToken = "";
+    JobsAuthUI.refreshExpiresAt = 0;
+    JobsAuthUI.tokensLoaded = true;
+    return false;
+}
+
+function saveTokensToFile() {
+    try {
+        if (typeof saveTextFile === "function") {
+            var tokenData = {
+                serverToken: JobsAuthUI.serverToken,
+                sessionToken: JobsAuthUI.sessionToken,
+                sessionExpiresAt: JobsAuthUI.sessionExpiresAt,
+                refreshToken: JobsAuthUI.refreshToken,
+                refreshExpiresAt: JobsAuthUI.refreshExpiresAt
+            };
+            saveTextFile("jobs_auth_tokens.json", JSON.stringify(tokenData, null, 2));
+            debugLog("[Auth] Tokens saved to file");
+            return true;
+        }
+    } catch (e) {
+        debugLog("[Auth] Failed to save tokens: " + e.message);
+    }
+    return false;
+}
+
+function clearTokens() {
+    JobsAuthUI.serverToken = "";
+    JobsAuthUI.sessionToken = "";
+    JobsAuthUI.sessionExpiresAt = 0;
+    JobsAuthUI.refreshToken = "";
+    JobsAuthUI.refreshExpiresAt = 0;
+    saveTokensToFile();
+    debugLog("[Auth] Tokens cleared");
+}
+
+function isTokenExpired(expiresAt) {
+    if (!expiresAt || expiresAt === 0) {
+        return true;
+    }
+    var now = Math.floor(Date.now() / 1000);
+    return now >= expiresAt;
+}
+
+function attemptAutoLogin() {
+    if (JobsAuthUI.autoLoginAttempted) {
+        return false;
+    }
+    
+    if (!JobsAuthUI.tokensLoaded) {
+        loadTokensFromFile();
+    }
+    
+    if (!JobsAuthUI.serverToken || JobsAuthUI.serverToken === "") {
+        debugLog("[Auth] No server token available for auto-login");
+        return false;
+    }
+    
+    // Check if we have valid tokens
+    var hasValidSessionToken = JobsAuthUI.sessionToken && !isTokenExpired(JobsAuthUI.sessionExpiresAt);
+    var hasValidRefreshToken = JobsAuthUI.refreshToken && !isTokenExpired(JobsAuthUI.refreshExpiresAt);
+    
+    if (!hasValidSessionToken && !hasValidRefreshToken) {
+        debugLog("[Auth] No valid tokens available for auto-login");
+        return false;
+    }
+    
+    JobsAuthUI.autoLoginAttempted = true;
+    
+    // Attempt token-based authentication
+    if (typeof triggerNetworkEvent === "function") {
+        triggerNetworkEvent("jobs.authWithTokens", 
+            hasValidSessionToken ? JobsAuthUI.sessionToken : "", 
+            hasValidRefreshToken ? JobsAuthUI.refreshToken : ""
+        );
+        debugLog("[Auth] Auto-login attempted with tokens");
+        setStatus("Attempting auto-login...", "info");
+        return true;
+    }
+    
+    return false;
+}
+
+// ============================================================================
+// TOKEN NETWORK HANDLERS
+// ============================================================================
+
+console.log("[Auth] Registering network handlers...");
+debugLog("[Auth] Registering network handlers...");
+
+addNetworkHandler("jobs.authServerToken", function() {
+    console.log("[Auth] jobs.authServerToken handler called!");
+    debugLog("[Auth] jobs.authServerToken handler called!");
+    var serverToken = arguments[0];
+    if (serverToken && serverToken !== "") {
+        JobsAuthUI.serverToken = serverToken;
+        saveTokensToFile();
+        debugLog("[Auth] Server token received: " + serverToken.substring(0, 8) + "...");
+        debugLog("[Auth] Auth state: required=" + JobsAuthUI.authState.authRequired + ", authenticated=" + JobsAuthUI.authState.authenticated);
+        
+        // v-admin style: Try auto-login immediately when server token received
+        if (!JobsAuthUI.authState.authenticated && !JobsAuthUI.autoLoginAttempted) {
+            setTimeout(function() {
+                debugLog("[Auth] Immediate auto-login attempt (v-admin style)");
+                attemptAutoLogin();
+            }, 200); // Very short delay
+        }
+    } else {
+        console.log("[Auth] Server token received but empty or null");
+        debugLog("[Auth] Server token received but empty or null");
+    }
+});
+
+addNetworkHandler("jobs.authTokens", function() {
+    var tokenData = arguments[0];
+    if (tokenData && typeof tokenData === "object") {
+        JobsAuthUI.serverToken = tokenData.serverToken || JobsAuthUI.serverToken;
+        JobsAuthUI.sessionToken = tokenData.sessionToken || "";
+        JobsAuthUI.sessionExpiresAt = tokenData.sessionExpiresAt || 0;
+        JobsAuthUI.refreshToken = tokenData.refreshToken || "";
+        JobsAuthUI.refreshExpiresAt = tokenData.refreshExpiresAt || 0;
+        
+        saveTokensToFile();
+        debugLog("[Auth] Tokens updated - Session: " + (JobsAuthUI.sessionToken ? "Yes" : "No") + 
+                 ", Refresh: " + (JobsAuthUI.refreshToken ? "Yes" : "No"));
+    }
+});
+
+addNetworkHandler("jobs.authSessionToken", function() {
+    var sessionToken = arguments[0];
+    var expiresAt = arguments[1];
+    
+    if (sessionToken && sessionToken !== "") {
+        JobsAuthUI.sessionToken = sessionToken;
+        JobsAuthUI.sessionExpiresAt = expiresAt || 0;
+        saveTokensToFile();
+        debugLog("[Auth] Session token refreshed");
+    }
+});
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+// Load tokens on startup
+bindEventHandler("onResourceReady", thisResource, function(event, resource) {
+    setTimeout(function() {
+        loadTokensFromFile();
+        debugLog("[Auth] Token system initialized");
+    }, 1000);
 });

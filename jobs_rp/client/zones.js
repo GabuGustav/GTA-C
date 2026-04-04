@@ -29,6 +29,18 @@ Zones.drawMarkersViaRender = Zones.drawMarkersViaRender || false;
 Zones.processEventName = Zones.processEventName || null;
 Zones.renderTimer = Zones.renderTimer || null;
 
+function debugLog(message) {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (enabled && typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log(message);
+    }
+}
+
 function nowMs() {
     if (typeof Date !== "undefined" && Date.now) {
         return Date.now();
@@ -1763,24 +1775,24 @@ if (typeof addNetworkHandler === "function") {
 
 // Police patrol point detection for auto-menu
 Zones.policePatrolCheck = function() {
-    console.log("[zones] Patrol check - localPlayer: " + (localPlayer ? "yes" : "no") + 
+    debugLog("[zones] Patrol check - localPlayer: " + (localPlayer ? "yes" : "no") + 
               ", position: " + (localPlayer && localPlayer.position ? JSON.stringify(localPlayer.position) : "null") + 
               ", profile: " + (JobsClient.profile ? "yes" : "no"));
     
     if (!localPlayer || !localPlayer.position || !JobsClient.profile) {
-        console.log("[zones] Patrol check aborted - missing requirements");
+        debugLog("[zones] Patrol check aborted - missing requirements");
         return;
     }
     
     // Only check if player is in police job
-    console.log("[zones] Current job: " + (JobsClient.profile.currentJobId || "none"));
+    debugLog("[zones] Current job: " + (JobsClient.profile.currentJobId || "none"));
     if (JobsClient.profile.currentJobId !== "police") {
-        console.log("[zones] Not in police job, skipping patrol check");
+        debugLog("[zones] Not in police job, skipping patrol check");
         return;
     }
     
     // Check if near police hub
-    console.log("[zones] Hub elements: " + (Zones.hubElements ? "yes" : "no") + 
+    debugLog("[zones] Hub elements: " + (Zones.hubElements ? "yes" : "no") + 
               ", police hub: " + (Zones.hubElements.police ? "yes" : "no"));
     
     if (Zones.hubElements && Zones.hubElements.police) {
@@ -1794,47 +1806,47 @@ Zones.policePatrolCheck = function() {
             } else if (typeof Vector3 !== "undefined") {
                 hubVector = new Vector3(policeHub.coords.x, policeHub.coords.y, policeHub.coords.z);
             } else {
-                console.log("[zones] No Vector3D constructor available");
+                debugLog("[zones] No Vector3D constructor available");
                 return;
             }
         } catch (e) {
-            console.log("[zones] Error creating hubVector: " + String(e));
+            debugLog("[zones] Error creating hubVector: " + String(e));
             return;
         }
         
         var distance = localPlayer.position.distance(hubVector);
         
-        console.log("[zones] Police hub coords: " + JSON.stringify(policeHub.coords) + 
+        debugLog("[zones] Police hub coords: " + JSON.stringify(policeHub.coords) + 
                   ", hubVector: " + (hubVector ? JSON.stringify(hubVector) : "null") + 
                   ", player distance: " + Math.round(distance) + 
                   ", threshold: 9");
         
         // If within 8 units of police hub, show menu
         if (distance <= 9) {
-            console.log("[zones] Player within range, last menu state: " + JSON.stringify(Zones.lastMenuState));
+            debugLog("[zones] Player within range, last menu state: " + JSON.stringify(Zones.lastMenuState));
             if (!Zones.lastMenuState || !Zones.lastMenuState.shown) {
-                console.log("[zones] Player near police hub, showing police menu");
+                debugLog("[zones] Player near police hub, showing police menu");
                 if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.show === "function") {
                     PoliceMenu.show();
                     Zones.lastMenuState = { shown: true, time: Date.now() };
                 } else {
-                    console.log("[zones] PoliceMenu not available for auto-show");
+                    debugLog("[zones] PoliceMenu not available for auto-show");
                 }
             }
         } else {
             // Clear menu state if far from hub (auto-close)
             if (Zones.lastMenuState && Zones.lastMenuState.shown) {
-                console.log("[zones] Player left police hub area, hiding police menu");
+                debugLog("[zones] Player left police hub area, hiding police menu");
                 if (typeof PoliceMenu !== "undefined" && PoliceMenu && typeof PoliceMenu.hide === "function") {
                     PoliceMenu.hide();
                 } else {
-                    console.log("[zones] PoliceMenu.hide not available for auto-close");
+                    debugLog("[zones] PoliceMenu.hide not available for auto-close");
                 }
                 Zones.lastMenuState = { shown: false, time: Date.now() };
             }
         }
     } else {
-        console.log("[zones] No police hub data available");
+        debugLog("[zones] No police hub data available");
     }
 };
 
@@ -1845,7 +1857,7 @@ Zones.startPolicePatrolCheck = function() {
     }
     
     Zones.policePatrolInterval = setInterval(Zones.policePatrolCheck, 1000); // Check every second
-    console.log("[zones] Police patrol checking started");
+    debugLog("[zones] Police patrol checking started");
 };
 
 // Initialize patrol checking when zones load
@@ -1853,13 +1865,13 @@ Zones.startPolicePatrolCheck();
 
 // Request hub data when available
 Zones.requestHubData = function() {
-    console.log("[zones] Requesting hub data from server");
+    debugLog("[zones] Requesting hub data from server");
     if (typeof triggerNetworkEvent === "function") {
         triggerNetworkEvent("jobs.requestHubElements");
     } else if (typeof triggerClientEvent === "function") {
         triggerClientEvent("jobs.requestHubElements");
     } else {
-        console.log("[zones] No network event function available");
+        debugLog("[zones] No network event function available");
     }
 };
 
@@ -1867,7 +1879,7 @@ Zones.requestHubData = function() {
 Zones.checkPoliceJob = function() {
     if (JobsClient.profile && JobsClient.profile.currentJobId === "police") {
         if (!Zones.hubElements || !Zones.hubElements.police) {
-            console.log("[zones] Police job detected but no hub data, requesting...");
+            debugLog("[zones] Police job detected but no hub data, requesting...");
             Zones.requestHubData();
         }
     }

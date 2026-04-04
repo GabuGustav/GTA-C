@@ -1,13 +1,28 @@
 "use strict";
 
-console.log("[Phone] Script loading...");
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
+debugLog("[Phone] Script loading...");
 
 // Load shared utilities
 if (typeof require !== "undefined") {
     try {
         require("shared_utils.js");
     } catch (e) {
-        console.log("[Phone] Could not load shared utilities: " + String(e));
+        debugLog("[Phone] Could not load shared utilities: " + String(e));
     }
 }
 
@@ -40,7 +55,8 @@ Phone.textState = {
     currentConversation: null,
     messageInput: "",
     isTyping: false,
-    playerList: []
+    playerList: [],
+    serverPlayerList: null
 };
 
 function getJobsRpUi() {
@@ -120,7 +136,7 @@ function ensureWindow() {
     
     // Prevent race condition
     if (Phone.windowCreating) {
-        console.log("[Phone] Window creation already in progress");
+        debugLog("[Phone] Window creation already in progress");
         return false;
     }
     
@@ -129,7 +145,7 @@ function ensureWindow() {
     try {
         var ui = getJobsRpUi();
         if (!ui) {
-            console.log("[Phone] UI framework not available");
+            debugLog("[Phone] UI framework not available");
             return false;
         }
 
@@ -147,23 +163,23 @@ function ensureWindow() {
         Phone.controls.styles = styles;
 
         buildHeader();
-        console.log("[Phone] Header built");
+        debugLog("[Phone] Header built");
         buildHome();
-        console.log("[Phone] Home built");
+        debugLog("[Phone] Home built");
         buildJobs();
-        console.log("[Phone] Jobs built");
+        debugLog("[Phone] Jobs built");
         buildText();
-        console.log("[Phone] Text built");
+        debugLog("[Phone] Text built");
         // Don't call buildPlaceholder for text app since it's now fully implemented
         // buildPlaceholder("cars", "Cars");
         // buildPlaceholder("bank", "Bank");
-        console.log("[Phone] All apps built");
+        debugLog("[Phone] All apps built");
 
         showApp("home");
-        console.log("[Phone] Phone setup complete, showing home");
+        debugLog("[Phone] Phone setup complete, showing home");
         return true;
     } catch (e) {
-        console.log("[Phone] Error creating window: " + String(e));
+        debugLog("[Phone] Error creating window: " + String(e));
         return false;
     } finally {
         Phone.windowCreating = false;
@@ -187,7 +203,7 @@ function buildHeader() {
 }
 
 function buildHome() {
-    console.log("[Phone] Building home screen...");
+    debugLog("[Phone] Building home screen...");
     var styles = Phone.controls.styles;
     var pad = Phone.config.padding;
     var startY = Phone.config.headerHeight + pad;
@@ -202,61 +218,52 @@ function buildHome() {
         { id: "bank", label: "Bank" }
     ];
     
-    console.log("[Phone] Apps to create: " + JSON.stringify(apps));
+    debugLog("[Phone] Apps to create: " + JSON.stringify(apps));
 
     for (var i = 0; i < apps.length; i++) {
+        var app = apps[i];
         var row = Math.floor(i / 2);
         var col = i % 2;
         var x = pad + col * (cellW + Phone.config.gridGap);
         var y = startY + row * (cellH + Phone.config.gridGap);
         
-        if (apps[i].icon) {
-            // Create container button for click area
-            var button = Phone.window.button(x, y, cellW, cellH, "", styles.accentButton);
-            button.appId = apps[i].id;
-            console.log("[Phone] Created button for app: " + apps[i].id);
-            button.onClick = function() {
-                console.log("[Phone] Button clicked! App: " + this.appId);
-                showApp(this.appId);
-            };
+        if (app.icon) {
+            // Create container button for click area with callback as parameter
+            var button = Phone.window.button(x, y, cellW, cellH, "", styles.accentButton, (function(appId) {
+                return function() {
+                    debugLog("[Phone] Button clicked! App: " + appId + " (manual click)");
+                    showApp(appId);
+                };
+            })(app.id));
+            button.appId = app.id;
+            debugLog("[Phone] Created button for app: " + app.id);
             
             // Create image control for icon
-            var icon = Phone.window.image(x + 10, y + 10, 30, 30, apps[i].icon, styles);
+            var icon = Phone.window.image(x + 10, y + 10, 30, 30, app.icon, styles);
             icon.shown = true;
-            console.log("[Phone] Created icon for: " + apps[i].id);
+            debugLog("[Phone] Created icon for: " + app.id);
             
             // Create text label below icon
-            var label = Phone.window.text(x, y + 45, cellW, 20, apps[i].label, styles.titleText);
+            var label = Phone.window.text(x, y + 45, cellW, 20, app.label, styles.titleText);
             label.shown = true;
-            console.log("[Phone] Created label for: " + apps[i].id);
+            debugLog("[Phone] Created label for: " + app.id);
             
             buttons.push(button, icon, label);
         } else {
-            // Regular button for apps without icons
-            var button = Phone.window.button(x, y, cellW, cellH, apps[i].label, styles.accentButton);
-            button.appId = apps[i].id;
-            button.onClick = function() {
-                console.log("[Phone] App clicked: " + this.appId);
-                showApp(this.appId);
-            };
+            // Regular button for apps without icons with callback as parameter
+            var button = Phone.window.button(x, y, cellW, cellH, app.label, styles.accentButton, (function(appId) {
+                return function() {
+                    debugLog("[Phone] Button clicked! App: " + appId + " (manual click)");
+                    showApp(appId);
+                };
+            })(app.id));
+            button.appId = app.id;
             buttons.push(button);
         }
     }
 
     Phone.controls.home = { buttons: buttons };
-    console.log("[Phone] Home controls created with " + buttons.length + " buttons");
-    
-    // Test button click after controls are created
-    setTimeout(function() {
-        if (buttons.length > 0) {
-            console.log("[Phone] Testing first button click after delay...");
-            try {
-                buttons[0].onClick();
-            } catch (e) {
-                console.log("[Phone] Button test failed: " + String(e));
-            }
-        }
-    }, 100);
+    debugLog("[Phone] Home controls created with " + buttons.length + " buttons");
 }
 
 function buildJobs() {
@@ -301,7 +308,7 @@ function buildJobs() {
 }
 
 function buildText() {
-    console.log("[Phone] Building text messaging app...");
+    debugLog("[Phone] Building text messaging app...");
     var styles = Phone.controls.styles;
     var pad = Phone.config.padding;
     var top = Phone.config.headerHeight + pad;
@@ -345,60 +352,107 @@ function buildText() {
         updateKeyboardContext();
     };
     
-    // Load player list
+    // Load player list (server-authenticated preferred)
+    if (Phone.textState.serverPlayerList == null) {
+        Utils.triggerNetworkEventSafe("phone.requestPlayerList");
+    }
     loadPlayerList();
 }
 
 // Text messaging core functions
 function loadPlayerList() {
-    console.log("[Phone] Loading player list...");
+    debugLog("[Phone] Loading player list...");
     
+    // Prefer server-provided authenticated player list if available
+    if (Phone.textState.serverPlayerList && Array.isArray(Phone.textState.serverPlayerList)) {
+        var filtered = [];
+        for (var s = 0; s < Phone.textState.serverPlayerList.length; s++) {
+            var item = Phone.textState.serverPlayerList[s];
+            if (!item || typeof item !== "object") {
+                continue;
+            }
+            var name = String(item.name || "");
+            if ((localId !== null && item.id === localId) || (localName && name === localName)) {
+                continue;
+            }
+            filtered.push({
+                id: item.id,
+                name: name,
+                data: item
+            });
+        }
+        Phone.textState.playerList = filtered;
+        updatePlayerListDisplay();
+        return;
+    }
+
     // Test both APIs to see which works
     var players = [];
+    var localName = null;
+    var localId = null;
+
+    try {
+        if (typeof localPlayer !== "undefined" && localPlayer) {
+            if (localPlayer.id !== undefined && localPlayer.id !== null) {
+                localId = localPlayer.id;
+            }
+            if (typeof localPlayer.name === "function") {
+                localName = localPlayer.name();
+            } else if (typeof localPlayer.name === "string") {
+                localName = localPlayer.name;
+            }
+        }
+    } catch (e) {
+        debugLog("[Phone] Failed to resolve local player identity: " + String(e));
+    }
     
     try {
         // Test getClients() first
         if (typeof getClients === "function") {
             var clients = getClients();
-            console.log("[Phone] getClients() returned: " + JSON.stringify(clients));
+            debugLog("[Phone] getClients() returned: " + JSON.stringify(clients));
             if (clients && Array.isArray(clients)) {
                 players = clients;
             }
         }
     } catch (e) {
-        console.log("[Phone] getClients() failed: " + String(e));
+        debugLog("[Phone] getClients() failed: " + String(e));
     }
     
     try {
         // Test getPlayers() as fallback
         if (players.length === 0 && typeof getPlayers === "function") {
             var playerList = getPlayers();
-            console.log("[Phone] getPlayers() returned: " + JSON.stringify(playerList));
+            debugLog("[Phone] getPlayers() returned: " + JSON.stringify(playerList));
             if (playerList && Array.isArray(playerList)) {
                 players = playerList;
             }
         }
     } catch (e) {
-        console.log("[Phone] getPlayers() failed: " + String(e));
+        debugLog("[Phone] getPlayers() failed: " + String(e));
     }
     
     // Use whichever API returned data
     var playerList = players.length > 0 ? players : clients;
     
     if (playerList && Array.isArray(playerList)) {
-        console.log("[Phone] Processing player list with " + playerList.length + " entries");
+        debugLog("[Phone] Processing player list with " + playerList.length + " entries");
         
         var allPlayers = [];
         
         for (var i = 0; i < playerList.length; i++) {
             var player = playerList[i];
-            console.log("[Phone] Processing player: " + JSON.stringify(player));
+            debugLog("[Phone] Processing player: " + JSON.stringify(player));
             
             // Add ALL players to list (let server handle filtering)
             if (player && typeof player === "object" && player.name) {
+                var cleanedName = player.name.replace(/#\d+$/, "");
+                if ((localId !== null && player.id === localId) || (localName && cleanedName === localName)) {
+                    continue;
+                }
                 allPlayers.push({
                     id: player.id,
-                    name: player.name.replace(/#\d+$/, ""), // Remove #numbers from name
+                    name: cleanedName, // Remove #numbers from name
                     data: player
                 });
             }
@@ -422,7 +476,7 @@ function updatePlayerListDisplay() {
         } else if (list.entries) {
             list.entries = [];
         } else {
-            console.log("[Phone] List clear method not found, creating new list");
+            debugLog("[Phone] List clear method not found, creating new list");
             // Recreate the list if clear doesn't work
             var styles = Phone.controls.styles;
             var pad = Phone.config.padding;
@@ -431,7 +485,7 @@ function updatePlayerListDisplay() {
             list = Phone.controls.text.playerListPanel.list;
         }
     } catch (e) {
-        console.log("[Phone] Error clearing list: " + String(e));
+        debugLog("[Phone] Error clearing list: " + String(e));
     }
     
     // Add players to list
@@ -449,19 +503,21 @@ function updatePlayerListDisplay() {
                     playerData: player
                 });
             } else {
-                console.log("[Phone] List addEntry method not found");
+                debugLog("[Phone] List addEntry method not found");
             }
         } catch (e) {
-            console.log("[Phone] Error adding player to list: " + String(e));
+            debugLog("[Phone] Error adding player to list: " + String(e));
         }
     }
     
-    console.log("[Phone] Player list updated with " + Phone.textState.playerList.length + " players");
+    debugLog("[Phone] Player list updated with " + Phone.textState.playerList.length + " players");
 }
 
 function showTextPanel(panelName) {
-    console.log("[Phone] Showing text panel: " + panelName);
+    debugLog("[Phone] Showing text panel: " + panelName);
     Phone.textState.currentPanel = panelName;
+    
+    debugLog("[Phone] Available text controls: " + JSON.stringify(Object.keys(Phone.controls.text || {})));
     
     // Hide all text panels first
     setControlsVisible(Phone.controls.text.playerListPanel, false);
@@ -469,20 +525,19 @@ function showTextPanel(panelName) {
     setControlsVisible(Phone.controls.text.conversationPanel, false);
     
     // Show selected panel
-    switch (panelName) {
-        case "playerList":
-            setControlsVisible(Phone.controls.text.playerListPanel, true);
-            break;
-        case "messageCompose":
-            setControlsVisible(Phone.controls.text.composePanel, true);
-            if (Phone.textState.selectedPlayer) {
-                Phone.controls.text.composePanel.title.text = Phone.textState.selectedPlayer.name;
-            }
-            break;
-        case "conversation":
-            setControlsVisible(Phone.controls.text.conversationPanel, true);
-            updateConversationDisplay();
-            break;
+    if (panelName === "playerList") {
+        debugLog("[Phone] Showing player list panel");
+        setControlsVisible(Phone.controls.text.playerListPanel, true);
+    } else if (panelName === "messageCompose") {
+        debugLog("[Phone] Showing message compose panel");
+        setControlsVisible(Phone.controls.text.composePanel, true);
+        if (Phone.textState.selectedPlayer) {
+            Phone.controls.text.composePanel.title.text = Phone.textState.selectedPlayer.name;
+        }
+    } else if (panelName === "conversation") {
+        debugLog("[Phone] Showing conversation panel");
+        setControlsVisible(Phone.controls.text.conversationPanel, true);
+        updateConversationDisplay();
     }
     
     updateKeyboardContext();
@@ -536,12 +591,12 @@ function updateKeyboardContext() {
         });
     }
     
-    console.log("[Phone] Keyboard context updated - typing: " + isTyping);
+    debugLog("[Phone] Keyboard context updated - typing: " + isTyping);
 }
 
 function sendMessage() {
     if (!Phone.textState.selectedPlayer || !Phone.textState.messageInput.trim()) {
-        console.log("[Phone] Cannot send message - no player or empty message");
+        debugLog("[Phone] Cannot send message - no player or empty message");
         return;
     }
     
@@ -572,7 +627,7 @@ function sendMessage() {
     Phone.textState.isTyping = false;
     updateKeyboardContext();
     
-    console.log("[Phone] Message sent to " + Phone.textState.selectedPlayer.name);
+    debugLog("[Phone] Message sent to " + Phone.textState.selectedPlayer.name);
 }
 
 function addMessageToConversation(playerId, message) {
@@ -665,19 +720,19 @@ function updateConversationDisplay() {
 
 function setControlsVisible(group, visible) {
     if (!group) {
-        console.log("[Phone] setControlsVisible: group is null");
+        debugLog("[Phone] setControlsVisible: group is null");
         return;
     }
     
-    console.log("[Phone] setControlsVisible: " + (visible ? "SHOWING" : "HIDING") + " group");
+    debugLog("[Phone] setControlsVisible: " + (visible ? "SHOWING" : "HIDING") + " group");
     
     // Helper function to set visibility on a control
     function setVisibility(control) {
         if (control && typeof control === "object" && control.shown !== undefined) {
             control.shown = visible;
-            console.log("[Phone] Set control visibility to: " + visible);
+            debugLog("[Phone] Set control visibility to: " + visible);
         } else {
-            console.log("[Phone] Control has no shown property or is invalid");
+            debugLog("[Phone] Control has no shown property or is invalid");
         }
     }
     
@@ -686,10 +741,10 @@ function setControlsVisible(group, visible) {
         if (group.hasOwnProperty(key)) {
             var control = group[key];
             if (control && typeof control === "object") {
-                console.log("[Phone] Processing control: " + key);
+                debugLog("[Phone] Processing control: " + key);
                 // Handle panels with visible property
                 if (control.visible !== undefined) {
-                    console.log("[Phone] Panel found: " + key);
+                    debugLog("[Phone] Panel found: " + key);
                     setVisibility(control.title);
                     setVisibility(control.list);
                     setVisibility(control.input);
@@ -699,7 +754,7 @@ function setControlsVisible(group, visible) {
                 }
                 // Handle buttons array (may contain images and labels)
                 if (control.buttons && Array.isArray(control.buttons)) {
-                    console.log("[Phone] Processing buttons array: " + control.buttons.length + " items");
+                    debugLog("[Phone] Processing buttons array: " + control.buttons.length + " items");
                     for (var i = 0; i < control.buttons.length; i++) {
                         setVisibility(control.buttons[i]);
                     }
@@ -710,7 +765,7 @@ function setControlsVisible(group, visible) {
     
     // Handle top-level buttons array (may contain images and labels)
     if (group.buttons && Array.isArray(group.buttons)) {
-        console.log("[Phone] Processing top-level buttons array: " + group.buttons.length + " items");
+        debugLog("[Phone] Processing top-level buttons array: " + group.buttons.length + " items");
         for (var j = 0; j < group.buttons.length; j++) {
             setVisibility(group.buttons[j]);
         }
@@ -721,11 +776,11 @@ function showApp(appId) {
     // Input validation using shared utility
     appId = Utils.validateInput(appId, "string", "home", ["home", "jobs", "text", "cars", "bank"]);
     
-    console.log("[Phone] Showing app: " + appId);
+    debugLog("[Phone] Showing app: " + appId);
     Phone.currentApp = appId;
 
     // Hide all apps first
-    console.log("[Phone] Hiding all apps...");
+    debugLog("[Phone] Hiding all apps...");
     setControlsVisible(Phone.controls.home, false);
     setControlsVisible(Phone.controls.jobs, false);
     setControlsVisible(Phone.controls.cars, false);
@@ -733,22 +788,22 @@ function showApp(appId) {
     setControlsVisible(Phone.controls.text, false);
 
     // Show selected app
-    console.log("[Phone] Showing app: " + appId);
+    debugLog("[Phone] Showing app: " + appId);
     if (appId === "home") {
-        console.log("[Phone] Showing home controls");
+        debugLog("[Phone] Showing home controls");
         setControlsVisible(Phone.controls.home, true);
     } else if (appId === "jobs") {
-        console.log("[Phone] Showing jobs controls");
+        debugLog("[Phone] Showing jobs controls");
         setControlsVisible(Phone.controls.jobs, true);
     } else if (appId === "text") {
-        console.log("[Phone] Showing text controls");
+        debugLog("[Phone] Text app clicked - showing text controls");
         setControlsVisible(Phone.controls.text, true);
         showTextPanel("playerList"); // Show player list when text app opens
     } else if (appId === "cars") {
-        console.log("[Phone] Showing cars controls");
+        debugLog("[Phone] Showing cars controls");
         setControlsVisible(Phone.controls.cars, true);
     } else if (appId === "bank") {
-        console.log("[Phone] Showing bank controls");
+        debugLog("[Phone] Showing bank controls");
         setControlsVisible(Phone.controls.bank, true);
     }
 
@@ -757,7 +812,7 @@ function showApp(appId) {
     }
     if (Phone.controls.title) {
         Phone.controls.title.text = (appId === "home") ? "PHONE" : String(appId).toUpperCase();
-        console.log("[Phone] Title updated to: " + Phone.controls.title.text);
+        debugLog("[Phone] Title updated to: " + Phone.controls.title.text);
     }
 }
 
@@ -770,6 +825,13 @@ Phone.show = function() {
     }
     Phone.window.shown = true;
     Phone.active = true;
+
+    // Enable mouse input for phone
+    var ui = getJobsRpUi();
+    if (ui && ui.setInput) {
+        ui.setInput(true);
+    }
+
     showApp(Phone.currentApp || "home");
 
     var ui = getJobsRpUi();
@@ -795,7 +857,7 @@ Phone.hide = function() {
 
 // Resource cleanup function
 Phone.cleanup = function() {
-    console.log("[Phone] Cleaning up resources...");
+    debugLog("[Phone] Cleaning up resources...");
     
     // Hide and destroy window
     if (Phone.window) {
@@ -817,11 +879,11 @@ Phone.cleanup = function() {
         ui.setInput(false);
     }
     
-    console.log("[Phone] Cleanup complete");
+    debugLog("[Phone] Cleanup complete");
 };
 
 Phone.toggle = function() {
-    console.log("[Phone] Toggle called, active: " + Phone.active);
+    debugLog("[Phone] Toggle called, active: " + Phone.active);
     if (Phone.active) {
         Phone.hide();
     } else {
@@ -831,7 +893,7 @@ Phone.toggle = function() {
 
 if (typeof addCommandHandler === "function") {
     addCommandHandler("phone", function() {
-        console.log("[Phone] Phone command received");
+        debugLog("[Phone] Phone command received");
         Phone.toggle();
     });
 }
@@ -839,7 +901,7 @@ if (typeof addCommandHandler === "function") {
 if (typeof bindKey === "function") {
     if (typeof SDLK_p !== "undefined" && typeof KEYSTATE_DOWN !== "undefined") {
         bindKey(SDLK_p, KEYSTATE_DOWN, function() {
-            console.log("[Phone] P key pressed");
+            debugLog("[Phone] P key pressed");
             Phone.toggle();
         });
     } else if (typeof SDLK_P !== "undefined" && typeof KEYSTATE_DOWN !== "undefined") {
@@ -856,7 +918,7 @@ if (typeof bindKey === "function") {
 // Network handlers for text messaging
 if (typeof addNetworkHandler === "function") {
     addNetworkHandler("phone.messageReceived", function(data) {
-        console.log("[Phone] Message received: " + JSON.stringify(data));
+        debugLog("[Phone] Message received: " + JSON.stringify(data));
         
         var message = {
             id: data.messageId,
@@ -873,12 +935,12 @@ if (typeof addNetworkHandler === "function") {
         // Show notification if not in text app
         if (Phone.currentApp !== "text") {
             // Could add notification here
-            console.log("[Phone] New message from " + data.senderName);
+            debugLog("[Phone] New message from " + data.senderName);
         }
     });
     
     addNetworkHandler("phone.messageDelivered", function(data) {
-        console.log("[Phone] Message delivered: " + JSON.stringify(data));
+        debugLog("[Phone] Message delivered: " + JSON.stringify(data));
         
         // Update message status from "sending" to "sent"
         if (Phone.textState.conversations[data.recipientId]) {
@@ -896,7 +958,14 @@ if (typeof addNetworkHandler === "function") {
         }
     });
     
-    console.log("[Phone] Text messaging network handlers registered");
+    debugLog("[Phone] Text messaging network handlers registered");
+
+    addNetworkHandler("phone.playerList", function(list) {
+        if (Array.isArray(list)) {
+            Phone.textState.serverPlayerList = list;
+            loadPlayerList();
+        }
+    });
 }
 
 // Enhanced keyboard handling for Enter key
@@ -908,11 +977,11 @@ if (typeof bindKey === "function") {
                     sendMessage();
                 }
             });
-            console.log("[Phone] Enter key bound for message sending");
+            debugLog("[Phone] Enter key bound for message sending");
         }
     } catch (e) {
-        console.log("[Phone] Failed to bind Enter key: " + String(e));
+        debugLog("[Phone] Failed to bind Enter key: " + String(e));
     }
 }
 
-console.log("[Phone] Phone UI ready. Use /phone or P.");
+debugLog("[Phone] Phone UI ready. Use /phone or P.");

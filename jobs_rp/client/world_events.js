@@ -1,5 +1,20 @@
 "use strict";
 
+function debugLog() {
+    var enabled = false;
+    try {
+        enabled = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config && JobsRP.Config.debug === true);
+    } catch (e) {
+        enabled = false;
+    }
+    if (!enabled) {
+        return;
+    }
+    if (typeof console !== "undefined" && console && typeof console.log === "function") {
+        console.log.apply(console, arguments);
+    }
+}
+
 var WorldEvents = WorldEvents || {};
 
 // World Events System
@@ -16,7 +31,7 @@ WorldEvents.Manager = {
     checkInterval: 45000, // 45 seconds
     
     init: function() {
-        console.log("[WorldEvents] Initializing world events system");
+        debugLog("[WorldEvents] Initializing world events system");
         
         // Register event types
         this.register(new BrawlEvent());
@@ -29,12 +44,12 @@ WorldEvents.Manager = {
             WorldEvents.Manager.checkRandomEvent();
         }, this.checkInterval);
         
-        console.log("[WorldEvents] World events system initialized with " + this.events.length + " event types");
+        debugLog("[WorldEvents] World events system initialized with " + this.events.length + " event types");
     },
     
     register: function(worldEvent) {
         this.events.push(worldEvent);
-        console.log("[WorldEvents] Registered world event: " + worldEvent.name);
+        debugLog("[WorldEvents] Registered world event: " + worldEvent.name);
     },
     
     checkRandomEvent: function() {
@@ -55,7 +70,7 @@ WorldEvents.Manager = {
             if (roll <= cumulative) {
                 var worldEvent = this.getEventByType(type);
                 if (worldEvent && worldEvent.canStart()) {
-                    console.log("[WorldEvents] Starting random world event: " + type + " (roll: " + roll.toFixed(2) + ")");
+                    debugLog("[WorldEvents] Starting random world event: " + type + " (roll: " + roll.toFixed(2) + ")");
                     worldEvent.start();
                     return;
                 }
@@ -74,14 +89,14 @@ WorldEvents.Manager = {
     
     addActiveEvent: function(worldEvent) {
         this.active.push(worldEvent);
-        console.log("[WorldEvents] Active event count: " + this.active.length);
+        debugLog("[WorldEvents] Active event count: " + this.active.length);
     },
     
     removeActiveEvent: function(worldEvent) {
         var index = this.active.indexOf(worldEvent);
         if (index > -1) {
             this.active.splice(index, 1);
-            console.log("[WorldEvents] Removed active event, count: " + this.active.length);
+            debugLog("[WorldEvents] Removed active event, count: " + this.active.length);
         }
     },
     
@@ -121,7 +136,7 @@ BrawlEvent.prototype.canStart = function() {
 };
 
 BrawlEvent.prototype.start = function() {
-    console.log("[BrawlEvent] Starting: " + this.name);
+    debugLog("[BrawlEvent] Starting: " + this.name);
     this.active = true;
     this.startTime = Date.now();
     
@@ -140,11 +155,11 @@ BrawlEvent.prototype.start = function() {
     // Setup event logic
     this.setupEventLogic();
     
-    console.log("[BrawlEvent] Started at: " + JSON.stringify(this.position));
+    debugLog("[BrawlEvent] Started at: " + JSON.stringify(this.position));
 };
 
 BrawlEvent.prototype.end = function() {
-    console.log("[BrawlEvent] Ending");
+    debugLog("[BrawlEvent] Ending");
     this.active = false;
     
     // Clean up
@@ -192,7 +207,7 @@ BrawlEvent.prototype.spawnParticipants = function() {
         };
         
         // This would spawn civilian with GTAC ped API
-        console.log("[BrawlEvent] Would spawn participant at: " + JSON.stringify(position) +
+        debugLog("[BrawlEvent] Would spawn participant at: " + JSON.stringify(position) +
             " with model: " + civilianModels[i % civilianModels.length]);
         
         // Store participant reference
@@ -204,7 +219,7 @@ BrawlEvent.prototype.spawnParticipants = function() {
         });
     }
     
-    console.log("[BrawlEvent] Spawned " + numParticipants + " participants");
+    debugLog("[BrawlEvent] Spawned " + numParticipants + " participants");
 };
 
 BrawlEvent.prototype.cleanupParticipants = function() {
@@ -294,7 +309,7 @@ DisturbanceEvent.prototype.canStart = function() {
 };
 
 DisturbanceEvent.prototype.start = function() {
-    console.log("[DisturbanceEvent] Starting: " + this.name);
+    debugLog("[DisturbanceEvent] Starting: " + this.name);
     this.active = true;
     this.startTime = Date.now();
     
@@ -304,11 +319,11 @@ DisturbanceEvent.prototype.start = function() {
     WorldEvents.Manager.addActiveEvent(this);
     this.setupEventLogic();
     
-    console.log("[DisturbanceEvent] Started at: " + JSON.stringify(this.position));
+    debugLog("[DisturbanceEvent] Started at: " + JSON.stringify(this.position));
 };
 
 DisturbanceEvent.prototype.end = function() {
-    console.log("[DisturbanceEvent] Ending");
+    debugLog("[DisturbanceEvent] Ending");
     this.active = false;
     
     if (this.blip) {
@@ -378,7 +393,7 @@ SuspiciousEvent.prototype.canStart = function() {
 };
 
 SuspiciousEvent.prototype.start = function() {
-    console.log("[SuspiciousEvent] Starting: " + this.name);
+    debugLog("[SuspiciousEvent] Starting: " + this.name);
     this.active = true;
     this.startTime = Date.now();
     
@@ -388,11 +403,11 @@ SuspiciousEvent.prototype.start = function() {
     WorldEvents.Manager.addActiveEvent(this);
     this.setupEventLogic();
     
-    console.log("[SuspiciousEvent] Started at: " + JSON.stringify(this.position));
+    debugLog("[SuspiciousEvent] Started at: " + JSON.stringify(this.position));
 };
 
 SuspiciousEvent.prototype.end = function() {
-    console.log("[SuspiciousEvent] Ending");
+    debugLog("[SuspiciousEvent] Ending");
     this.active = false;
     
     if (this.blip) {
@@ -462,7 +477,7 @@ MedicalEvent.prototype.canStart = function() {
 };
 
 MedicalEvent.prototype.start = function() {
-    console.log("[MedicalEvent] Starting: " + this.name);
+    debugLog("[MedicalEvent] Starting: " + this.name);
     this.active = true;
     this.startTime = Date.now();
     
@@ -472,11 +487,11 @@ MedicalEvent.prototype.start = function() {
     WorldEvents.Manager.addActiveEvent(this);
     this.setupEventLogic();
     
-    console.log("[MedicalEvent] Started at: " + JSON.stringify(this.position));
+    debugLog("[MedicalEvent] Started at: " + JSON.stringify(this.position));
 };
 
 MedicalEvent.prototype.end = function() {
-    console.log("[MedicalEvent] Ending");
+    debugLog("[MedicalEvent] Ending");
     this.active = false;
     
     if (this.blip) {

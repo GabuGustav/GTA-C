@@ -110,7 +110,17 @@ root.Config = root.Config or {
     },
     debug_quick_test = false,
     admin_allow_all = false,
-    debug = false
+    debug = false,
+    
+    -- Character System Configuration
+    character_enabled = true,
+    character_change_cooldown_sec = 300,
+    character_force_on_login = false,
+    character_auto_open_jobs = true,
+    character_allow_custom_models = false,
+    character_validation_strict = false,
+    character_save_history = true,
+    character_max_history = 10
 }
 
 function root.trim(value)
