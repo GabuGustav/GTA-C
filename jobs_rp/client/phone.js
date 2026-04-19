@@ -191,11 +191,32 @@ function buildHeader() {
     var pad = Phone.config.padding;
     var header = Phone.window.rectangle(0, 0, Phone.config.width, Phone.config.headerHeight, styles.header);
     var title = Phone.window.text(pad, 12, Phone.config.width - pad * 2, 24, "PHONE", styles.titleText);
-    var back = Phone.window.button(Phone.config.width - 70, 8, 60, 28, "Back", styles.button);
+    var back = Phone.window.button(Phone.config.width - 70, 8, 60, 28, "Back", styles.button, function() {
+    debugLog("[Phone] Back button clicked - closing phone");
+    try {
+        Phone.hide();
+        debugLog("[Phone] Phone.hide() called successfully");
+    } catch (e) {
+        debugLog("[Phone] Error in Phone.hide(): " + String(e));
+    }
+});
 
-    back.onClick = function() {
-        showApp("home");
-    };
+// Add debugging to back button
+back.onMouseDown = function(e) {
+    debugLog("[Phone] Back button onMouseDown triggered");
+    if(e.button == 0 && this.isCursorOverControl()) {
+        debugLog("[Phone] Back button mouse down over control");
+        e.used = true;
+        this.checkToCallCallback();
+    } else {
+        debugLog("[Phone] Back button mouse down but not over control");
+    }
+};
+
+// Add visual debugging to back button
+back.debug = function() {
+    debugLog("[Phone] Back button debug - position: " + this.getScreenPosition() + " size: " + this.size + " shown: " + this.shown);
+};
 
     Phone.controls.header = header;
     Phone.controls.title = title;
@@ -237,6 +258,18 @@ function buildHome() {
             })(app.id));
             button.appId = app.id;
             debugLog("[Phone] Created button for app: " + app.id);
+            
+            // Add debugging to home screen buttons
+            if (app.id === "text") {
+                button.onMouseDown = function(e) {
+                    debugLog("[Phone] Text button onMouseDown triggered");
+                    if(e.button == 0 && this.isCursorOverControl()) {
+                        debugLog("[Phone] Text button mouse down over control");
+                        e.used = true;
+                        this.checkToCallCallback();
+                    }
+                };
+            }
             
             // Create image control for icon
             var icon = Phone.window.image(x + 10, y + 10, 30, 30, app.icon, styles);
@@ -365,29 +398,16 @@ function loadPlayerList() {
     
     // Prefer server-provided authenticated player list if available
     if (Phone.textState.serverPlayerList && Array.isArray(Phone.textState.serverPlayerList)) {
-        var filtered = [];
-        for (var s = 0; s < Phone.textState.serverPlayerList.length; s++) {
-            var item = Phone.textState.serverPlayerList[s];
-            if (!item || typeof item !== "object") {
-                continue;
-            }
-            var name = String(item.name || "");
-            if ((localId !== null && item.id === localId) || (localName && name === localName)) {
-                continue;
-            }
-            filtered.push({
-                id: item.id,
-                name: name,
-                data: item
-            });
-        }
-        Phone.textState.playerList = filtered;
+        debugLog("[Phone] Using server player list: " + JSON.stringify(Phone.textState.serverPlayerList));
+        Phone.textState.playerList = Phone.textState.serverPlayerList;
         updatePlayerListDisplay();
         return;
     }
 
+    debugLog("[Phone] No server player list available, falling back to local API");
     // Test both APIs to see which works
     var players = [];
+    var clients = [];
     var localName = null;
     var localId = null;
 
@@ -402,6 +422,7 @@ function loadPlayerList() {
                 localName = localPlayer.name;
             }
         }
+        debugLog("[Phone] Local player: id=" + localId + ", name=" + localName);
     } catch (e) {
         debugLog("[Phone] Failed to resolve local player identity: " + String(e));
     }
@@ -409,8 +430,11 @@ function loadPlayerList() {
     try {
         // Test getClients() first
         if (typeof getClients === "function") {
-            var clients = getClients();
+            clients = getClients();
             debugLog("[Phone] getClients() returned: " + JSON.stringify(clients));
+            debugLog("[Phone] getClients() type: " + typeof clients);
+            debugLog("[Phone] getClients() isArray: " + Array.isArray(clients));
+            debugLog("[Phone] getClients() length: " + (clients ? clients.length : "null"));
             if (clients && Array.isArray(clients)) {
                 players = clients;
             }
@@ -424,6 +448,9 @@ function loadPlayerList() {
         if (players.length === 0 && typeof getPlayers === "function") {
             var playerList = getPlayers();
             debugLog("[Phone] getPlayers() returned: " + JSON.stringify(playerList));
+            debugLog("[Phone] getPlayers() type: " + typeof playerList);
+            debugLog("[Phone] getPlayers() isArray: " + Array.isArray(playerList));
+            debugLog("[Phone] getPlayers() length: " + (playerList ? playerList.length : "null"));
             if (playerList && Array.isArray(playerList)) {
                 players = playerList;
             }
@@ -433,7 +460,7 @@ function loadPlayerList() {
     }
     
     // Use whichever API returned data
-    var playerList = players.length > 0 ? players : clients;
+    var playerList = players;
     
     if (playerList && Array.isArray(playerList)) {
         debugLog("[Phone] Processing player list with " + playerList.length + " entries");
@@ -442,39 +469,90 @@ function loadPlayerList() {
         
         for (var i = 0; i < playerList.length; i++) {
             var player = playerList[i];
-            debugLog("[Phone] Processing player: " + JSON.stringify(player));
+            debugLog("[Phone] Processing player " + i + ": " + JSON.stringify(player));
             
-            // Add ALL players to list (let server handle filtering)
-            if (player && typeof player === "object" && player.name) {
-                var cleanedName = player.name.replace(/#\d+$/, "");
-                if ((localId !== null && player.id === localId) || (localName && cleanedName === localName)) {
-                    continue;
+            // Check if player is valid and has required properties
+            if (player && typeof player === "object") {
+                var playerName = null;
+                var playerId = null;
+                
+                // Try different ways to get player name
+                if (player.name) {
+                    playerName = String(player.name);
+                } else if (typeof player.getName === "function") {
+                    playerName = String(player.getName());
+                } else if (typeof player.toString === "function") {
+                    playerName = String(player.toString());
                 }
-                allPlayers.push({
-                    id: player.id,
-                    name: cleanedName, // Remove #numbers from name
-                    data: player
-                });
+                
+                // Try different ways to get player ID
+                if (player.id !== undefined && player.id !== null) {
+                    playerId = player.id;
+                } else if (player.index !== undefined && player.index !== null) {
+                    playerId = player.index;
+                }
+                
+                debugLog("[Phone] Extracted: id=" + playerId + ", name=" + playerName);
+                
+                // Skip local player (commented out for testing)
+                var cleanedName = playerName ? playerName.replace(/#\d+$/, "") : "";
+                var isLocal = false;
+                
+                if (localId !== null && playerId !== null && playerId === localId) {
+                    isLocal = true;
+                } else if (localName && cleanedName === localName) {
+                    isLocal = true;
+                } else if (playerName && playerName.includes("#")) {
+                    isLocal = true;
+                }
+                
+                debugLog("[Phone] Player is local: " + isLocal);
+                
+                // For testing: Show all players including local player
+                if (playerName && playerId !== null) {
+                    allPlayers.push({
+                        id: playerId,
+                        name: cleanedName + (isLocal ? " (You)" : ""), // Add "(You)" to identify local player
+                        data: player
+                    });
+                    debugLog("[Phone] Added player to list: " + cleanedName + (isLocal ? " (You)" : ""));
+                }
             }
         }
         
         Phone.textState.playerList = allPlayers;
+        debugLog("[Phone] Final player list: " + JSON.stringify(allPlayers));
+        updatePlayerListDisplay();
+    } else {
+        debugLog("[Phone] No valid player list available");
+        Phone.textState.playerList = [];
         updatePlayerListDisplay();
     }
 }
 
 function updatePlayerListDisplay() {
     var list = Phone.controls.text.playerListPanel.list;
-    if (!list) return;
+    if (!list) {
+        debugLog("[Phone] updatePlayerListDisplay: list is null");
+        return;
+    }
+    
+    debugLog("[Phone] updatePlayerListDisplay: list type=" + typeof list);
+    debugLog("[Phone] updatePlayerListDisplay: list.axis=" + (list.axis ? "exists" : "null"));
+    debugLog("[Phone] updatePlayerListDisplay: list.addEntry=" + (typeof list.addEntry));
+    debugLog("[Phone] updatePlayerListDisplay: list.axis.y=" + (list.axis && list.axis.y ? "exists" : "null"));
     
     // Clear existing entries - try different methods
     try {
         if (list.axis && list.axis.y && list.axis.y.clear) {
             list.axis.y.clear();
+            debugLog("[Phone] Cleared list using list.axis.y.clear()");
         } else if (list.clear) {
             list.clear();
+            debugLog("[Phone] Cleared list using list.clear()");
         } else if (list.entries) {
             list.entries = [];
+            debugLog("[Phone] Cleared list using list.entries = []");
         } else {
             debugLog("[Phone] List clear method not found, creating new list");
             // Recreate the list if clear doesn't work
@@ -483,27 +561,54 @@ function updatePlayerListDisplay() {
             var top = Phone.config.headerHeight + pad;
             Phone.controls.text.playerListPanel.list = Phone.window.list(pad, top + 40, Phone.config.width - pad * 2, 320, styles);
             list = Phone.controls.text.playerListPanel.list;
+            debugLog("[Phone] Recreated list with new list object");
         }
     } catch (e) {
         debugLog("[Phone] Error clearing list: " + String(e));
     }
     
     // Add players to list
+    debugLog("[Phone] About to add " + Phone.textState.playerList.length + " players to list");
     for (var i = 0; i < Phone.textState.playerList.length; i++) {
         var player = Phone.textState.playerList[i];
+        debugLog("[Phone] Adding player " + i + ": " + JSON.stringify(player));
         try {
             if (list.axis && list.axis.y && list.axis.y.addEntry) {
                 list.axis.y.addEntry({
                     text: player.name,
-                    playerData: player
+                    playerData: player,
+                    onClick: function() {
+                        debugLog("[Phone] Player clicked: " + player.name);
+                        Phone.textState.selectedPlayer = player;
+                        showTextPanel("messageCompose");
+                    }
                 });
+                debugLog("[Phone] Added using list.axis.y.addEntry()");
             } else if (list.addEntry) {
                 list.addEntry({
                     text: player.name,
-                    playerData: player
+                    playerData: player,
+                    onClick: function() {
+                        debugLog("[Phone] Player clicked: " + player.name);
+                        Phone.textState.selectedPlayer = player;
+                        showTextPanel("messageCompose");
+                    }
                 });
+                debugLog("[Phone] Added using list.addEntry()");
             } else {
-                debugLog("[Phone] List addEntry method not found");
+                debugLog("[Phone] List addEntry method not found - trying button approach");
+                // Try creating individual buttons for each player
+                var styles = Phone.controls.styles;
+                var pad = Phone.config.padding;
+                var top = Phone.config.headerHeight + pad;
+                var buttonY = top + 40 + (i * 35); // Position each button
+                var playerButton = Phone.window.button(pad, buttonY, Phone.config.width - pad * 2, 30, player.name, styles.button, function() {
+                    debugLog("[Phone] Player button clicked: " + player.name);
+                    Phone.textState.selectedPlayer = player;
+                    showTextPanel("messageCompose");
+                });
+                playerButton.shown = true;
+                debugLog("[Phone] Created player button: " + player.name);
             }
         } catch (e) {
             debugLog("[Phone] Error adding player to list: " + String(e));
@@ -524,7 +629,6 @@ function showTextPanel(panelName) {
     setControlsVisible(Phone.controls.text.composePanel, false);
     setControlsVisible(Phone.controls.text.conversationPanel, false);
     
-    // Show selected panel
     if (panelName === "playerList") {
         debugLog("[Phone] Showing player list panel");
         setControlsVisible(Phone.controls.text.playerListPanel, true);
@@ -532,15 +636,18 @@ function showTextPanel(panelName) {
         debugLog("[Phone] Showing message compose panel");
         setControlsVisible(Phone.controls.text.composePanel, true);
         if (Phone.textState.selectedPlayer) {
-            Phone.controls.text.composePanel.title.text = Phone.textState.selectedPlayer.name;
+            Phone.controls.text.composePanel.title.text = "Message: " + Phone.textState.selectedPlayer.name;
         }
     } else if (panelName === "conversation") {
         debugLog("[Phone] Showing conversation panel");
         setControlsVisible(Phone.controls.text.conversationPanel, true);
-        updateConversationDisplay();
+        if (Phone.textState.currentConversation) {
+            var conversation = Phone.textState.conversations[Phone.textState.currentConversation];
+            if (conversation) {
+                Phone.controls.text.conversationPanel.title.text = conversation.playerName;
+            }
+        }
     }
-    
-    updateKeyboardContext();
 }
 
 function updateKeyboardContext() {
@@ -554,39 +661,32 @@ function updateKeyboardContext() {
             isActive: function() { return Phone.active && Phone.textState.isTyping; },
             appendChar: function(ch) { 
                 var input = Phone.controls.text.composePanel.input;
-                if (input && input.text.length < Phone.config.messageCharLimit) {
-                    input.text += ch;
+                if (input && input.text) {
+                    input.text = input.text + ch;
                     Phone.textState.messageInput = input.text;
                 }
             },
-            deleteChar: function() { 
+            deleteChar: function() {
                 var input = Phone.controls.text.composePanel.input;
-                if (input && input.text.length > 0) {
-                    input.text = input.text.slice(0, -1);
+                if (input && input.text && input.text.length > 0) {
+                    input.text = input.text.substring(0, input.text.length - 1);
                     Phone.textState.messageInput = input.text;
                 }
             },
-            spaceChar: function() { 
+            spaceChar: function() {
                 var input = Phone.controls.text.composePanel.input;
-                if (input && input.text.length < Phone.config.messageCharLimit) {
-                    input.text += " ";
+                if (input && input.text) {
+                    input.text = input.text + " ";
                     Phone.textState.messageInput = input.text;
                 }
             }
         });
     } else {
-        // Configure for navigation (Backspace goes back)
+        // Disable keyboard when not typing - don't interfere with UI navigation
         KeyboardService.setConfig({
-            isActive: function() { return Phone.active && !Phone.textState.isTyping; },
+            isActive: function() { return false; }, // Disable keyboard completely when not typing
             appendChar: function() {},
-            deleteChar: function() {
-                // Backspace goes back when not typing
-                if (Phone.textState.currentPanel !== "playerList") {
-                    showTextPanel("playerList");
-                } else {
-                    showApp("home");
-                }
-            },
+            deleteChar: function() {},
             spaceChar: function() {}
         });
     }
@@ -817,29 +917,56 @@ function showApp(appId) {
 }
 
 Phone.show = function() {
+    debugLog("[Phone] Show called, active: " + Phone.active);
+    
     if (Phone.active) {
+        debugLog("[Phone] Phone already active, showing window");
+        if (Phone.window) {
+            Phone.window.shown = true;
+        }
         return;
     }
+    
+    // Check authentication first
+    if (typeof JobsClient !== "undefined" && JobsClient.authState) {
+        if (JobsClient.authState.authRequired === true && JobsClient.authState.authenticated !== true) {
+            if (JobsClient.UI && typeof JobsClient.UI.showPrompt === "function") {
+                JobsClient.UI.showPrompt("Authenticate in the Jobs Auth panel before using phone.", "warn", true);
+            }
+            return;
+        }
+    }
+    
+    debugLog("[Phone] Creating phone window...");
     if (!ensureWindow()) {
+        debugLog("[Phone] Failed to ensure window");
         return;
     }
+    
     Phone.window.shown = true;
     Phone.active = true;
+    debugLog("[Phone] Phone window shown, active: " + Phone.active);
 
     // Enable mouse input for phone
     var ui = getJobsRpUi();
     if (ui && ui.setInput) {
         ui.setInput(true);
+        debugLog("[Phone] Mouse input enabled");
+    } else {
+        debugLog("[Phone] Failed to enable mouse input - ui or ui.setInput not available");
     }
 
     showApp(Phone.currentApp || "home");
-
-    var ui = getJobsRpUi();
-    if (ui && ui.setInput) {
-        ui.setInput(true);
-    }
+    
+    // Debug button positions
+    setTimeout(function() {
+        if (Phone.controls.back && Phone.controls.back.debug) {
+            Phone.controls.back.debug();
+        }
+    }, 1000);
 };
 
+// ... (rest of the code remains the same)
 Phone.hide = function() {
     if (!Phone.active) {
         return;

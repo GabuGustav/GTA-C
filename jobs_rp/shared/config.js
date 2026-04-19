@@ -84,6 +84,13 @@ JobsRP.Config = JobsRP.Config || {
     legacy_admin_command_root: "jobadmin",
     mod_command_root: "mod",
     auth_forgot_password_enabled: false,
+    web_integration_enabled: true,
+    website_api_url: "https://bgfr-gta-connected.netlify.app/.netlify/functions",
+    website_sync_api_url: "http://127.0.0.1:3001/api",
+    api_secret_key: "gta-server-api-key",
+    web_bridge_enabled: true,
+    web_bridge_queue_file: "data/web_api_queue.json",
+    web_bridge_status_file: "data/web_sync_status.json",
     admin_accounts: ["your_account_id"],
     mod_accounts: [],
     auth_reserved_ids: [

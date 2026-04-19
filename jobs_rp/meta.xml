@@ -23,7 +23,13 @@
   <script language="lua" type="server" src="server/network.lua" />
   <script language="lua" type="server" src="server/backup_system.lua" />
   <script language="lua" type="server" src="server/gamemode_setup.lua" />
-<script language="lua" type="server" src="server/phone_events.lua" />
+  <script language="lua" type="server" src="server/phone_events.lua" />
+  <script language="lua" type="server" src="server/http_client.lua" />
+  <script language="lua" type="server" src="server/job_stats.lua" />
+  <script language="lua" type="server" src="server/sync_scheduler.lua" />
+  <script language="lua" type="server" src="server/web_integration.lua" />
+  <script language="javascript" type="server" src="shared/config.js" />
+  <script language="javascript" type="server" src="server/web_sync_bridge.js" />
   <script language="javascript" type="client" src="shared/config.js" />
   <script language="javascript" type="client" src="shared/job_defs.js" />
   <script language="javascript" type="client" src="shared/character_defs.js" />

@@ -13,7 +13,7 @@ function WebIntegration.init(config)
     -- Set default configuration
     WebIntegration.config = {
         enabled = true,
-        apiUrl = "https://bgf-revival-iv.netlify.app/api",  -- Updated for Netlify deployment
+        apiUrl = "https://bgfr-gta-connected.netlify.app/.netlify/functions",
         apiKey = "gta-server-api-key",
         syncInterval = 5, -- minutes
         autoCreateAccounts = true,
