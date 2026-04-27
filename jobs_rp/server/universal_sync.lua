@@ -37,16 +37,132 @@ function UniversalSync.onPlayerJoin(client)
         lastUpdate = platform.ticks,
         position = {x=0, y=0, z=0},
         velocity = {x=0, y=0, z=0},
-        interpolationBuffer = {}
+        interpolationBuffer = {},
+        playtimeInitialized = false
     }
     
     print("[UniversalSync] Player joined: " .. (client.name or "Unknown") .. " with ping: " .. (client.ping or 100))
+    
+    -- Delay playtime tracking initialization to wait for authentication
+    if JobsRP and JobsRP.JobStats then
+        print("[UniversalSync] DEBUG: Scheduling delayed playtime tracking initialization...")
+        
+        -- Schedule delayed initialization (5 seconds after join)
+        if setTimeout then
+            setTimeout(function()
+                UniversalSync.initializePlaytimeTrackingDelayed(client)
+            end, 5000)
+        else
+            print("[UniversalSync] ERROR: setTimeout not available - using immediate fallback")
+            UniversalSync.initializePlaytimeTrackingImmediate(client)
+        end
+    else
+        print("[UniversalSync] DEBUG: JobsRP.JobStats not available")
+    end
     
     -- Send current server state immediately
     UniversalSync.sendFullState(client)
 end
 
+-- Delayed initialization function
+function UniversalSync.initializePlaytimeTrackingDelayed(client)
+    if not client or not UniversalSync.playerStates[client] then
+        print("[UniversalSync] DEBUG: Client no longer valid for delayed initialization")
+        return
+    end
+    
+    print("[UniversalSync] DEBUG: Running delayed playtime tracking initialization...")
+    
+    -- Get accountId from Auth system or fallback to Store system
+    local accountId = nil
+    
+    -- Try Auth system first
+    if JobsRP.Auth and JobsRP.Auth.getAccountId then
+        accountId = JobsRP.Auth.getAccountId(client)
+        print("[UniversalSync] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
+    end
+    
+    -- Fallback: Try Store system if Auth fails
+    if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
+        accountId = JobsRP.Store.getPlayerId(client)
+        print("[UniversalSync] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
+    end
+    
+    -- Final fallback: Use player name as accountId if still no accountId
+    if not accountId and client.name then
+        accountId = JobsRP.normalizeName(client.name)
+        print("[UniversalSync] DEBUG: Using player name as accountId: " .. accountId)
+        
+        -- Attach to Store system if not already attached
+        if JobsRP.Store and JobsRP.Store.attachPlayerAccount then
+            JobsRP.Store.attachPlayerAccount(client, accountId)
+            print("[UniversalSync] DEBUG: Attached player to Store with accountId: " .. accountId)
+        end
+    end
+    
+    if accountId then
+        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has accountId: " .. accountId)
+        JobsRP.JobStats.initPlayerSession(accountId)
+        JobsRP.JobStats.initPlayerStats(accountId, "civilian")
+        UniversalSync.playerStates[client].playtimeInitialized = true
+        print("[UniversalSync] DEBUG: Playtime tracking initialized successfully for " .. accountId)
+    else
+        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId - giving up after retries")
+        -- Stop retrying to prevent infinite loop
+        UniversalSync.playerStates[client].playtimeInitialized = false
+    end
+end
+
+-- Immediate initialization fallback
+function UniversalSync.initializePlaytimeTrackingImmediate(client)
+    print("[UniversalSync] DEBUG: Running immediate playtime tracking initialization...")
+    
+    -- Get accountId from Auth system or fallback to Store system
+    local accountId = nil
+    
+    -- Try Auth system first
+    if JobsRP.Auth and JobsRP.Auth.getAccountId then
+        accountId = JobsRP.Auth.getAccountId(client)
+        print("[UniversalSync] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
+    end
+    
+    -- Fallback: Try Store system if Auth fails
+    if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
+        accountId = JobsRP.Store.getPlayerId(client)
+        print("[UniversalSync] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
+    end
+    
+    if accountId then
+        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has accountId: " .. accountId)
+        JobsRP.JobStats.initPlayerSession(accountId)
+        JobsRP.JobStats.initPlayerStats(accountId, "civilian")
+        UniversalSync.playerStates[client].playtimeInitialized = true
+    else
+        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId, skipping playtime tracking")
+    end
+end
+
 function UniversalSync.onPlayerQuit(client)
+    -- Clean up playtime tracking
+    if JobsRP and JobsRP.JobStats then
+        -- Get accountId from Auth system or fallback to Store system
+        local accountId = nil
+        
+        -- Try Auth system first
+        if JobsRP.Auth and JobsRP.Auth.getAccountId then
+            accountId = JobsRP.Auth.getAccountId(client)
+        end
+        
+        -- Fallback: Try Store system if Auth fails
+        if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
+            accountId = JobsRP.Store.getPlayerId(client)
+        end
+        
+        if accountId then
+            JobsRP.JobStats.cleanupPlayerSession(accountId)
+        end
+    end
+    
     UniversalSync.playerStates[client] = nil
     print("[UniversalSync] Player quit: " .. (client.name or "Unknown"))
 end

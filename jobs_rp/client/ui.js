@@ -357,6 +357,29 @@ function initHudUi() {
     var xpBarFill = window.rectangle(0, 0, 10, 10, xpFillStyles);
     var xpBarText = window.text(0, 0, 10, 10, "", textStyles);
 
+    // Persistent Level Bar (shown always, not just on level up)
+    var levelBarBg = window.rectangle(0, 0, 10, 10, {
+        main: { backgroundColour: toColour(20, 20, 20, 200) }
+    });
+    var levelBarFill = window.rectangle(0, 0, 10, 10, {
+        main: { backgroundColour: toColour(180, 180, 180, 255) }  // Light gray for gradient effect
+    });
+    var levelLabel = window.text(0, 0, 10, 10, "Level", {
+        main: {
+            textColour: toColour(0, 255, 0, 255),  // Green text like in image
+            textSize: 14,
+            textAlign: 0.5
+        }
+    });
+    var levelNumber = window.text(0, 0, 10, 10, "1", {
+        main: {
+            textColour: toColour(0, 255, 0, 255),  // Green number
+            textSize: 16,
+            textAlign: 0.5,
+            textWeight: 2  // Bold
+        }
+    });
+
     UI.hud.uiWindow = window;
     UI.hud.uiControls = {
         cashBox: cashBox,
@@ -366,7 +389,11 @@ function initHudUi() {
         pipRects: pipRects,
         xpBarBg: xpBarBg,
         xpBarFill: xpBarFill,
-        xpBarText: xpBarText
+        xpBarText: xpBarText,
+        levelBarBg: levelBarBg,
+        levelBarFill: levelBarFill,
+        levelLabel: levelLabel,
+        levelNumber: levelNumber
     };
     UI.hud.uiReady = true;
     UI.hud.useJobsUi = true;
@@ -495,6 +522,69 @@ function updateHudUi() {
         xpBarFill.shown = false;
         xpBarText.shown = false;
     }
+
+    // Persistent Level Bar - Always visible
+    var levelBarBg = UI.hud.uiControls.levelBarBg;
+    var levelBarFill = UI.hud.uiControls.levelBarFill;
+    var levelLabel = UI.hud.uiControls.levelLabel;
+    var levelNumber = UI.hud.uiControls.levelNumber;
+
+    // Get current job and XP info
+    var currentJob = UI.hud.currentJobId || "civilian";
+    var jobConfig = JobsRP && JobsRP.Config && JobsRP.Config.jobs ? JobsRP.Config.jobs[currentJob] : null;
+    var thresholds = jobConfig && jobConfig.xp_thresholds ? jobConfig.xp_thresholds : [100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];
+
+    // Get player XP and level for current job (fallback to civilian)
+    var currentLevel = 1;
+    var currentXp = 0;
+    var nextLevelXp = thresholds[0] || 100;
+
+    // Try to get from profile if available
+    if (JobsRP && JobsRP.Profile && JobsRP.Profile.data) {
+        var profile = JobsRP.Profile.data;
+        if (profile.jobs && profile.jobs[currentJob]) {
+            currentXp = profile.jobs[currentJob].experience || 0;
+            currentLevel = profile.jobs[currentJob].level || 1;
+        } else if (profile.jobs && profile.jobs.civilian) {
+            // Fallback to civilian
+            currentXp = profile.jobs.civilian.experience || 0;
+            currentLevel = profile.jobs.civilian.level || 1;
+        }
+    }
+
+    // Calculate XP percentage for current level
+    var prevThreshold = currentLevel > 1 ? (thresholds[currentLevel - 2] || 0) : 0;
+    var nextThreshold = thresholds[currentLevel - 1] || (prevThreshold + 100);
+    var levelRange = nextThreshold - prevThreshold;
+    var xpInLevel = currentXp - prevThreshold;
+    var xpPercent = levelRange > 0 ? Math.min(1, Math.max(0, xpInLevel / levelRange)) : 0;
+
+    // Position the level bar below the cash display
+    var levelBarW = 200 * scale;
+    var levelBarH = 24 * scale;
+    var levelBarX = rightPx - levelBarW;
+    var levelBarY = topPx + (cashEnabled && !nativeCash ? 40 * scale : 0);
+
+    // Background (dark with border effect)
+    levelBarBg.shown = true;
+    levelBarBg.position = new Vec2(levelBarX, levelBarY);
+    levelBarBg.size = new Vec2(levelBarW, levelBarH);
+
+    // Fill (light gray for gradient effect, width based on XP)
+    levelBarFill.shown = true;
+    levelBarFill.position = new Vec2(levelBarX, levelBarY);
+    levelBarFill.size = new Vec2(levelBarW * xpPercent, levelBarH);
+
+    // Level label on the left side of bar
+    levelLabel.shown = true;
+    levelLabel.position = new Vec2(levelBarX - 50 * scale, levelBarY);
+    levelLabel.size = new Vec2(45 * scale, levelBarH);
+
+    // Level number
+    levelNumber.shown = true;
+    levelNumber.position = new Vec2(levelBarX + levelBarW + 5 * scale, levelBarY);
+    levelNumber.size = new Vec2(30 * scale, levelBarH);
+    levelNumber.text = String(currentLevel);
 }
 
 function drawHud() {
@@ -680,6 +770,23 @@ UI.showWallet = function(cash, delta, reason) {
         text = text + " [" + String(reason) + "]";
     }
     safeChat("[Jobs] " + text, 140, 255, 140);
+};
+
+// Show XP gain notification
+UI.showXPGain = function(amount, reason, jobType) {
+    var xpAmount = Math.round(Number(amount || 0));
+    if (xpAmount === 0) {
+        return;
+    }
+    
+    var jobName = jobType || "General";
+    var text = "[" + jobName + "] +" + xpAmount + " XP";
+    if (reason && reason !== "") {
+        text = text + " - " + reason;
+    }
+    
+    // Show in green/yellow color for XP
+    safeChat(text, 255, 220, 80);  // Yellow/gold color
 };
 
 UI.setProfile = function(profile) {

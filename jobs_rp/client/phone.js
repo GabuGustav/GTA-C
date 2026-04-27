@@ -34,14 +34,23 @@ var Utils = JobsClient.Utils || {};
 
 Phone.config = {
     width: 320,
-    height: 560,
+    height: 520, // Screen height (content area)
     padding: 16,
     headerHeight: 48,
     buttonHeight: 56,
     buttonSpacing: 12,
     gridGap: 14,
     messageCharLimit: 160,
-    messageHistoryLimit: 50
+    messageHistoryLimit: 50,
+    // Phone frame styling
+    frameWidth: 340,
+    frameHeight: 640, // Extra space for home button area
+    framePadding: 10,
+    topBarHeight: 25, // Space for speaker/camera
+    bottomBarHeight: 70, // Space for home button
+    cornerRadius: 30, // Rounded corners for phone look
+    bezelColour: toColour(40, 40, 45, 255), // Phone bezel color
+    screenCornerRadius: 8 // Rounded screen corners
 };
 
 Phone.active = false;
@@ -130,8 +139,18 @@ function makeStyles() {
 Phone.windowCreating = false;
 
 function ensureWindow() {
-    if (Phone.window) {
+    // Check if we have both frame and window (new structure)
+    if (Phone.window && Phone.frame) {
         return true;
+    }
+    
+    // If we only have old window without frame, cleanup and recreate
+    if (Phone.window && !Phone.frame) {
+        debugLog("[Phone] Old window structure detected, cleaning up and recreating");
+        if (Phone.window.shown !== undefined) {
+            Phone.window.shown = false;
+        }
+        Phone.window = null;
     }
     
     // Prevent race condition
@@ -150,17 +169,42 @@ function ensureWindow() {
         }
 
         var screen = getScreenSize();
-        var x = Math.floor(screen.width - Phone.config.width - 30);
-        var y = Math.floor((screen.height - Phone.config.height) / 2);
+        var x = Math.floor(screen.width - Phone.config.frameWidth - 30);
+        var y = Math.floor((screen.height - Phone.config.frameHeight) / 2);
 
         var styles = makeStyles();
-        var win = ui.window(x, y, Phone.config.width, Phone.config.height, "Phone", styles.window);
+        // Create phone frame (the outer bezel) - positioned on screen
+        Phone.frame = ui.window(x, y, Phone.config.frameWidth, Phone.config.frameHeight, "Phone", {
+            main: {
+                backgroundColour: Phone.config.bezelColour,
+                borderColour: toColour(60, 60, 65, 255),
+                borderSize: 1
+            }
+        });
+        Phone.frame.titleBarShown = false;
+        Phone.frame.shown = false;
+
+        // Create inner screen window - at SAME screen position as frame, offset by top bar
+        var screenX = x + Phone.config.framePadding;
+        var screenY = y + Phone.config.topBarHeight; // Start after top speaker/camera area
+        var win = ui.window(screenX, screenY, Phone.config.width, Phone.config.height, "Phone", styles.window);
         win.titleBarShown = false;
         win.shown = false;
 
         Phone.window = win;
         Phone.controls = {};
         Phone.controls.styles = styles;
+
+        // Ensure screen window is on top of frame (z-order)
+        if (Phone.window.setTop) {
+            Phone.window.setTop();
+        }
+
+        // Build phone frame elements (home button, speaker, etc.)
+        buildPhoneFrame();
+        
+        // Start visibility watchdog to prevent mexui from hiding phone on outside click
+        startVisibilityWatchdog();
 
         buildHeader();
         debugLog("[Phone] Header built");
@@ -194,6 +238,7 @@ function buildHeader() {
     var back = Phone.window.button(Phone.config.width - 70, 8, 60, 28, "Back", styles.button, function() {
     debugLog("[Phone] Back button clicked - closing phone");
     try {
+        hidePlayerButtons(); // Hide player buttons when closing phone
         Phone.hide();
         debugLog("[Phone] Phone.hide() called successfully");
     } catch (e) {
@@ -221,6 +266,112 @@ back.debug = function() {
     Phone.controls.header = header;
     Phone.controls.title = title;
     Phone.controls.back = back;
+}
+
+function buildPhoneFrame() {
+    debugLog("[Phone] Building phone frame...");
+    var styles = Phone.controls.styles;
+    var cfg = Phone.config;
+    
+    // Create phone frame elements on the outer frame window
+    if (!Phone.frame) return;
+    
+    // Top speaker grill
+    var speakerWidth = 80;
+    var speakerX = (cfg.frameWidth - speakerWidth) / 2;
+    var speakerY = (cfg.topBarHeight - 6) / 2; // Center vertically in top bar
+    Phone.controls.speaker = Phone.frame.rectangle(speakerX, speakerY, speakerWidth, 6, {
+        main: {
+            backgroundColour: toColour(30, 30, 35, 255),
+            borderSize: 1,
+            borderColour: toColour(50, 50, 55, 255)
+        }
+    });
+    Phone.controls.speaker.shown = true;
+    
+    // Home button at bottom - positioned below screen
+    var homeBtnSize = 50;
+    var homeBtnX = (cfg.frameWidth - homeBtnSize) / 2;
+    var homeBtnY = cfg.topBarHeight + cfg.height + 10; // Position after screen + gap
+    
+    Phone.controls.homeButton = Phone.frame.button(homeBtnX, homeBtnY, homeBtnSize, homeBtnSize, "", {
+        main: {
+            backgroundColour: toColour(50, 50, 55, 200),
+            borderSize: 2,
+            borderColour: toColour(80, 80, 85, 255)
+        },
+        hover: {
+            backgroundColour: toColour(70, 70, 75, 220),
+            borderColour: toColour(100, 100, 105, 255)
+        }
+    }, function() {
+        debugLog("[Phone] Home button clicked - going to home");
+        showApp("home");
+    });
+    Phone.controls.homeButton.shown = true;
+    
+    // White circle inside home button using Unicode character
+    var circleSize = 20;
+    var circleX = homeBtnX + (homeBtnSize - circleSize) / 2;
+    var circleY = homeBtnY + (homeBtnSize - 24) / 2; // Adjust for text height
+    Phone.controls.homeButtonCircle = Phone.frame.text(circleX, circleY, circleSize, 24, "\u25CF", { // Unicode black circle
+        main: {
+            textColour: toColour(255, 255, 255, 255), // White
+            textAlign: 0.5, // Center
+            textSize: 18
+        }
+    });
+    Phone.controls.homeButtonCircle.shown = true;
+    
+    // Back button to the right of home button
+    var backBtnSize = 50;
+    var backBtnX = homeBtnX + homeBtnSize + 20; // 20px gap from home button
+    var backBtnY = homeBtnY;
+    
+    Phone.controls.frameBackButton = Phone.frame.button(backBtnX, backBtnY, backBtnSize, backBtnSize, "", {
+        main: {
+            backgroundColour: toColour(50, 50, 55, 200),
+            borderSize: 2,
+            borderColour: toColour(80, 80, 85, 255)
+        },
+        hover: {
+            backgroundColour: toColour(70, 70, 75, 220),
+            borderColour: toColour(100, 100, 105, 255)
+        }
+    }, function() {
+        debugLog("[Phone] Frame back button clicked - going back");
+        if (Phone.currentApp === "text" && Phone.textState.currentPanel === "messageCompose") {
+            showTextPanel("playerList"); // Go back to player list from compose
+        } else if (Phone.currentApp !== "home") {
+            showApp("home"); // Go to home from other apps
+        }
+    });
+    Phone.controls.frameBackButton.shown = true;
+    
+    // Back arrow inside back button using Unicode
+    var arrowSize = 20;
+    var arrowX = backBtnX + (backBtnSize - arrowSize) / 2;
+    var arrowY = backBtnY + (backBtnSize - 24) / 2;
+    Phone.controls.frameBackButtonArrow = Phone.frame.text(arrowX, arrowY, arrowSize, 24, "\u25C0", { // Unicode left-pointing triangle
+        main: {
+            textColour: toColour(255, 255, 255, 255), // White
+            textAlign: 0.5, // Center
+            textSize: 16
+        }
+    });
+    Phone.controls.frameBackButtonArrow.shown = true;
+    
+    // Camera dot - positioned near speaker
+    Phone.controls.camera = Phone.frame.rectangle(cfg.frameWidth / 2 + 50, speakerY + 1, 8, 4, {
+        main: {
+            backgroundColour: toColour(20, 20, 25, 255),
+            borderSize: 1,
+            borderColour: toColour(40, 40, 45, 255)
+        }
+    });
+    Phone.controls.camera.shown = true;
+    
+    debugLog("[Phone] Phone frame built with home button, back button, speaker, camera");
 }
 
 function buildHome() {
@@ -271,13 +422,16 @@ function buildHome() {
                 };
             }
             
-            // Create image control for icon
-            var icon = Phone.window.image(x + 10, y + 10, 30, 30, app.icon, styles);
+            // Create image control for icon - larger and centered
+            var iconSize = 48; // Increased from 30 to 48 pixels
+            var iconX = x + (cellW - iconSize) / 2; // Center horizontally
+            var iconY = y + 8; // Position near top of button
+            var icon = Phone.window.image(iconX, iconY, iconSize, iconSize, app.icon, styles);
             icon.shown = true;
-            debugLog("[Phone] Created icon for: " + app.id);
+            debugLog("[Phone] Created icon for: " + app.id + " at " + iconX + "," + iconY + " size " + iconSize);
             
-            // Create text label below icon
-            var label = Phone.window.text(x, y + 45, cellW, 20, app.label, styles.titleText);
+            // Create text label below icon - centered
+            var label = Phone.window.text(x, y + 58, cellW, 24, app.label, styles.titleText);
             label.shown = true;
             debugLog("[Phone] Created label for: " + app.id);
             
@@ -363,6 +517,18 @@ function buildText() {
         visible: false
     };
     
+    // Create blinking cursor for input (same pattern as auth UI)
+    var inputX = pad + 5; // Slight offset from input edge
+    var inputY = top + 60 + 10; // Position inside input
+    Phone.controls.text.composePanel.cursor = Phone.window.text(inputX, inputY, 12, 24, "|", {
+        main: {
+            textColour: toColour(255, 255, 255, 255), // White cursor
+            textSize: 20,
+            textAlign: 0.5
+        }
+    });
+    Phone.controls.text.composePanel.cursor.shown = false; // Hidden by default
+    
     // Conversation Panel
     Phone.controls.text.conversationPanel = {
         title: Phone.window.text(pad, top, Phone.config.width - pad * 2, 24, "", styles.titleText),
@@ -370,26 +536,25 @@ function buildText() {
         visible: false
     };
     
-    // Setup list callback
-    Phone.controls.text.playerListPanel.list.onClick = function(selectedRow) {
-        if (selectedRow && selectedRow.playerData) {
-            Phone.textState.selectedPlayer = selectedRow.playerData;
-            showTextPanel("messageCompose");
-        }
-    };
+    // NOTE: List onClick disabled - using individual player buttons instead for reliability
+    // Phone.controls.text.playerListPanel.list.onClick removed
+    
+    // Create player buttons container - same pattern as home screen apps
+    Phone.controls.text.playerListPanel.buttons = [];
     
     // Setup input callback
     Phone.controls.text.composePanel.input.onChange = function(text) {
         Phone.textState.messageInput = text;
         Phone.textState.isTyping = text.length > 0;
         updateKeyboardContext();
+        updateInputCursor(); // Update cursor position on text change
     };
     
-    // Load player list (server-authenticated preferred)
-    if (Phone.textState.serverPlayerList == null) {
-        Utils.triggerNetworkEventSafe("phone.requestPlayerList");
-    }
-    loadPlayerList();
+    // NOTE: Player buttons are created on-demand when text panel opens
+    // Do NOT load player list here - it will be loaded when text app is opened
+    
+    // Start cursor blink timer
+    startCursorBlink();
 }
 
 // Text messaging core functions
@@ -400,7 +565,7 @@ function loadPlayerList() {
     if (Phone.textState.serverPlayerList && Array.isArray(Phone.textState.serverPlayerList)) {
         debugLog("[Phone] Using server player list: " + JSON.stringify(Phone.textState.serverPlayerList));
         Phone.textState.playerList = Phone.textState.serverPlayerList;
-        updatePlayerListDisplay();
+        // Buttons are built ON-DEMAND when text panel opens
         return;
     }
 
@@ -522,100 +687,147 @@ function loadPlayerList() {
         
         Phone.textState.playerList = allPlayers;
         debugLog("[Phone] Final player list: " + JSON.stringify(allPlayers));
-        updatePlayerListDisplay();
+        // Buttons will be built on-demand when text panel opens
     } else {
         debugLog("[Phone] No valid player list available");
         Phone.textState.playerList = [];
-        updatePlayerListDisplay();
     }
 }
 
-function updatePlayerListDisplay() {
-    var list = Phone.controls.text.playerListPanel.list;
-    if (!list) {
-        debugLog("[Phone] updatePlayerListDisplay: list is null");
+// Update player buttons text (buttons already exist, just update text and visibility)
+function updatePlayerButtons() {
+    var styles = Phone.controls.styles;
+    var pad = Phone.config.padding;
+    var top = Phone.config.headerHeight + pad;
+    var startY = top + 40;
+    var buttonHeight = 40;
+    var buttonSpacing = 5;
+    var buttons = Phone.controls.text.playerListPanel.buttons;
+    
+    // Hide the list control - we're using buttons instead
+    if (Phone.controls.text.playerListPanel.list) {
+        Phone.controls.text.playerListPanel.list.shown = false;
+    }
+    
+    // First, hide all existing buttons
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i]) buttons[i].shown = false;
+    }
+    
+    // Update/show buttons for current player list
+    debugLog("[Phone] Updating " + Phone.textState.playerList.length + " player buttons");
+    
+    for (var i = 0; i < Phone.textState.playerList.length; i++) {
+        var player = Phone.textState.playerList[i];
+        
+        if (i < buttons.length) {
+            // Update existing button
+            buttons[i].text = player.name;
+            buttons[i].shown = true;
+            debugLog("[Phone] Updated player button " + i + ": " + player.name);
+        } else {
+            // Create new button if needed
+            var buttonY = startY + (i * (buttonHeight + buttonSpacing));
+            (function(playerData, btnIndex) {
+                var playerButton = Phone.window.button(
+                    pad, 
+                    buttonY, 
+                    Phone.config.width - pad * 2, 
+                    buttonHeight, 
+                    playerData.name, 
+                    styles.button, 
+                    function() {
+                        debugLog("[Phone] Player button clicked: " + playerData.name);
+                        Phone.textState.selectedPlayer = playerData;
+                        showTextPanel("messageCompose");
+                    }
+                );
+                playerButton.shown = true;
+                buttons.push(playerButton);
+                debugLog("[Phone] Created player button " + btnIndex + ": " + playerData.name);
+            })(player, i);
+        }
+    }
+    
+    debugLog("[Phone] Player buttons updated: " + buttons.length + " total, " + Phone.textState.playerList.length + " active");
+}
+
+// Hide all player buttons (same pattern as hiding app buttons)
+function hidePlayerButtons() {
+    var buttons = Phone.controls.text.playerListPanel.buttons;
+    debugLog("[Phone] Hiding " + buttons.length + " player buttons");
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i]) buttons[i].shown = false;
+    }
+}
+
+// Cursor blink state
+var cursorBlinkInterval = null;
+var cursorVisible = false;
+
+// Start cursor blinking timer
+function startCursorBlink() {
+    if (cursorBlinkInterval) {
+        clearInterval(cursorBlinkInterval);
+    }
+    
+    cursorBlinkInterval = setInterval(function() {
+        if (Phone.active && Phone.textState.currentPanel === "messageCompose" && Phone.textState.isTyping) {
+            cursorVisible = !cursorVisible;
+            if (Phone.controls.text.composePanel.cursor) {
+                Phone.controls.text.composePanel.cursor.shown = cursorVisible;
+            }
+        } else {
+            // Hide cursor when not typing or not on compose panel
+            if (Phone.controls.text.composePanel.cursor) {
+                Phone.controls.text.composePanel.cursor.shown = false;
+            }
+            cursorVisible = false;
+        }
+    }, 500); // Blink every 500ms (half second)
+}
+
+// Update cursor position based on input text
+function updateInputCursor() {
+    if (!Phone.controls.text.composePanel.input || !Phone.controls.text.composePanel.cursor) {
         return;
     }
     
-    debugLog("[Phone] updatePlayerListDisplay: list type=" + typeof list);
-    debugLog("[Phone] updatePlayerListDisplay: list.axis=" + (list.axis ? "exists" : "null"));
-    debugLog("[Phone] updatePlayerListDisplay: list.addEntry=" + (typeof list.addEntry));
-    debugLog("[Phone] updatePlayerListDisplay: list.axis.y=" + (list.axis && list.axis.y ? "exists" : "null"));
+    var input = Phone.controls.text.composePanel.input;
+    var cursor = Phone.controls.text.composePanel.cursor;
+    var text = input.text || "";
+    var pad = Phone.config.padding;
+    var top = Phone.config.headerHeight + pad;
     
-    // Clear existing entries - try different methods
-    try {
-        if (list.axis && list.axis.y && list.axis.y.clear) {
-            list.axis.y.clear();
-            debugLog("[Phone] Cleared list using list.axis.y.clear()");
-        } else if (list.clear) {
-            list.clear();
-            debugLog("[Phone] Cleared list using list.clear()");
-        } else if (list.entries) {
-            list.entries = [];
-            debugLog("[Phone] Cleared list using list.entries = []");
-        } else {
-            debugLog("[Phone] List clear method not found, creating new list");
-            // Recreate the list if clear doesn't work
-            var styles = Phone.controls.styles;
-            var pad = Phone.config.padding;
-            var top = Phone.config.headerHeight + pad;
-            Phone.controls.text.playerListPanel.list = Phone.window.list(pad, top + 40, Phone.config.width - pad * 2, 320, styles);
-            list = Phone.controls.text.playerListPanel.list;
-            debugLog("[Phone] Recreated list with new list object");
-        }
-    } catch (e) {
-        debugLog("[Phone] Error clearing list: " + String(e));
+    // Calculate cursor X position based on text length (approximate)
+    var charWidth = 8; // Approximate width per character
+    var inputX = pad + 5;
+    var cursorX = inputX + Math.min(text.length * charWidth, input.size.x - 20);
+    var cursorY = top + 60 + 10;
+    
+    // Update cursor position
+    cursor.position.x = cursorX;
+    cursor.position.y = cursorY;
+    
+    // Show cursor when typing
+    if (Phone.textState.isTyping) {
+        cursor.shown = true;
+        cursorVisible = true;
+    } else {
+        cursor.shown = false;
+        cursorVisible = false;
     }
-    
-    // Add players to list
-    debugLog("[Phone] About to add " + Phone.textState.playerList.length + " players to list");
-    for (var i = 0; i < Phone.textState.playerList.length; i++) {
-        var player = Phone.textState.playerList[i];
-        debugLog("[Phone] Adding player " + i + ": " + JSON.stringify(player));
-        try {
-            if (list.axis && list.axis.y && list.axis.y.addEntry) {
-                list.axis.y.addEntry({
-                    text: player.name,
-                    playerData: player,
-                    onClick: function() {
-                        debugLog("[Phone] Player clicked: " + player.name);
-                        Phone.textState.selectedPlayer = player;
-                        showTextPanel("messageCompose");
-                    }
-                });
-                debugLog("[Phone] Added using list.axis.y.addEntry()");
-            } else if (list.addEntry) {
-                list.addEntry({
-                    text: player.name,
-                    playerData: player,
-                    onClick: function() {
-                        debugLog("[Phone] Player clicked: " + player.name);
-                        Phone.textState.selectedPlayer = player;
-                        showTextPanel("messageCompose");
-                    }
-                });
-                debugLog("[Phone] Added using list.addEntry()");
-            } else {
-                debugLog("[Phone] List addEntry method not found - trying button approach");
-                // Try creating individual buttons for each player
-                var styles = Phone.controls.styles;
-                var pad = Phone.config.padding;
-                var top = Phone.config.headerHeight + pad;
-                var buttonY = top + 40 + (i * 35); // Position each button
-                var playerButton = Phone.window.button(pad, buttonY, Phone.config.width - pad * 2, 30, player.name, styles.button, function() {
-                    debugLog("[Phone] Player button clicked: " + player.name);
-                    Phone.textState.selectedPlayer = player;
-                    showTextPanel("messageCompose");
-                });
-                playerButton.shown = true;
-                debugLog("[Phone] Created player button: " + player.name);
-            }
-        } catch (e) {
-            debugLog("[Phone] Error adding player to list: " + String(e));
-        }
+}
+
+// Stop cursor blinking
+function stopCursorBlink() {
+    if (cursorBlinkInterval) {
+        clearInterval(cursorBlinkInterval);
+        cursorBlinkInterval = null;
     }
-    
-    debugLog("[Phone] Player list updated with " + Phone.textState.playerList.length + " players");
+    if (Phone.controls.text.composePanel.cursor) {
+        Phone.controls.text.composePanel.cursor.shown = false;
+    }
 }
 
 function showTextPanel(panelName) {
@@ -629,17 +841,38 @@ function showTextPanel(panelName) {
     setControlsVisible(Phone.controls.text.composePanel, false);
     setControlsVisible(Phone.controls.text.conversationPanel, false);
     
+    // Show or hide player buttons based on panel (same pattern as app buttons)
+    if (panelName === "playerList") {
+        debugLog("[Phone] Showing player buttons for playerList");
+        updatePlayerButtons(); // Update and show buttons
+    } else {
+        debugLog("[Phone] Hiding player buttons for panel: " + panelName);
+        hidePlayerButtons(); // Hide buttons when not on playerList
+    }
+    
     if (panelName === "playerList") {
         debugLog("[Phone] Showing player list panel");
+        // Hide cursor when leaving compose panel
+        if (Phone.controls.text.composePanel.cursor) {
+            Phone.controls.text.composePanel.cursor.shown = false;
+        }
         setControlsVisible(Phone.controls.text.playerListPanel, true);
     } else if (panelName === "messageCompose") {
         debugLog("[Phone] Showing message compose panel");
+        hidePlayerButtons(); // Hide buttons when going to typing screen
         setControlsVisible(Phone.controls.text.composePanel, true);
         if (Phone.textState.selectedPlayer) {
             Phone.controls.text.composePanel.title.text = "Message: " + Phone.textState.selectedPlayer.name;
         }
+        // Reset and show cursor when entering compose panel
+        updateInputCursor();
     } else if (panelName === "conversation") {
         debugLog("[Phone] Showing conversation panel");
+        hidePlayerButtons(); // Hide buttons when viewing conversation
+        // Hide cursor when leaving compose panel
+        if (Phone.controls.text.composePanel.cursor) {
+            Phone.controls.text.composePanel.cursor.shown = false;
+        }
         setControlsVisible(Phone.controls.text.conversationPanel, true);
         if (Phone.textState.currentConversation) {
             var conversation = Phone.textState.conversations[Phone.textState.currentConversation];
@@ -656,7 +889,7 @@ function updateKeyboardContext() {
     var isTyping = Phone.textState.isTyping && Phone.textState.currentPanel === "messageCompose";
     
     if (isTyping) {
-        // Configure for text input
+        // Configure for text input - NO delete/backspace handling (removed per request)
         KeyboardService.setConfig({
             isActive: function() { return Phone.active && Phone.textState.isTyping; },
             appendChar: function(ch) { 
@@ -666,13 +899,7 @@ function updateKeyboardContext() {
                     Phone.textState.messageInput = input.text;
                 }
             },
-            deleteChar: function() {
-                var input = Phone.controls.text.composePanel.input;
-                if (input && input.text && input.text.length > 0) {
-                    input.text = input.text.substring(0, input.text.length - 1);
-                    Phone.textState.messageInput = input.text;
-                }
-            },
+            // deleteChar REMOVED - no backspace handling in phone
             spaceChar: function() {
                 var input = Phone.controls.text.composePanel.input;
                 if (input && input.text) {
@@ -682,11 +909,11 @@ function updateKeyboardContext() {
             }
         });
     } else {
-        // Disable keyboard when not typing - don't interfere with UI navigation
+        // Disable keyboard when not typing
         KeyboardService.setConfig({
-            isActive: function() { return false; }, // Disable keyboard completely when not typing
+            isActive: function() { return false; },
             appendChar: function() {},
-            deleteChar: function() {},
+            // deleteChar REMOVED
             spaceChar: function() {}
         });
     }
@@ -870,6 +1097,9 @@ function setControlsVisible(group, visible) {
             setVisibility(group.buttons[j]);
         }
     }
+    
+    // NOTE: playerButtons array is managed directly by buildPlayerButtons/clearPlayerButtons
+    // Do NOT process here to avoid conflicts with on-demand creation
 }
 
 function showApp(appId) {
@@ -885,25 +1115,40 @@ function showApp(appId) {
     setControlsVisible(Phone.controls.jobs, false);
     setControlsVisible(Phone.controls.cars, false);
     setControlsVisible(Phone.controls.bank, false);
-    setControlsVisible(Phone.controls.text, false);
+    
+    // Explicitly hide all text panels and player buttons
+    if (Phone.controls.text) {
+        setControlsVisible(Phone.controls.text.playerListPanel, false);
+        setControlsVisible(Phone.controls.text.composePanel, false);
+        setControlsVisible(Phone.controls.text.conversationPanel, false);
+        // Hide player buttons when leaving text app (same pattern as apps)
+        hidePlayerButtons();
+    }
 
     // Show selected app
     debugLog("[Phone] Showing app: " + appId);
     if (appId === "home") {
         debugLog("[Phone] Showing home controls");
         setControlsVisible(Phone.controls.home, true);
+        // Hide player buttons when on home screen
+        hidePlayerButtons();
     } else if (appId === "jobs") {
         debugLog("[Phone] Showing jobs controls");
+        hidePlayerButtons(); // Hide player buttons when leaving text app
         setControlsVisible(Phone.controls.jobs, true);
     } else if (appId === "text") {
         debugLog("[Phone] Text app clicked - showing text controls");
         setControlsVisible(Phone.controls.text, true);
-        showTextPanel("playerList"); // Show player list when text app opens
+        // Request player list from server first, then show panel (buttons built on-demand)
+        Utils.triggerNetworkEventSafe("phone.requestPlayerList");
+        showTextPanel("playerList");
     } else if (appId === "cars") {
         debugLog("[Phone] Showing cars controls");
+        hidePlayerButtons(); // Hide player buttons when leaving text app
         setControlsVisible(Phone.controls.cars, true);
     } else if (appId === "bank") {
         debugLog("[Phone] Showing bank controls");
+        hidePlayerButtons(); // Hide player buttons when leaving text app
         setControlsVisible(Phone.controls.bank, true);
     }
 
@@ -920,9 +1165,12 @@ Phone.show = function() {
     debugLog("[Phone] Show called, active: " + Phone.active);
     
     if (Phone.active) {
-        debugLog("[Phone] Phone already active, showing window");
+        debugLog("[Phone] Phone already active, showing window and frame");
         if (Phone.window) {
             Phone.window.shown = true;
+        }
+        if (Phone.frame) {
+            Phone.frame.shown = true;
         }
         return;
     }
@@ -937,15 +1185,29 @@ Phone.show = function() {
         }
     }
     
-    debugLog("[Phone] Creating phone window...");
+    debugLog("[Phone] Creating phone window and frame...");
     if (!ensureWindow()) {
         debugLog("[Phone] Failed to ensure window");
         return;
     }
     
     Phone.window.shown = true;
+    if (Phone.frame) {
+        Phone.frame.shown = true;
+    }
     Phone.active = true;
-    debugLog("[Phone] Phone window shown, active: " + Phone.active);
+    debugLog("[Phone] Phone window and frame shown, active: " + Phone.active);
+    
+    // Ensure proper z-order - screen on top of frame
+    if (Phone.frame && Phone.frame.setTop) {
+        Phone.frame.setTop();
+    }
+    if (Phone.window && Phone.window.setTop) {
+        Phone.window.setTop();
+    }
+    
+    // Start visibility watchdog
+    startVisibilityWatchdog();
 
     // Enable mouse input for phone
     var ui = getJobsRpUi();
@@ -971,8 +1233,18 @@ Phone.hide = function() {
     if (!Phone.active) {
         return;
     }
+    
+    // Stop visibility watchdog
+    stopVisibilityWatchdog();
+    
+    // Hide player buttons when hiding phone
+    hidePlayerButtons();
+    
     if (Phone.window) {
         Phone.window.shown = false;
+    }
+    if (Phone.frame) {
+        Phone.frame.shown = false;
     }
     Phone.active = false;
 
@@ -981,6 +1253,40 @@ Phone.hide = function() {
         ui.setInput(false);
     }
 };
+
+// Visibility watchdog - ensures phone stays visible and on top when active
+var visibilityWatchdogInterval = null;
+function startVisibilityWatchdog() {
+    if (visibilityWatchdogInterval) {
+        clearInterval(visibilityWatchdogInterval);
+    }
+    
+    visibilityWatchdogInterval = setInterval(function() {
+        if (Phone.active) {
+            // Ensure both windows are visible
+            if (Phone.window && !Phone.window.shown) {
+                Phone.window.shown = true;
+                debugLog("[Phone] Watchdog: Restored screen window visibility");
+            }
+            if (Phone.frame && !Phone.frame.shown) {
+                Phone.frame.shown = true;
+                debugLog("[Phone] Watchdog: Restored frame visibility");
+            }
+            
+            // Ensure screen stays on top
+            if (Phone.window && Phone.window.setTop) {
+                Phone.window.setTop();
+            }
+        }
+    }, 100); // Check every 100ms
+}
+
+function stopVisibilityWatchdog() {
+    if (visibilityWatchdogInterval) {
+        clearInterval(visibilityWatchdogInterval);
+        visibilityWatchdogInterval = null;
+    }
+}
 
 // Resource cleanup function
 Phone.cleanup = function() {
@@ -1091,6 +1397,11 @@ if (typeof addNetworkHandler === "function") {
         if (Array.isArray(list)) {
             Phone.textState.serverPlayerList = list;
             loadPlayerList();
+            // Update buttons if currently on playerList panel
+            if (Phone.textState.currentPanel === "playerList" && Phone.active) {
+                debugLog("[Phone] Updating player buttons after server update");
+                updatePlayerButtons();
+            }
         }
     });
 }

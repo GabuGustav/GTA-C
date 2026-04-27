@@ -26,6 +26,7 @@
   <script language="lua" type="server" src="server/phone_events.lua" />
   <script language="lua" type="server" src="server/http_client.lua" />
   <script language="lua" type="server" src="server/job_stats.lua" />
+  <script language="lua" type="server" src="server/account_data_store.lua" />
   <script language="lua" type="server" src="server/sync_scheduler.lua" />
   <script language="lua" type="server" src="server/web_integration.lua" />
   <script language="javascript" type="server" src="shared/config.js" />

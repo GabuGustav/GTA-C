@@ -122,9 +122,28 @@ function SyncScheduler.syncBatch(playerUpdates, callback)
         return
     end
     
+    -- First, save all player stats to local JSON files
+    if JobsRP.AccountDataStore then
+        for _, update in ipairs(playerUpdates) do
+            if update.accountId then
+                JobsRP.AccountDataStore.savePlayerStats(update.accountId)
+                print("[SyncScheduler] Saved player stats to local file: " .. update.accountId)
+            end
+        end
+    end
+    
     JobsRP.HttpClient.syncPlayerStats(playerUpdates, function(success, response, status)
         if success and response then
             print("[SyncScheduler] Batch sync successful: " .. (response.updatedCount or 0) .. " players updated")
+            
+            -- Mark all synced accounts as synced
+            if JobsRP.AccountDataStore then
+                for _, update in ipairs(playerUpdates) do
+                    if update.accountId then
+                        JobsRP.AccountDataStore.markSynced(update.accountId)
+                    end
+                end
+            end
             
             -- Log any errors from individual players
             if response.errors and #response.errors > 0 then
@@ -137,9 +156,73 @@ function SyncScheduler.syncBatch(playerUpdates, callback)
             if callback then callback(true, nil) end
         else
             print("[SyncScheduler] Batch sync failed: " .. tostring(response))
+            
+            -- Mark accounts as failed for retry
+            if JobsRP.AccountDataStore then
+                for _, update in ipairs(playerUpdates) do
+                    if update.accountId then
+                        JobsRP.AccountDataStore.markSyncFailed(update.accountId, tostring(response))
+                        print("[SyncScheduler] Marked for retry from local file: " .. update.accountId)
+                    end
+                end
+            end
+            
             if callback then callback(false, response) end
         end
     end)
+end
+
+-- Retry failed syncs from local JSON files
+function SyncScheduler.retryFailedSyncs()
+    if not JobsRP.AccountDataStore then
+        print("[SyncScheduler] AccountDataStore not available for retry")
+        return false
+    end
+    
+    local pendingSyncs = JobsRP.AccountDataStore.getPendingSyncs()
+    
+    if #pendingSyncs == 0 then
+        return true
+    end
+    
+    print("[SyncScheduler] Retrying " .. #pendingSyncs .. " failed syncs from local files")
+    
+    -- Convert pending syncs to player updates format
+    local playerUpdates = {}
+    for _, pending in ipairs(pendingSyncs) do
+        local accountId = pending.accountId
+        local data = pending.data
+        
+        if data and data.jobStats then
+            for jobType, jobData in pairs(data.jobStats) do
+                table.insert(playerUpdates, {
+                    accountId = accountId,
+                    jobType = jobType,
+                    stats = jobData.stats or {},
+                    experience = jobData.experience or 0,
+                    level = jobData.level or 1,
+                    lastUpdated = jobData.lastUpdated or 0,
+                    retryCount = pending.retryCount or 0
+                })
+            end
+        end
+    end
+    
+    if #playerUpdates == 0 then
+        print("[SyncScheduler] No valid player updates found for retry")
+        return false
+    end
+    
+    -- Sync the batch
+    SyncScheduler.syncBatch(playerUpdates, function(success, error)
+        if success then
+            print("[SyncScheduler] Retry sync successful for " .. #playerUpdates .. " updates")
+        else
+            print("[SyncScheduler] Retry sync failed: " .. tostring(error))
+        end
+    end)
+    
+    return true
 end
 
 -- Update sync statistics

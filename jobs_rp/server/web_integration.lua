@@ -57,6 +57,20 @@ function WebIntegration.init(config)
         print("[WebIntegration] Sync scheduler initialized")
     end
     
+    -- Initialize account data store for local JSON backup
+    if JobsRP.AccountDataStore then
+        JobsRP.AccountDataStore.init({
+            autoSave = true,
+            syncToApi = true,
+            retryFailedSync = true,
+            retryInterval = 60
+        })
+        print("[WebIntegration] Account data store initialized")
+        
+        -- Set up automatic retry of failed syncs every 2 minutes
+        WebIntegration.startRetryScheduler()
+    end
+    
     -- Test connection to website
     if WebIntegration.config.enabled and JobsRP.HttpClient then
         WebIntegration.testConnection()
@@ -119,6 +133,22 @@ function WebIntegration.getStatus()
         status.components.syncScheduler = { loaded = false }
     end
     
+    -- Check account data store status
+    if JobsRP.AccountDataStore then
+        local allStats = {}
+        -- Get pending sync count
+        local pendingCount = 0
+        for _ in pairs(JobsRP.AccountDataStore.pendingSync) do
+            pendingCount = pendingCount + 1
+        end
+        status.components.accountDataStore = {
+            loaded = true,
+            pendingSyncs = pendingCount
+        }
+    else
+        status.components.accountDataStore = { loaded = false }
+    end
+    
     return status
 end
 
@@ -164,6 +194,37 @@ function WebIntegration.getLeaderboard(jobType, limit)
     return JobsRP.JobStats.getLeaderboard(jobType, limit)
 end
 
+-- Retry scheduler timer
+WebIntegration.retryTimer = nil
+
+-- Start retry scheduler for failed syncs
+function WebIntegration.startRetryScheduler()
+    if WebIntegration.retryTimer then
+        clearInterval(WebIntegration.retryTimer)
+    end
+    
+    -- Retry every 2 minutes (120 seconds = 120000ms)
+    if setInterval then
+        WebIntegration.retryTimer = setInterval(function()
+            if JobsRP.SyncScheduler and JobsRP.SyncScheduler.retryFailedSyncs then
+                JobsRP.SyncScheduler.retryFailedSyncs()
+            end
+        end, 120000) -- 2 minutes in ms
+        print("[WebIntegration] Retry scheduler started (120s interval)")
+    else
+        print("[WebIntegration] WARNING: setInterval not available, retry scheduler disabled")
+    end
+end
+
+-- Stop retry scheduler
+function WebIntegration.stopRetryScheduler()
+    if WebIntegration.retryTimer and clearInterval then
+        clearInterval(WebIntegration.retryTimer)
+        WebIntegration.retryTimer = nil
+        print("[WebIntegration] Retry scheduler stopped")
+    end
+end
+
 -- Admin command to show integration status
 function WebIntegration.adminStatus(client)
     if not Auth or not Auth.requireAuthenticated(client) then
@@ -205,6 +266,117 @@ function WebIntegration.adminStatus(client)
         messageClient(client, "Failed: " .. (syncStatus.stats.failedSyncs or 0), 255, 255, 255)
     else
         messageClient(client, "Sync Scheduler: Not loaded", 255, 0, 0)
+    end
+    
+    return true
+end
+
+-- Admin command to check authentication status
+function WebIntegration.adminAuthStatus(client)
+    if not client then
+        print("[WebIntegration] ERROR: No client provided")
+        return false
+    end
+    
+    messageClient(client, "Checking authentication status...", 255, 255, 0)
+    
+    -- Get accountId from Auth system
+    local accountId = nil
+    if JobsRP and JobsRP.Auth and JobsRP.Auth.getAccountId then
+        accountId = JobsRP.Auth.getAccountId(client)
+        print("[WebIntegration] DEBUG: getAccountId returned: " .. tostring(accountId))
+    else
+        print("[WebIntegration] DEBUG: Auth.getAccountId not available")
+    end
+    
+    if accountId then
+        messageClient(client, "Authenticated as: " .. accountId, 0, 255, 0)
+        messageClient(client, "XP rewards are active!", 0, 255, 0)
+    else
+        messageClient(client, "Not authenticated!", 255, 0, 0)
+        messageClient(client, "Use: /jobauth login <username> <password>", 255, 255, 0)
+        messageClient(client, "Then you will earn XP for playtime", 255, 255, 0)
+    end
+    
+    return true
+end
+
+-- Admin command to test playtime XP system
+function WebIntegration.adminTestXP(client)
+    if not client then
+        print("[WebIntegration] ERROR: No client provided for testxp command")
+        return false
+    end
+    
+    -- Validate client has required methods
+    if not client.name then
+        print("[WebIntegration] ERROR: Invalid client object for testxp command")
+        return false
+    end
+    
+    print("[WebIntegration] DEBUG: testxp command called by client: " .. (client.name or "Unknown"))
+    
+    if messageClient then
+        messageClient(client, "Testing playtime XP system...", 255, 255, 0)
+    else
+        print("[WebIntegration] ERROR: messageClient function not available")
+        return false
+    end
+    
+    if JobsRP and JobsRP.JobStats then
+        -- Get accountId from Auth system or fallback to Store system
+        local accountId = nil
+        
+        -- Try Auth system first
+        if JobsRP.Auth and JobsRP.Auth.getAccountId then
+            accountId = JobsRP.Auth.getAccountId(client)
+            print("[WebIntegration] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
+        end
+        
+        -- Fallback: Try Store system if Auth fails
+        if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
+            accountId = JobsRP.Store.getPlayerId(client)
+            print("[WebIntegration] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
+        end
+        
+        if accountId then
+            print("[WebIntegration] DEBUG: Granting 10 XP to " .. accountId)
+            messageClient(client, "Manually granting 10 XP to " .. accountId, 0, 255, 0)
+            JobsRP.JobStats.addExperience(accountId, "civilian", 10)
+            
+            -- Get updated stats
+            local stats = JobsRP.JobStats.getPlayerStats(accountId, "civilian")
+            if stats then
+                messageClient(client, "New XP: " .. stats.experience .. ", Level: " .. stats.level, 0, 255, 0)
+            end
+        else
+            messageClient(client, "You have no accountId! Please authenticate first with /jobauth login", 255, 0, 0)
+            print("[WebIntegration] DEBUG: No accountId found for client: " .. (client.name or "Unknown"))
+        end
+    else
+        messageClient(client, "JobStats system not available!", 255, 0, 0)
+        print("[WebIntegration] ERROR: JobStats system not available")
+        return false
+    end
+    
+    return true
+end
+
+-- Admin command to reset all accounts
+function WebIntegration.adminResetAccounts(client)
+    if not Auth or not Auth.requireAuthenticated(client) then
+        return false
+    end
+    
+    messageClient(client, "RESETTING ALL PLAYER ACCOUNTS...", 255, 0, 0)
+    
+    if JobsRP and JobsRP.JobStats and JobsRP.JobStats.resetAllAccounts then
+        JobsRP.JobStats.resetAllAccounts()
+        messageClient(client, "All accounts have been reset!", 0, 255, 0)
+        messageClient(client, "New playtime XP system is now active.", 0, 255, 0)
+    else
+        messageClient(client, "JobStats system not available!", 255, 0, 0)
+        return false
     end
     
     return true
@@ -281,7 +453,10 @@ function WebIntegration.registerEventHandlers()
         addCommandHandler("webstatus", WebIntegration.adminStatus)
         addCommandHandler("webtest", WebIntegration.adminTest)
         addCommandHandler("websync", WebIntegration.adminSync)
-        print("[WebIntegration] Admin commands registered: /webstatus, /webtest, /websync")
+        addCommandHandler("resetaccounts", WebIntegration.adminResetAccounts)
+        addCommandHandler("testxp", WebIntegration.adminTestXP)
+        addCommandHandler("authstatus", WebIntegration.adminAuthStatus)
+        print("[WebIntegration] Admin commands registered: /webstatus, /webtest, /websync, /resetaccounts, /testxp, /authstatus")
     end
     
     -- Register event handlers if event system is available
@@ -336,6 +511,9 @@ function WebIntegration.shutdown()
     if JobsRP.SyncScheduler then
         JobsRP.SyncScheduler.stop()
     end
+    
+    -- Stop retry scheduler
+    WebIntegration.stopRetryScheduler()
     
     -- Clear any pending requests
     if JobsRP.HttpClient then

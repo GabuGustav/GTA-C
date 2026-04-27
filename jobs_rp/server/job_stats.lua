@@ -53,19 +53,32 @@ JobStats.jobTypes = {
     }
 }
 
--- Experience requirements per level
+-- Experience requirements per level (infinite levels with doubling requirements)
+-- Level 1: 100XP, Level 2: 200XP, Level 3: 400XP, etc.
 JobStats.experienceRequirements = {
-    [1] = 0,
-    [2] = 100,
-    [3] = 250,
-    [4] = 500,
-    [5] = 1000,
-    [6] = 1750,
-    [7] = 3000,
-    [8] = 5000,
-    [9] = 8000,
-    [10] = 12000
+    [1] = 100,  -- Starting level requires 100XP
+    [2] = 200,  -- Double previous level
+    [3] = 400,  -- Double previous level
+    [4] = 800,  -- Double previous level
+    [5] = 1600, -- Double previous level
+    [6] = 3200, -- Double previous level
+    [7] = 6400, -- Double previous level
+    [8] = 12800, -- Double previous level
+    [9] = 25600, -- Double previous level
+    [10] = 51200 -- Double previous level
 }
+
+-- Playtime tracking for XP rewards
+JobStats.playtimeRewards = {
+    firstJoinXP = 15,      -- XP granted on first join
+    tenMinuteXP = 10,      -- XP per 10 minutes (first hour)
+    doubledXP = 20,        -- XP per 10 minutes (after 1 hour)
+    rewardInterval = 600,  -- 10 minutes in seconds
+    doubleThreshold = 3600 -- 1 hour in seconds
+}
+
+-- Player playtime session tracking
+JobStats.playerSessions = JobStats.playerSessions or {}
 
 -- Initialize player statistics
 function JobStats.initPlayerStats(accountId, jobType)
@@ -207,14 +220,26 @@ function JobStats.addExperience(accountId, jobType, experience)
     return newLevel > oldLevel
 end
 
--- Calculate level based on experience
+-- Calculate level based on experience (infinite levels with doubling requirements)
 function JobStats.calculateLevel(experience)
-    for level, reqXP in pairs(JobStats.experienceRequirements) do
-        if experience < reqXP then
-            return math.max(1, level - 1)
-        end
+    if experience < 100 then
+        return 1 -- Level 1 starts at 100XP
     end
-    return 10 -- Max level
+    
+    -- Calculate level using formula: level = floor(log2(experience/100)) + 1
+    -- This gives: 100-199XP = Level 1, 200-399XP = Level 2, 400-799XP = Level 3, etc.
+    local level = math.floor(math.log2(experience / 100)) + 2
+    return level
+end
+
+-- Get XP required for a specific level (infinite levels)
+function JobStats.getXPForLevel(level)
+    if level <= 1 then
+        return 100 -- Level 1 requires 100XP
+    end
+    
+    -- Formula: XP = 100 * 2^(level-1)
+    return 100 * math.pow(2, level - 1)
 end
 
 -- Get player statistics
@@ -429,6 +454,122 @@ function JobStats.getLeaderboard(jobType, limit)
     return results
 end
 
+-- Playtime tracking functions for XP rewards
+
+-- Initialize player session for playtime tracking
+function JobStats.initPlayerSession(accountId)
+    print("[JobStats] DEBUG: initPlayerSession called for " .. accountId)
+    
+    if not JobStats.playerSessions[accountId] then
+        JobStats.playerSessions[accountId] = {
+            sessionStart = JobsRP.nowSeconds(),
+            lastRewardTime = JobsRP.nowSeconds(),
+            totalPlaytime = 0,
+            isFirstJoin = true,
+            sessionPlaytime = 0
+        }
+        print("[JobStats] Initialized playtime session for " .. accountId)
+        
+        -- Grant first join XP
+        JobStats.addExperience(accountId, "civilian", JobStats.playtimeRewards.firstJoinXP)
+        print("[JobStats] Granted " .. JobStats.playtimeRewards.firstJoinXP .. " XP to " .. accountId .. " for first join")
+    else
+        -- Reset session start time for reconnection
+        JobStats.playerSessions[accountId].sessionStart = JobsRP.nowSeconds()
+        JobStats.playerSessions[accountId].isFirstJoin = false
+        print("[JobStats] Reconnected player " .. accountId .. " - session reset")
+    end
+    
+    -- Debug: Verify session was created
+    local session = JobStats.playerSessions[accountId]
+    if session then
+        print("[JobStats] DEBUG: Session verified for " .. accountId .. " - Start: " .. session.sessionStart .. ", LastReward: " .. session.lastRewardTime)
+    else
+        print("[JobStats] ERROR: Failed to create session for " .. accountId)
+    end
+end
+
+-- Update player playtime and grant XP rewards
+function JobStats.updatePlaytimeRewards(accountId)
+    local session = JobStats.playerSessions[accountId]
+    if not session then
+        print("[JobStats] DEBUG: No session found for " .. accountId)
+        return
+    end
+    
+    local currentTime = JobsRP.nowSeconds()
+    local sessionDuration = currentTime - session.sessionStart
+    local totalDuration = session.totalPlaytime + sessionDuration
+    local timeSinceLastReward = currentTime - session.lastRewardTime
+    
+    print("[JobStats] DEBUG: " .. accountId .. " - Session: " .. sessionDuration .. "s, Total: " .. totalDuration .. "s, Since last reward: " .. timeSinceLastReward .. "s")
+    
+    -- Check if it's time for a reward (every 10 minutes)
+    if timeSinceLastReward >= JobStats.playtimeRewards.rewardInterval then
+        local xpReward = JobStats.playtimeRewards.tenMinuteXP
+        
+        -- Double XP after 1 hour of continuous playtime
+        if sessionDuration >= JobStats.playtimeRewards.doubleThreshold then
+            xpReward = JobStats.playtimeRewards.doubledXP
+            print("[JobStats] DEBUG: " .. accountId .. " - Double XP active (session: " .. sessionDuration .. "s >= " .. JobStats.playtimeRewards.doubleThreshold .. "s)")
+        end
+        
+        -- Grant XP reward
+        JobStats.addExperience(accountId, "civilian", xpReward)
+        
+        -- Update playtime stats
+        JobStats.updateStat(accountId, "civilian", "time_played", sessionDuration, "add")
+        
+        -- Reset reward timer
+        session.lastRewardTime = currentTime
+        session.totalPlaytime = totalDuration
+        
+        print("[JobStats] Granted " .. xpReward .. " XP to " .. accountId .. " for playtime (total: " .. totalDuration .. "s)")
+    else
+        print("[JobStats] DEBUG: " .. accountId .. " - Not time for reward yet (need " .. (JobStats.playtimeRewards.rewardInterval - timeSinceLastReward) .. "s more)")
+    end
+end
+
+-- Clean up player session on disconnect
+function JobStats.cleanupPlayerSession(accountId)
+    local session = JobStats.playerSessions[accountId]
+    if session then
+        local currentTime = JobsRP.nowSeconds()
+        local sessionDuration = currentTime - session.sessionStart
+        session.totalPlaytime = session.totalPlaytime + sessionDuration
+        
+        -- Update final playtime stat
+        JobStats.updateStat(accountId, "civilian", "time_played", sessionDuration, "add")
+        
+        print("[JobStats] Cleaned up session for " .. accountId .. " (total playtime: " .. session.totalPlaytime .. "s)")
+    end
+end
+
+-- Reset all player statistics and accounts
+function JobStats.resetAllAccounts()
+    print("[JobStats] RESETTING ALL PLAYER ACCOUNTS AND STATISTICS...")
+    
+    -- Clear all player statistics
+    JobStats.playerStats = {}
+    print("[JobStats] Cleared all player statistics")
+    
+    -- Clear all playtime sessions
+    JobStats.playerSessions = {}
+    print("[JobStats] Cleared all playtime sessions")
+    
+    -- Clear web sync queue and status files
+    local queueFile = "data/web_api_queue.json"
+    local statusFile = "data/web_sync_status.json"
+    
+    if saveTextFile then
+        saveTextFile(queueFile, "[]")
+        saveTextFile(statusFile, "{}")
+        print("[JobStats] Cleared web sync files")
+    end
+    
+    print("[JobStats] ACCOUNT RESET COMPLETE - All players start fresh with new playtime XP system")
+end
+
 -- Initialize the job stats system
 function JobStats.init()
     print("[JobStats] Initializing job statistics system")
@@ -438,10 +579,81 @@ function JobStats.init()
         setInterval(JobStats.updateTimeStats, 5 * 60 * 1000)
     end
     
-    print("[JobStats] Job statistics system loaded")
+    -- Set up playtime reward checks (every 1 minute)
+    if setInterval then
+        setInterval(function()
+            print("[JobStats] DEBUG: Checking playtime rewards for all players...")
+            -- Check all connected players for playtime rewards
+            local okClients, clients = pcall(getClients)
+            if okClients and type(clients) == "table" then
+                print("[JobStats] DEBUG: Found " .. #clients .. " connected players")
+                for _, client in ipairs(clients) do
+                    -- Get accountId from Auth system or fallback to Store system
+                    local accountId = nil
+                    
+                    -- Try Auth system first
+                    if JobsRP and JobsRP.Auth and JobsRP.Auth.getAccountId then
+                        accountId = JobsRP.Auth.getAccountId(client)
+                        print("[JobStats] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
+                    end
+                    
+                    -- Fallback: Try Store system if Auth fails
+                    if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
+                        accountId = JobsRP.Store.getPlayerId(client)
+                        print("[JobStats] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
+                    end
+                    
+                    -- Final fallback: Use player name as accountId if still no accountId
+                    if not accountId and client.name then
+                        accountId = JobsRP.normalizeName(client.name)
+                        print("[JobStats] DEBUG: Using player name as accountId: " .. accountId)
+                        
+                        -- Attach to Store system if not already attached
+                        if JobsRP.Store and JobsRP.Store.attachPlayerAccount then
+                            JobsRP.Store.attachPlayerAccount(client, accountId)
+                            print("[JobStats] DEBUG: Attached player to Store with accountId: " .. accountId)
+                        end
+                    end
+                    
+                    -- Additional debugging
+                    local session = JobsRP.Auth and JobsRP.Auth.getSession and JobsRP.Auth.getSession(client)
+                    if session then
+                        print("[JobStats] DEBUG: Session exists - authenticated: " .. tostring(session.authenticated) .. ", accountId: " .. tostring(session.accountId))
+                    else
+                        print("[JobStats] DEBUG: No session found for player")
+                    end
+                    
+                    if accountId then
+                        print("[JobStats] DEBUG: Checking player " .. (client.name or "Unknown") .. " (ID: " .. accountId .. ")")
+                        
+                        -- Check if session exists, create if missing
+                        local session = JobStats.playerSessions[accountId]
+                        if not session then
+                            print("[JobStats] DEBUG: Creating missing session for " .. accountId)
+                            JobStats.initPlayerSession(accountId)
+                        end
+                        
+                        JobStats.updatePlaytimeRewards(accountId)
+                    else
+                        print("[JobStats] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId - using name fallback")
+                    end
+                end
+            else
+                print("[JobStats] DEBUG: Failed to get clients list")
+            end
+        end, 60 * 1000) -- Check every minute
+    else
+        print("[JobStats] ERROR: setInterval not available - playtime rewards disabled")
+    end
+    
+    print("[JobStats] Job statistics system loaded with playtime rewards")
 end
 
 -- Initialize on load
 JobStats.init()
+
+-- Auto-reset all accounts for new playtime XP system
+print("[JobStats] AUTO-RESETTING ACCOUNTS FOR NEW PLAYTIME XP SYSTEM...")
+JobStats.resetAllAccounts()
 
 print("[JobStats] Job stats module loaded")
