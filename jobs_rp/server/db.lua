@@ -180,7 +180,9 @@ function DB.init()
     DB.lastError = nil
 
     local requested = tostring(cfg("storage_backend", "json"))
-    if requested ~= "mysql" then
+    if requested == "supabase" then
+        return DB.initSupabase()
+    elseif requested ~= "mysql" then
         return false
     end
 
@@ -334,4 +336,125 @@ function DB.saveProfile(accountId, record)
         payload,
         now
     )
+end
+
+-- Supabase integration functions
+local function makeHttpRequest(url, method, headers, body)
+    if not JobsRP.Http then
+        log("HTTP client not available for Supabase")
+        return false, "HTTP client not available"
+    end
+    
+    local defaultHeaders = {
+        ["Content-Type"] = "application/json",
+        ["apikey"] = cfg("supabase_key", ""),
+        ["Authorization"] = "Bearer " .. cfg("supabase_service_key", "")
+    }
+    
+    for k, v in pairs(headers or {}) do
+        defaultHeaders[k] = v
+    end
+    
+    return JobsRP.Http.request(url, method, defaultHeaders, body)
+end
+
+function DB.initSupabase()
+    local supabaseUrl = tostring(cfg("supabase_url", ""))
+    local supabaseKey = tostring(cfg("supabase_key", ""))
+    local serviceKey = tostring(cfg("supabase_service_key", ""))
+    
+    if supabaseUrl == "" or supabaseKey == "" or serviceKey == "" then
+        DB.lastError = "Supabase configuration missing (url, key, or service_key)"
+        log(DB.lastError)
+        return false
+    end
+    
+    -- Test connection by making a simple request
+    local testUrl = supabaseUrl .. "/rest/v1/" .. DB.accountsTable .. "?select=count&limit=1"
+    local success, response = makeHttpRequest(testUrl, "GET")
+    
+    if not success then
+        DB.lastError = "Supabase connection failed: " .. tostring(response)
+        log(DB.lastError)
+        return false
+    end
+    
+    DB.connection = "supabase"  -- Mark as connected
+    DB.ready = true
+    log("Supabase database initialized successfully")
+    return true
+end
+
+function DB.supabaseUpsert(table, key, payload)
+    local supabaseUrl = tostring(cfg("supabase_url", ""))
+    if supabaseUrl == "" then
+        return false
+    end
+    
+    local now = JobsRP.nowSeconds()
+    local data = {
+        account_id = key,
+        payload = payload,
+        updated_at = now
+    }
+    
+    local url = supabaseUrl .. "/rest/v1/" .. table
+    local body = JobsRP.Json.encode(data)
+    
+    -- Use POST for upsert (Supabase supports upsert via POST with on conflict)
+    local headers = {
+        ["Prefer"] = "resolution=merge-duplicates"
+    }
+    
+    local success, response = makeHttpRequest(url, "POST", headers, body)
+    return success
+end
+
+function DB.supabaseGet(table, key)
+    local supabaseUrl = tostring(cfg("supabase_url", ""))
+    if supabaseUrl == "" then
+        return false, nil
+    end
+    
+    local url = supabaseUrl .. "/rest/v1/" .. table .. "?account_id=eq." .. key .. "&limit=1"
+    local success, response = makeHttpRequest(url, "GET")
+    
+    if not success then
+        return false, nil
+    end
+    
+    -- Parse response
+    local ok, data = pcall(JobsRP.Json.decode, response)
+    if not ok or type(data) ~= "table" or #data == 0 then
+        return false, nil
+    end
+    
+    return true, data[1]
+end
+
+-- Override functions for Supabase
+if cfg("storage_backend", "json") == "supabase" then
+    DB.setAccount = function(key, payload)
+        return DB.supabaseUpsert(DB.accountsTable, key, payload)
+    end
+    
+    DB.getAccount = function(key)
+        local success, record = DB.supabaseGet(DB.accountsTable, key)
+        if not success or not record then
+            return nil
+        end
+        return decodePayload(record.payload)
+    end
+    
+    DB.setProfile = function(key, payload)
+        return DB.supabaseUpsert(DB.profilesTable, key, payload)
+    end
+    
+    DB.getProfile = function(key)
+        local success, record = DB.supabaseGet(DB.profilesTable, key)
+        if not success or not record then
+            return nil
+        end
+        return decodePayload(record.payload)
+    end
 end

@@ -531,8 +531,16 @@ function updateHudUi() {
 
     // Get current job and XP info
     var currentJob = UI.hud.currentJobId || "civilian";
-    var jobConfig = JobsRP && JobsRP.Config && JobsRP.Config.jobs ? JobsRP.Config.jobs[currentJob] : null;
-    var thresholds = jobConfig && jobConfig.xp_thresholds ? jobConfig.xp_thresholds : [100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];
+    var cfg = JobsRP && JobsRP.Config ? JobsRP.Config : {};
+    var thresholds;
+    
+    // Use civilian-specific thresholds for civilian job
+    if (currentJob === "civilian") {
+        thresholds = cfg.civilian_xp_thresholds || [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600, 51200];
+    } else {
+        // Fallback to default thresholds for other jobs
+        thresholds = [100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];
+    }
 
     // Get player XP and level for current job (fallback to civilian)
     var currentLevel = 1;
@@ -833,3 +841,36 @@ UI.handleJobReward = function(jobId, xpGain, xpTotal, gradeBefore, gradeAfter, p
         UI.hud.policeGrade = Number(gradeAfter || 0) || 0;
     }
 };
+
+// Network handler for passive XP updates
+if (typeof addNetworkHandler === "function") {
+    addNetworkHandler("jobs.passiveXPUpdate", function(data) {
+        if (!data || typeof data !== "object") {
+            return;
+        }
+        
+        var xpAmount = Number(data.xpAmount) || 0;
+        var sessionTime = Number(data.sessionTime) || 0;
+        var isDoubled = Boolean(data.isDoubled);
+        
+        if (xpAmount > 0) {
+            // Show XP gain notification
+            var rateText = isDoubled ? " (2x rate)" : "";
+            UI.showXPGain(xpAmount, "Passive time" + rateText, "Civilian");
+            
+            // Trigger XP bar animation
+            var now = nowMs();
+            UI.hud.xpGainAt = now;
+            UI.hud.levelUpText = "+" + xpAmount + " XP Passive" + rateText;
+            UI.hud.levelUpAt = now;
+            
+            // Auto-hide after a short duration for passive gains
+            setTimeout(function() {
+                if (UI.hud.levelUpText && UI.hud.levelUpText.indexOf("Passive") !== -1) {
+                    UI.hud.levelUpAt = 0;
+                    UI.hud.levelUpText = "";
+                }
+            }, 2000);
+        }
+    });
+}

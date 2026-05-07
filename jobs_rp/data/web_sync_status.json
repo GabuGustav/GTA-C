@@ -1,7 +1,8 @@
 ﻿{
   "isProcessing": false,
-  "lastAttemptAt": "2026-04-27T16:02:30.658Z",
-  "lastError": "curl=0 http=503",
-  "lastResponseCode": 503,
-  "failedCount": 5
+  "lastAttemptAt": "2026-05-07T09:48:42.088Z",
+  "lastError": null,
+  "lastResponseCode": 200,
+  "processedCount": 1,
+  "lastSuccessAt": "2026-05-07T09:48:42.090Z"
 }

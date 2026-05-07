@@ -12,6 +12,9 @@ PoliceScanner.Manager = {
     _autoEnableTimer: null,
     structuredMode: true,
     structuredMaxClips: 5,
+    _isPlaying: false,
+    _currentSequence: null,
+    _sequenceTimers: [],
     
     init: function() {
         console.log("[PoliceScanner] Initializing police scanner audio system");
@@ -301,15 +304,51 @@ PoliceScanner.Manager = {
             console.log("[PoliceScanner] Playback disabled (playSequence blocked)");
             return;
         }
+        
+        // Stop any currently playing sequence to prevent overlap
+        this.stopCurrentSequence();
+        
+        this._isPlaying = true;
+        this._currentSequence = sequence;
         var delay = 0;
         
+        console.log("[PoliceScanner] Starting new sequence with " + sequence.length + " clips");
+        
         sequence.forEach(function(item) {
-            setTimeout(function() {
-                PoliceScanner.Manager.playSound(item.category, item.file, position);
+            var timerId = setTimeout(function() {
+                if (PoliceScanner.Manager._currentSequence === sequence) {
+                    PoliceScanner.Manager.playSound(item.category, item.file, position);
+                }
             }, delay);
             
+            PoliceScanner.Manager._sequenceTimers.push(timerId);
             delay += item.delay + 500; // Add pause between clips
         });
+        
+        // Mark sequence as finished after all clips
+        var finishTimerId = setTimeout(function() {
+            if (PoliceScanner.Manager._currentSequence === sequence) {
+                PoliceScanner.Manager._isPlaying = false;
+                PoliceScanner.Manager._currentSequence = null;
+                PoliceScanner.Manager._sequenceTimers = [];
+                console.log("[PoliceScanner] Sequence finished");
+            }
+        }, delay);
+        
+        this._sequenceTimers.push(finishTimerId);
+    },
+    
+    stopCurrentSequence: function() {
+        if (this._sequenceTimers.length > 0) {
+            console.log("[PoliceScanner] Stopping current sequence (" + this._sequenceTimers.length + " timers)");
+            this._sequenceTimers.forEach(function(timerId) {
+                clearTimeout(timerId);
+            });
+            this._sequenceTimers = [];
+        }
+        
+        this._isPlaying = false;
+        this._currentSequence = null;
     },
     
     playSound: function(category, file, position, force) {

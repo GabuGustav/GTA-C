@@ -267,7 +267,7 @@ function Store.newProfile(playerId)
         version = JobsRP.Config.version,
         playerId = playerId,
         cash = 0,
-        currentJobId = nil,
+        currentJobId = "civilian", -- Default to civilian job
         switchCooldownUntil = 0,
         jobs = makeDefaultJobs(),
         stats = {

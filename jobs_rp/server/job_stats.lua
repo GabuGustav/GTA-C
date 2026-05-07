@@ -179,7 +179,12 @@ function JobStats.calculateExperienceGain(jobType, statName, value, operation)
     
     -- Apply operation modifier
     if operation == "add" then
-        return baseXP * value
+        -- For civilian playtime XP, return the XP amount directly
+        if jobType == "civilian" then
+            return value
+        else
+            return baseXP * value
+        end
     elseif operation == "set" then
         -- For set operations, calculate difference
         return baseXP
@@ -226,20 +231,25 @@ function JobStats.calculateLevel(experience)
         return 1 -- Level 1 starts at 100XP
     end
     
-    -- Calculate level using formula: level = floor(log2(experience/100)) + 1
-    -- This gives: 100-199XP = Level 1, 200-399XP = Level 2, 400-799XP = Level 3, etc.
-    local level = math.floor(math.log2(experience / 100)) + 2
+    -- Calculate level using additive progression (100, 200, 300, 400...)
+    local level = math.floor(experience / 100) + 1
+    -- This gives: 0-99XP = Level 1, 100-199XP = Level 2, 200-299XP = Level 3, etc.
+    if level < 1 then level = 1 end
     return level
 end
 
--- Get XP required for a specific level (infinite levels)
+-- Get XP required for a specific level (additive progression)
 function JobStats.getXPForLevel(level)
-    if level <= 1 then
-        return 100 -- Level 1 requires 100XP
-    end
+    -- Use civilian additive thresholds from config if available, otherwise default
+    local cfg = JobsRP and JobsRP.Config or {}
+    local thresholds = cfg.civilian_xp_thresholds or {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
     
-    -- Formula: XP = 100 * 2^(level-1)
-    return 100 * math.pow(2, level - 1)
+    if level >= 1 and level <= #thresholds then
+        return thresholds[level]
+    else
+        -- Fallback to additive formula: 100 * level
+        return 100 * level
+    end
 end
 
 -- Get player statistics

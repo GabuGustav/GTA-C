@@ -129,6 +129,19 @@ local defs = {
         }
     },
     {
+        id = "civilian",
+        label = "Civilian Life",
+        hub = { -50, -50, 30 },
+        payout = 0, -- No active payout, passive XP only
+        xp = 10, -- Base XP per 10 minutes
+        constraints = { role = "civilian" },
+        passive = true, -- Mark as passive job
+        xp_interval_minutes = 10, -- XP gained every 10 minutes
+        xp_double_after_hours = 1, -- XP doubles after 1 hour
+        pools = {}, -- No active tasks
+        stages = {} -- No active stages
+    },
+    {
         id = "police",
         label = "Police Patrol",
         hub = { 100, 50, 25 },

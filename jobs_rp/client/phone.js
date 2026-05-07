@@ -507,15 +507,49 @@ function buildText() {
     Phone.controls.text.playerListPanel = {
         title: Phone.window.text(pad, top, Phone.config.width - pad * 2, 24, "Select Player", styles.titleText),
         list: Phone.window.list(pad, top + 40, Phone.config.width - pad * 2, 320, styles),
+        noPlayersText: Phone.window.text(pad, top + 100, Phone.config.width - pad * 2, 24, "", {
+            main: {
+                textColour: toColour(150, 150, 150, 255),
+                textSize: 14,
+                textAlign: 0.5
+            }
+        }),
         visible: true
     };
+    Phone.controls.text.playerListPanel.noPlayersText.shown = false;
     
     // Message Compose Panel
     Phone.controls.text.composePanel = {
         title: Phone.window.text(pad, top, Phone.config.width - pad * 2, 24, "", styles.titleText),
-        input: Phone.window.textInput(pad, top + 60, Phone.config.width - pad * 2, 80, "Type your message here.....", styles),
+        input: Phone.window.textInput(pad, top + 60, Phone.config.width - pad * 2 - 50, 80, "Type your message here.....", styles),
         visible: false
     };
+    
+    // Send button with image - positioned to the right of input
+    var sendBtnSize = 40;
+    var sendBtnX = pad + (Phone.config.width - pad * 2 - 50) + 5; // Right of input
+    var sendBtnY = top + 60 + 20; // Centered vertically with input
+    
+    Phone.controls.text.composePanel.sendButton = Phone.window.imageButton(
+        sendBtnX, 
+        sendBtnY, 
+        sendBtnSize, 
+        sendBtnSize, 
+        "jobsrpui/mexui/Images/Send Message.png",
+        {
+            main: {
+                backgroundColour: toColour(50, 150, 255, 200)
+            },
+            hover: {
+                backgroundColour: toColour(80, 180, 255, 220)
+            }
+        },
+        function() {
+            debugLog("[Phone] Send button clicked");
+            sendMessage();
+        }
+    );
+    Phone.controls.text.composePanel.sendButton.shown = false; // Hidden by default
     
     // Create blinking cursor for input (same pattern as auth UI)
     var inputX = pad + 5; // Slight offset from input edge
@@ -696,6 +730,9 @@ function loadPlayerList() {
 
 // Update player buttons text (buttons already exist, just update text and visibility)
 function updatePlayerButtons() {
+    if (!Phone.controls || !Phone.controls.styles || !Phone.controls.text || !Phone.controls.text.playerListPanel) {
+        return;
+    }
     var styles = Phone.controls.styles;
     var pad = Phone.config.padding;
     var top = Phone.config.headerHeight + pad;
@@ -703,10 +740,32 @@ function updatePlayerButtons() {
     var buttonHeight = 40;
     var buttonSpacing = 5;
     var buttons = Phone.controls.text.playerListPanel.buttons;
+    if (!buttons) {
+        return;
+    }
     
     // Hide the list control - we're using buttons instead
     if (Phone.controls.text.playerListPanel.list) {
         Phone.controls.text.playerListPanel.list.shown = false;
+    }
+    
+    // Check if no players online
+    if (!Phone.textState.playerList || Phone.textState.playerList.length === 0) {
+        // Show "No players online" message
+        if (Phone.controls.text.playerListPanel.noPlayersText) {
+            Phone.controls.text.playerListPanel.noPlayersText.shown = true;
+            Phone.controls.text.playerListPanel.noPlayersText.text = "No other players online";
+        }
+        // Hide all buttons
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i]) buttons[i].shown = false;
+        }
+        return;
+    } else {
+        // Hide "No players" message when players exist
+        if (Phone.controls.text.playerListPanel.noPlayersText) {
+            Phone.controls.text.playerListPanel.noPlayersText.shown = false;
+        }
     }
     
     // First, hide all existing buttons
@@ -754,7 +813,13 @@ function updatePlayerButtons() {
 
 // Hide all player buttons (same pattern as hiding app buttons)
 function hidePlayerButtons() {
+    if (!Phone.controls || !Phone.controls.text || !Phone.controls.text.playerListPanel) {
+        return;
+    }
     var buttons = Phone.controls.text.playerListPanel.buttons;
+    if (!buttons) {
+        return;
+    }
     debugLog("[Phone] Hiding " + buttons.length + " player buttons");
     for (var i = 0; i < buttons.length; i++) {
         if (buttons[i]) buttons[i].shown = false;
@@ -852,9 +917,12 @@ function showTextPanel(panelName) {
     
     if (panelName === "playerList") {
         debugLog("[Phone] Showing player list panel");
-        // Hide cursor when leaving compose panel
+        // Hide cursor and send button when leaving compose panel
         if (Phone.controls.text.composePanel.cursor) {
             Phone.controls.text.composePanel.cursor.shown = false;
+        }
+        if (Phone.controls.text.composePanel.sendButton) {
+            Phone.controls.text.composePanel.sendButton.shown = false;
         }
         setControlsVisible(Phone.controls.text.playerListPanel, true);
     } else if (panelName === "messageCompose") {
@@ -864,14 +932,31 @@ function showTextPanel(panelName) {
         if (Phone.textState.selectedPlayer) {
             Phone.controls.text.composePanel.title.text = "Message: " + Phone.textState.selectedPlayer.name;
         }
+        // Show send button
+        if (Phone.controls.text.composePanel.sendButton) {
+            Phone.controls.text.composePanel.sendButton.shown = true;
+        }
         // Reset and show cursor when entering compose panel
         updateInputCursor();
+        // Hide cursor initially until typing starts
+        if (Phone.controls.text.composePanel.cursor) {
+            Phone.controls.text.composePanel.cursor.shown = false;
+            cursorVisible = false;
+        }
+        // Focus input for typing
+        if (Phone.controls.text.composePanel.input) {
+            Phone.controls.text.composePanel.input.focused = true;
+            updateKeyboardContext();
+        }
     } else if (panelName === "conversation") {
         debugLog("[Phone] Showing conversation panel");
         hidePlayerButtons(); // Hide buttons when viewing conversation
-        // Hide cursor when leaving compose panel
+        // Hide cursor and send button when leaving compose panel
         if (Phone.controls.text.composePanel.cursor) {
             Phone.controls.text.composePanel.cursor.shown = false;
+        }
+        if (Phone.controls.text.composePanel.sendButton) {
+            Phone.controls.text.composePanel.sendButton.shown = false;
         }
         setControlsVisible(Phone.controls.text.conversationPanel, true);
         if (Phone.textState.currentConversation) {
@@ -1159,6 +1244,11 @@ function showApp(appId) {
         Phone.controls.title.text = (appId === "home") ? "PHONE" : String(appId).toUpperCase();
         debugLog("[Phone] Title updated to: " + Phone.controls.title.text);
     }
+    
+    // Ensure frame is always visible when phone is active
+    if (Phone.frame) {
+        Phone.frame.shown = true;
+    }
 }
 
 Phone.show = function() {
@@ -1256,6 +1346,7 @@ Phone.hide = function() {
 
 // Visibility watchdog - ensures phone stays visible and on top when active
 var visibilityWatchdogInterval = null;
+var componentValidationInterval = null;
 function startVisibilityWatchdog() {
     if (visibilityWatchdogInterval) {
         clearInterval(visibilityWatchdogInterval);
@@ -1263,22 +1354,66 @@ function startVisibilityWatchdog() {
     
     visibilityWatchdogInterval = setInterval(function() {
         if (Phone.active) {
-            // Ensure both windows are visible
-            if (Phone.window && !Phone.window.shown) {
-                Phone.window.shown = true;
-                debugLog("[Phone] Watchdog: Restored screen window visibility");
+            // Validate UI framework is still available
+            var ui = getJobsRpUi();
+            if (!ui) {
+                debugLog("[Phone] Watchdog: UI framework lost, attempting recovery");
+                Phone.recoverUI();
+                return;
             }
-            if (Phone.frame && !Phone.frame.shown) {
-                Phone.frame.shown = true;
-                debugLog("[Phone] Watchdog: Restored frame visibility");
+            
+            // Ensure both windows are still valid and visible
+            if (Phone.window) {
+                try {
+                    // Test if window is still valid by checking a basic property
+                    var isValid = Phone.window.shown !== undefined;
+                    if (!isValid) {
+                        debugLog("[Phone] Watchdog: Window became invalid, recreating");
+                        Phone.recoverUI();
+                        return;
+                    }
+                    
+                    if (!Phone.window.shown) {
+                        Phone.window.shown = true;
+                        debugLog("[Phone] Watchdog: Restored screen window visibility");
+                    }
+                } catch (e) {
+                    debugLog("[Phone] Watchdog: Window validation failed: " + String(e));
+                    Phone.recoverUI();
+                    return;
+                }
+            }
+            
+            if (Phone.frame) {
+                try {
+                    var isValid = Phone.frame.shown !== undefined;
+                    if (!isValid) {
+                        debugLog("[Phone] Watchdog: Frame became invalid, recreating");
+                        Phone.recoverUI();
+                        return;
+                    }
+                    
+                    if (!Phone.frame.shown) {
+                        Phone.frame.shown = true;
+                        debugLog("[Phone] Watchdog: Restored frame visibility");
+                    }
+                } catch (e) {
+                    debugLog("[Phone] Watchdog: Frame validation failed: " + String(e));
+                    Phone.recoverUI();
+                    return;
+                }
             }
             
             // Ensure screen stays on top
             if (Phone.window && Phone.window.setTop) {
-                Phone.window.setTop();
+                try {
+                    Phone.window.setTop();
+                } catch (e) {
+                    debugLog("[Phone] Watchdog: Failed to set window on top: " + String(e));
+                }
             }
         }
-    }, 100); // Check every 100ms
+    }, 200); // Check every 200ms (reduced frequency)
 }
 
 function stopVisibilityWatchdog() {
@@ -1288,14 +1423,86 @@ function stopVisibilityWatchdog() {
     }
 }
 
+// UI recovery function - recreates phone UI when components become invalid
+Phone.recoverUI = function() {
+    debugLog("[Phone] Attempting UI recovery...");
+    
+    try {
+        // Save current state
+        var wasActive = Phone.active;
+        var currentApp = Phone.currentApp;
+        
+        // Cleanup existing UI
+        if (Phone.window) {
+            try {
+                Phone.window.shown = false;
+            } catch (e) {
+                debugLog("[Phone] Error hiding window during recovery: " + String(e));
+            }
+        }
+        if (Phone.frame) {
+            try {
+                Phone.frame.shown = false;
+            } catch (e) {
+                debugLog("[Phone] Error hiding frame during recovery: " + String(e));
+            }
+        }
+        
+        // Reset UI components
+        Phone.window = null;
+        Phone.frame = null;
+        Phone.controls = {};
+        Phone.windowCreating = false;
+        
+        // Wait a moment for cleanup
+        setTimeout(function() {
+            if (wasActive) {
+                debugLog("[Phone] Recreating UI after recovery...");
+                if (ensureWindow()) {
+                    Phone.window.shown = true;
+                    if (Phone.frame) {
+                        Phone.frame.shown = true;
+                    }
+                    Phone.active = true;
+                    showApp(currentApp || "home");
+                    debugLog("[Phone] UI recovery successful");
+                } else {
+                    debugLog("[Phone] UI recovery failed - could not recreate window");
+                    Phone.active = false;
+                }
+            }
+        }, 100);
+        
+    } catch (e) {
+        debugLog("[Phone] Exception during UI recovery: " + String(e));
+        Phone.active = false;
+    }
+};
+
 // Resource cleanup function
 Phone.cleanup = function() {
     debugLog("[Phone] Cleaning up resources...");
     
+    // Stop watchdogs
+    stopVisibilityWatchdog();
+    
     // Hide and destroy window
     if (Phone.window) {
-        Phone.window.shown = false;
+        try {
+            Phone.window.shown = false;
+        } catch (e) {
+            debugLog("[Phone] Error hiding window during cleanup: " + String(e));
+        }
         Phone.window = null;
+    }
+    
+    if (Phone.frame) {
+        try {
+            Phone.frame.shown = false;
+        } catch (e) {
+            debugLog("[Phone] Error hiding frame during cleanup: " + String(e));
+        }
+        Phone.frame = null;
     }
     
     // Clear controls

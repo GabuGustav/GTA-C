@@ -10,6 +10,7 @@ Jobs.groupByPlayerId = Jobs.groupByPlayerId or {}
 Jobs.groupCounter = Jobs.groupCounter or 0
 Jobs.hubElements = Jobs.hubElements or {}
 
+
 local function unpackTable(values, index)
     local i = index or 1
     if type(values) ~= "table" then
@@ -644,6 +645,13 @@ local function handleRobberyAction(player, playerId, session, jobDef, payload, f
     return false
 end
 
+-- Civilian job action handler (passive XP system)
+handleCivilianAction = function(player, playerId, session, jobDef, payload, forced)
+    -- Civilian job is passive - no active actions needed
+    Jobs.prompt(player, "Civilian life is passive. You gain XP automatically over time.", "info")
+    return true
+end
+
 -- Taxi job action handler
 handleTaxiAction = function(player, playerId, session, jobDef, payload, forced)
     local step = sessionTarget(session)
@@ -1047,18 +1055,18 @@ function Jobs.leaveJob(player)
     end
 
     local profile = JobsRP.Store.getProfileByPlayer(player)
-    if not profile.currentJobId then
-        Jobs.prompt(player, "No active job to leave.", "warn")
+    if not profile.currentJobId or profile.currentJobId == "civilian" then
+        Jobs.prompt(player, "You're already in civilian life.", "info")
         return false
     end
 
     removePlayerFromGroup(playerId)
     Jobs.stopJob(player, "Job stopped.")
-    profile.currentJobId = nil
+    profile.currentJobId = "civilian" -- Return to civilian job by default
     profile.switchCooldownUntil = JobsRP.nowSeconds() + JobsRP.Config.switch_cooldown_sec
     JobsRP.Store.markDirty(playerId)
     Jobs.syncProfile(player)
-    Jobs.prompt(player, "You left your current job. Cooldown started.", "info")
+    Jobs.prompt(player, "You left your current job. Returned to civilian life. Cooldown started.", "info")
     return true
 end
 
@@ -1347,6 +1355,10 @@ function Jobs.requestAction(player, actionType, payload, forced)
     local jobDef = JobsRP.JobDefs.get(session.jobId)
     if session.jobId == "robbery" and jobDef then
         return handleRobberyAction(player, playerId, session, jobDef, payload, forced)
+    end
+
+    if session.jobId == "civilian" and jobDef then
+        return handleCivilianAction(player, playerId, session, jobDef, payload, forced)
     end
 
     if session.jobId == "taxi" and jobDef then
@@ -1698,6 +1710,151 @@ addEventHandler("onResourceStop", function(event, resource)
     JobsRP.Store.saveAll(true)
 end)
 
+    
+    -- Process all players
+    if getPlayers then
+        for _, player in ipairs(getPlayers()) do
+            local playerId = JobsRP.Store.getPlayerId(player)
+            if not playerId then
+                goto continue
+            end
+            
+            local profile = JobsRP.Store.getProfileByPlayer(player)
+            if not profile or profile.currentJobId ~= "civilian" then
+                goto continue
+            end
+            
+            -- Initialize or update civilian stats
+            if not Jobs.civilianStats[playerId] then
+                Jobs.civilianStats[playerId] = {
+                    sessionStart = JobsRP.nowMilliseconds(),
+                    lastXPGrant = JobsRP.nowMilliseconds(),
+                    totalSessionTime = 0
+                }
+            end
+            
+            local stats = Jobs.civilianStats[playerId]
+            local now = JobsRP.nowMilliseconds()
+            local sessionTime = now - stats.sessionStart
+            
+            -- Check if it's time to grant XP
+            if (now - stats.lastXPGrant) >= xpInterval then
+                -- Calculate XP amount (doubles after 1 hour)
+                local xpAmount = baseXP
+                if sessionTime >= doubleAfterHours then
+                    xpAmount = baseXP * 2
+                end
+                
+                -- Apply XP gain
+                if JobsRP.Economy then
+                    JobsRP.Economy.applyJobReward(playerId, "civilian", 0, xpAmount, "passive_time")
+                end
+                
+                -- Send notification to player
+                local timeStr = sessionTime >= doubleAfterHours and "doubled" or "base"
+                Jobs.prompt(player, string.format("Passive XP gained: +%d (%s rate)", xpAmount, timeStr), "info")
+                
+                -- Update last grant time
+                stats.lastXPGrant = now
+                
+                -- Send XP update to client for bar visualization
+                pushClientEvent(player, "jobs.passiveXPUpdate", {
+                    xpAmount = xpAmount,
+                    sessionTime = sessionTime,
+                    isDoubled = sessionTime >= doubleAfterHours
+                })
+            end
+            
+            ::continue::
+        end
+end
+
+function Jobs.handlePlayerJoin(player)
+    -- Initialize civilian stats for joining players
+    local playerId = JobsRP.Store.getPlayerId(player)
+    if playerId then
+        Jobs.civilianStats[playerId] = {
+            sessionStart = JobsRP.nowMilliseconds(),
+            lastXPGrant = JobsRP.nowMilliseconds(),
+            totalSessionTime = 0
+        }
+    end
+end
 
 
+function Jobs.handlePlayerLeave(player)
+    -- Clean up civilian stats for leaving players
+    local playerId = JobsRP.Store.getPlayerId(player)
+    if playerId and Jobs.civilianStats[playerId] then
+        Jobs.civilianStats[playerId] = nil
+    end
+end
 
+if addCommandHandler then
+    -- Test XP gain command
+    addCommandHandler("testxp", function(parameters)
+        local player = client -- Fix client object reference
+        local playerId = requireAuthenticatedAccountId(player)
+        if not playerId then
+            return
+        end
+        
+        local profile = JobsRP.Store.getProfileByPlayer(player)
+        if not profile then
+            return
+        end
+        
+        -- Add test XP
+        local testAmount = 50
+        if JobsRP.Economy then
+            JobsRP.Economy.applyJobReward(playerId, profile.currentJobId or "civilian", 0, testAmount, "test_command")
+        end
+        
+        Jobs.prompt(player, "Test XP added: +" .. testAmount .. " XP", "success")
+    end)
+    
+    -- Fill XP bar command
+    addCommandHandler("fillxp", function(parameters)
+        local player = client -- Fix client object reference
+        local playerId = requireAuthenticatedAccountId(player)
+        if not playerId then
+            return
+        end
+        
+        local profile = JobsRP.Store.getProfileByPlayer(player)
+        if not profile then
+            return
+        end
+        
+        local currentJob = profile.currentJobId or "civilian"
+        
+        -- Add enough XP to reach next level threshold
+        local cfg = JobsRP.Config or {}
+        local thresholds = currentJob == "civilian" and cfg.civilian_xp_thresholds or {100, 200, 400} or cfg.grade_thresholds or {100, 250, 500}
+        
+        local currentXP = 0
+        if profile.jobs and profile.jobs[currentJob] then
+            currentXP = profile.jobs[currentJob].experience or 0
+        end
+        
+        local currentLevel = 1
+        if profile.jobs and profile.jobs[currentJob] then
+            currentLevel = profile.jobs[currentJob].level or 1
+        end
+        
+        -- Find next threshold
+        local nextThreshold = thresholds[currentLevel] or (thresholds[#thresholds] or 1000)
+        local xpNeeded = nextThreshold - currentXP
+        
+        if xpNeeded > 0 then
+            if JobsRP.Economy then
+                JobsRP.Economy.applyJobReward(playerId, currentJob, 0, xpNeeded, "fill_command")
+            end
+            Jobs.prompt(player, "XP bar filled: +" .. xpNeeded .. " XP (Level " .. (currentLevel + 1) .. ")", "success")
+        else
+            Jobs.prompt(player, "Already at max level or next threshold unknown", "info")
+        end
+    end)
+    
+    print("[Jobs] Player commands registered: /testxp, /fillxp")
+end
