@@ -200,3 +200,25 @@
 1773943984|recordName|123|ok|playyer1
 1773943984|recordIp|123|ok|172.29.223.195
 1773944010|logout|unknown|ok|ok
+1774044368|logout|unknown|ok|ok
+1774044493|logout|unknown|ok|ok
+1774044613|register|123|fail|exists
+1774044616|login|123|ok|ok
+1774044616|recordName|123|ok|Noob Player
+1774044616|recordIp|123|ok|172.29.223.195
+1774045943|login|123|ok|ok
+1774045943|recordName|123|ok|Noob Player
+1774045943|recordIp|123|ok|172.29.223.195
+1774046794|login|123|ok|ok
+1774046794|recordName|123|ok|Noob Player
+1774046794|recordIp|123|ok|172.29.223.195
+1774047238|login|123|ok|ok
+1774047238|recordName|123|ok|Noob Player
+1774047238|recordIp|123|ok|172.29.223.195
+1774048764|logout|unknown|ok|ok
+1774048989|login|123|ok|ok
+1774048989|recordName|123|ok|Noob Player
+1774048989|recordIp|123|ok|172.29.223.195
+1774049113|login|123|ok|ok
+1774049113|recordName|123|ok|Noob Player
+1774049113|recordIp|123|ok|172.29.223.195
