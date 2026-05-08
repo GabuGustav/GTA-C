@@ -68,6 +68,19 @@ Phone.textState = {
     serverPlayerList: null
 };
 
+function getConversationName(playerId) {
+    if (Phone.textState.selectedPlayer && String(Phone.textState.selectedPlayer.id) === String(playerId)) {
+        return Phone.textState.selectedPlayer.name || "Unknown";
+    }
+    var players = Phone.textState.playerList || [];
+    for (var i = 0; i < players.length; i++) {
+        if (String(players[i].id) === String(playerId)) {
+            return players[i].name || "Unknown";
+        }
+    }
+    return "Unknown";
+}
+
 function getJobsRpUi() {
     return Utils.getJobsRpUi();
 }
@@ -464,25 +477,21 @@ function buildJobs() {
     var btnY = top + 60;
     var fullW = Phone.config.width - pad * 2;
 
-    var statusBtn = Phone.window.button(pad, btnY, fullW, Phone.config.buttonHeight, "Refresh Status", styles.button);
-    statusBtn.onClick = function() {
+    var statusBtn = Phone.window.button(pad, btnY, fullW, Phone.config.buttonHeight, "Refresh Status", styles.button, function() {
         Utils.sendServerSafe("jobs.requestStatus");
-    };
+    });
 
-    var listBtn = Phone.window.button(pad, btnY + 64, fullW, Phone.config.buttonHeight, "Job List", styles.button);
-    listBtn.onClick = function() {
+    var listBtn = Phone.window.button(pad, btnY + 64, fullW, Phone.config.buttonHeight, "Job List", styles.button, function() {
         Utils.sendServerSafe("jobs.requestList");
-    };
+    });
 
-    var startBtn = Phone.window.button(pad, btnY + 128, fullW, Phone.config.buttonHeight, "Start Job", styles.button);
-    startBtn.onClick = function() {
+    var startBtn = Phone.window.button(pad, btnY + 128, fullW, Phone.config.buttonHeight, "Start Job", styles.button, function() {
         Utils.sendServerSafe("jobs.requestStart");
-    };
+    });
 
-    var stopBtn = Phone.window.button(pad, btnY + 192, fullW, Phone.config.buttonHeight, "Stop Job", styles.button);
-    stopBtn.onClick = function() {
+    var stopBtn = Phone.window.button(pad, btnY + 192, fullW, Phone.config.buttonHeight, "Stop Job", styles.button, function() {
         Utils.sendServerSafe("jobs.requestStop");
-    };
+    });
 
     Phone.controls.jobs = {
         title: title,
@@ -521,9 +530,11 @@ function buildText() {
     // Message Compose Panel
     Phone.controls.text.composePanel = {
         title: Phone.window.text(pad, top, Phone.config.width - pad * 2, 24, "", styles.titleText),
-        input: Phone.window.textInput(pad, top + 60, Phone.config.width - pad * 2 - 50, 80, "Type your message here.....", styles),
+        input: Phone.window.textInput(pad, top + 60, Phone.config.width - pad * 2 - 50, 80, "Type your message...", styles),
+        charCount: Phone.window.text(pad, top + 145, Phone.config.width - pad * 2, 18, "0/" + Phone.config.messageCharLimit, styles.subText),
         visible: false
     };
+    Phone.controls.text.composePanel.charCount.shown = false;
     
     // Send button with image - positioned to the right of input
     var sendBtnSize = 40;
@@ -578,8 +589,16 @@ function buildText() {
     
     // Setup input callback
     Phone.controls.text.composePanel.input.onChange = function(text) {
-        Phone.textState.messageInput = text;
-        Phone.textState.isTyping = text.length > 0;
+        var next = String(text || "");
+        if (next.length > Phone.config.messageCharLimit) {
+            next = next.slice(0, Phone.config.messageCharLimit);
+            Phone.controls.text.composePanel.input.text = next;
+        }
+        Phone.textState.messageInput = next;
+        Phone.textState.isTyping = next.length > 0;
+        if (Phone.controls.text.composePanel.charCount) {
+            Phone.controls.text.composePanel.charCount.text = String(next.length) + "/" + String(Phone.config.messageCharLimit);
+        }
         updateKeyboardContext();
         updateInputCursor(); // Update cursor position on text change
     };
@@ -707,14 +726,13 @@ function loadPlayerList() {
                 
                 debugLog("[Phone] Player is local: " + isLocal);
                 
-                // For testing: Show all players including local player
-                if (playerName && playerId !== null) {
+                if (playerName && playerId !== null && !isLocal) {
                     allPlayers.push({
                         id: playerId,
-                        name: cleanedName + (isLocal ? " (You)" : ""), // Add "(You)" to identify local player
+                        name: cleanedName,
                         data: player
                     });
-                    debugLog("[Phone] Added player to list: " + cleanedName + (isLocal ? " (You)" : ""));
+                    debugLog("[Phone] Added player to list: " + cleanedName);
                 }
             }
         }
@@ -932,6 +950,13 @@ function showTextPanel(panelName) {
         if (Phone.textState.selectedPlayer) {
             Phone.controls.text.composePanel.title.text = "Message: " + Phone.textState.selectedPlayer.name;
         }
+        if (Phone.controls.text.composePanel.charCount) {
+            var existing = Phone.controls.text.composePanel.input && typeof Phone.controls.text.composePanel.input.text === "string"
+                ? Phone.controls.text.composePanel.input.text.length
+                : 0;
+            Phone.controls.text.composePanel.charCount.shown = true;
+            Phone.controls.text.composePanel.charCount.text = String(existing) + "/" + String(Phone.config.messageCharLimit);
+        }
         // Show send button
         if (Phone.controls.text.composePanel.sendButton) {
             Phone.controls.text.composePanel.sendButton.shown = true;
@@ -969,7 +994,7 @@ function showTextPanel(panelName) {
 }
 
 function updateKeyboardContext() {
-    if (!KeyboardService) return;
+    if (typeof KeyboardService === "undefined" || !KeyboardService) return;
     
     var isTyping = Phone.textState.isTyping && Phone.textState.currentPanel === "messageCompose";
     
@@ -979,17 +1004,29 @@ function updateKeyboardContext() {
             isActive: function() { return Phone.active && Phone.textState.isTyping; },
             appendChar: function(ch) { 
                 var input = Phone.controls.text.composePanel.input;
-                if (input && input.text) {
+                if (input && typeof input.text === "string") {
+                    if ((input.text.length + 1) > Phone.config.messageCharLimit) {
+                        return;
+                    }
                     input.text = input.text + ch;
                     Phone.textState.messageInput = input.text;
+                    if (Phone.controls.text.composePanel.charCount) {
+                        Phone.controls.text.composePanel.charCount.text = String(input.text.length) + "/" + String(Phone.config.messageCharLimit);
+                    }
                 }
             },
             // deleteChar REMOVED - no backspace handling in phone
             spaceChar: function() {
                 var input = Phone.controls.text.composePanel.input;
-                if (input && input.text) {
+                if (input && typeof input.text === "string") {
+                    if ((input.text.length + 1) > Phone.config.messageCharLimit) {
+                        return;
+                    }
                     input.text = input.text + " ";
                     Phone.textState.messageInput = input.text;
+                    if (Phone.controls.text.composePanel.charCount) {
+                        Phone.controls.text.composePanel.charCount.text = String(input.text.length) + "/" + String(Phone.config.messageCharLimit);
+                    }
                 }
             }
         });
@@ -1012,11 +1049,19 @@ function sendMessage() {
         return;
     }
     
+    var content = Phone.textState.messageInput.trim();
+    if (content.length > Phone.config.messageCharLimit) {
+        content = content.slice(0, Phone.config.messageCharLimit);
+    }
+    if (!content) {
+        return;
+    }
+
     var message = {
         id: Date.now().toString(),
         sender: "local",
         recipient: Phone.textState.selectedPlayer.name,
-        content: Phone.textState.messageInput.trim(),
+        content: content,
         timestamp: Date.now(),
         status: "sending",
         type: "sent"
@@ -1037,6 +1082,9 @@ function sendMessage() {
     Phone.controls.text.composePanel.input.text = "";
     Phone.textState.messageInput = "";
     Phone.textState.isTyping = false;
+    if (Phone.controls.text.composePanel.charCount) {
+        Phone.controls.text.composePanel.charCount.text = "0/" + String(Phone.config.messageCharLimit);
+    }
     updateKeyboardContext();
     
     debugLog("[Phone] Message sent to " + Phone.textState.selectedPlayer.name);
@@ -1046,7 +1094,7 @@ function addMessageToConversation(playerId, message) {
     if (!Phone.textState.conversations[playerId]) {
         Phone.textState.conversations[playerId] = {
             playerId: playerId,
-            playerName: Phone.textState.selectedPlayer ? Phone.textState.selectedPlayer.name : "Unknown",
+            playerName: getConversationName(playerId),
             messages: [],
             lastActivity: Date.now()
         };
@@ -1086,12 +1134,23 @@ function updateConversationDisplay() {
     
     // Create message bubbles
     var y = Phone.config.headerHeight + Phone.config.padding + 40;
-    var messageHeight = 30;
+    var lineHeight = 16;
+    var maxLines = 3;
     var spacing = 8;
     
     for (var j = 0; j < conversation.messages.length; j++) {
         var msg = conversation.messages[j];
         var bubbleWidth = Math.min(200, Phone.config.width - Phone.config.padding * 4);
+        var maxCharsPerLine = Math.max(10, Math.floor((bubbleWidth - 16) / 7));
+        var raw = String(msg.content || "");
+        var lines = [];
+        var remaining = raw;
+        while (remaining.length > 0 && lines.length < maxLines) {
+            lines.push(remaining.slice(0, maxCharsPerLine));
+            remaining = remaining.slice(maxCharsPerLine);
+        }
+        var textBody = lines.join("\n");
+        var messageHeight = Math.max(30, (lines.length * lineHeight) + 14);
         var bubbleX = msg.type === "sent" ? 
             Phone.config.width - Phone.config.padding - bubbleWidth : 
             Phone.config.padding;
@@ -1121,7 +1180,7 @@ function updateConversationDisplay() {
         
         var text = Phone.window.text(
             bubbleX + 8, y + 6, bubbleWidth - 16, messageHeight - 12,
-            msg.content,
+            textBody,
             { main: { textColour: textColor, textIndent: 0 } }
         );
         
@@ -1160,6 +1219,10 @@ function setControlsVisible(group, visible) {
                     setVisibility(control.title);
                     setVisibility(control.list);
                     setVisibility(control.input);
+                    setVisibility(control.sendButton);
+                    setVisibility(control.cursor);
+                    setVisibility(control.charCount);
+                    setVisibility(control.noPlayersText);
                     control.visible = visible;
                 } else {
                     setVisibility(control);
@@ -1185,6 +1248,25 @@ function setControlsVisible(group, visible) {
     
     // NOTE: playerButtons array is managed directly by buildPlayerButtons/clearPlayerButtons
     // Do NOT process here to avoid conflicts with on-demand creation
+}
+
+function ensureHomeControlsReady() {
+    if (!Phone.controls.home || !Array.isArray(Phone.controls.home.buttons) || Phone.controls.home.buttons.length === 0) {
+        debugLog("[Phone] Home controls missing, rebuilding");
+        buildHome();
+    }
+}
+
+function forceShowHomeControls() {
+    ensureHomeControlsReady();
+    setControlsVisible(Phone.controls.home, true);
+    if (Phone.controls.home && Array.isArray(Phone.controls.home.buttons)) {
+        for (var i = 0; i < Phone.controls.home.buttons.length; i++) {
+            if (Phone.controls.home.buttons[i] && Phone.controls.home.buttons[i].shown !== undefined) {
+                Phone.controls.home.buttons[i].shown = true;
+            }
+        }
+    }
 }
 
 function showApp(appId) {
@@ -1214,7 +1296,7 @@ function showApp(appId) {
     debugLog("[Phone] Showing app: " + appId);
     if (appId === "home") {
         debugLog("[Phone] Showing home controls");
-        setControlsVisible(Phone.controls.home, true);
+        forceShowHomeControls();
         // Hide player buttons when on home screen
         hidePlayerButtons();
     } else if (appId === "jobs") {
@@ -1230,11 +1312,23 @@ function showApp(appId) {
     } else if (appId === "cars") {
         debugLog("[Phone] Showing cars controls");
         hidePlayerButtons(); // Hide player buttons when leaving text app
-        setControlsVisible(Phone.controls.cars, true);
+        if (Phone.controls.cars) {
+            setControlsVisible(Phone.controls.cars, true);
+        } else {
+            debugLog("[Phone] Cars controls missing, falling back to home");
+            appId = "home";
+            forceShowHomeControls();
+        }
     } else if (appId === "bank") {
         debugLog("[Phone] Showing bank controls");
         hidePlayerButtons(); // Hide player buttons when leaving text app
-        setControlsVisible(Phone.controls.bank, true);
+        if (Phone.controls.bank) {
+            setControlsVisible(Phone.controls.bank, true);
+        } else {
+            debugLog("[Phone] Bank controls missing, falling back to home");
+            appId = "home";
+            forceShowHomeControls();
+        }
     }
 
     if (Phone.controls.back) {
@@ -1346,7 +1440,7 @@ Phone.hide = function() {
 
 // Visibility watchdog - ensures phone stays visible and on top when active
 var visibilityWatchdogInterval = null;
-var componentValidationInterval = null;
+var lastTopRefreshAt = 0;
 function startVisibilityWatchdog() {
     if (visibilityWatchdogInterval) {
         clearInterval(visibilityWatchdogInterval);
@@ -1405,15 +1499,17 @@ function startVisibilityWatchdog() {
             }
             
             // Ensure screen stays on top
-            if (Phone.window && Phone.window.setTop) {
+            var now = Date.now ? Date.now() : 0;
+            if (Phone.window && Phone.window.setTop && (now - lastTopRefreshAt > 1000)) {
                 try {
                     Phone.window.setTop();
+                    lastTopRefreshAt = now;
                 } catch (e) {
                     debugLog("[Phone] Watchdog: Failed to set window on top: " + String(e));
                 }
             }
         }
-    }, 200); // Check every 200ms (reduced frequency)
+    }, 400);
 }
 
 function stopVisibilityWatchdog() {

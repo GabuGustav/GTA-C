@@ -86,6 +86,23 @@
   <file type="client" src="Audio/PoliceScanner/Model/MOD_LANDSTALKER.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_ORACLE.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_SENTINEL.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_THIS_IS_CONTROL_WE_HAVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_CIVILIANS_REPORT.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_AVAILABLE_UNITS_RESPOND_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_2_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_3_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_AIR_UNIT_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/LOOKS_LIKE_HES_HEADING.wav" />
+  <file type="client" src="Audio/PoliceScanner/ON_FOOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/LAST_SEEN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/ALBANY_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/ALGONQUIN_BRIDGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/COLUMBUS_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/FRANKLIN_DRIVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/HARRISON_ST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/IVY_RD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/SARATOGA_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/UNION_DRIVE_WEST.wav" />
   <script language="javascript" type="client" src="client/shared_utils.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />

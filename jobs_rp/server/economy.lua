@@ -138,10 +138,22 @@ function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
     local payoutMultiplier = Economy.getPayoutMultiplier(gradeBefore)
 
     local rawPayout = JobsRP.round((JobsRP.toNumber(basePayout, 0) or 0) * payoutMultiplier)
-    local xpGain = JobsRP.round(JobsRP.toNumber(baseXp, 0) or 0)
+    local xpGain = math.floor(JobsRP.round(JobsRP.toNumber(baseXp, 0) or 0))
 
-    jobState.xp = (JobsRP.toNumber(jobState.xp, 0) or 0) + xpGain
-    jobState.grade = Economy.computeGrade(jobState.xp)
+    -- Handle XP through dedicated XP module
+    if JobsRP.XP then
+        JobsRP.XP.addXP(playerId, jobId, xpGain, reason)
+    else
+        print("[Economy] ERROR: XP module not available")
+    end
+    
+    -- Update job state with XP module result
+    local xpInfo = JobsRP.XP and JobsRP.XP.getPlayerXP(playerId, jobId)
+    if xpInfo then
+        jobState.xp = xpInfo.xp
+        jobState.level = xpInfo.level
+        jobState.grade = Economy.computeGrade(xpInfo.level)
+    end
     jobState.completedRuns = (JobsRP.toNumber(jobState.completedRuns, 0) or 0) + 1
 
     local paid = 0
@@ -171,3 +183,4 @@ function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
         cashAfter = profile.cash or 0
     }
 end
+

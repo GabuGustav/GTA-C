@@ -238,6 +238,16 @@ function lerp(a, b, t) {
     return a + (b - a) * t;
 }
 
+function getActiveProfile() {
+    if (typeof JobsClient !== "undefined" && JobsClient && JobsClient.profile && typeof JobsClient.profile === "object") {
+        return JobsClient.profile;
+    }
+    if (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Profile && JobsRP.Profile.data && typeof JobsRP.Profile.data === "object") {
+        return JobsRP.Profile.data;
+    }
+    return null;
+}
+
 function calcXpPercent(xp, thresholds) {
     if (!thresholds || thresholds.length === 0) {
         return 0;
@@ -536,7 +546,7 @@ function updateHudUi() {
     
     // Use civilian-specific thresholds for civilian job
     if (currentJob === "civilian") {
-        thresholds = cfg.civilian_xp_thresholds || [100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600, 51200];
+        thresholds = cfg.civilian_xp_thresholds || [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000];
     } else {
         // Fallback to default thresholds for other jobs
         thresholds = [100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];
@@ -547,25 +557,22 @@ function updateHudUi() {
     var currentXp = 0;
     var nextLevelXp = thresholds[0] || 100;
 
-    // Try to get from profile if available
-    if (JobsRP && JobsRP.Profile && JobsRP.Profile.data) {
-        var profile = JobsRP.Profile.data;
-        if (profile.jobs && profile.jobs[currentJob]) {
-            currentXp = profile.jobs[currentJob].experience || 0;
-            currentLevel = profile.jobs[currentJob].level || 1;
-        } else if (profile.jobs && profile.jobs.civilian) {
+    // Try to get from synced profile data
+    var profile = getActiveProfile();
+    if (profile && profile.jobs) {
+        if (profile.jobs[currentJob]) {
+            currentXp = Number(profile.jobs[currentJob].experience != null ? profile.jobs[currentJob].experience : profile.jobs[currentJob].xp) || 0;
+            currentLevel = Number(profile.jobs[currentJob].level) || 1;
+        } else if (profile.jobs.civilian) {
             // Fallback to civilian
-            currentXp = profile.jobs.civilian.experience || 0;
-            currentLevel = profile.jobs.civilian.level || 1;
+            currentXp = Number(profile.jobs.civilian.experience != null ? profile.jobs.civilian.experience : profile.jobs.civilian.xp) || 0;
+            currentLevel = Number(profile.jobs.civilian.level) || 1;
         }
     }
 
-    // Calculate XP percentage for current level
-    var prevThreshold = currentLevel > 1 ? (thresholds[currentLevel - 2] || 0) : 0;
-    var nextThreshold = thresholds[currentLevel - 1] || (prevThreshold + 100);
-    var levelRange = nextThreshold - prevThreshold;
-    var xpInLevel = currentXp - prevThreshold;
-    var xpPercent = levelRange > 0 ? Math.min(1, Math.max(0, xpInLevel / levelRange)) : 0;
+    // Calculate XP percentage for current level (per-level system)
+    var requiredXP = thresholds[currentLevel - 1] || (100 * currentLevel);
+    var xpPercent = requiredXP > 0 ? Math.min(1, Math.max(0, currentXp / requiredXP)) : 0;
 
     // Position the level bar below the cash display
     var levelBarW = 200 * scale;
@@ -801,6 +808,9 @@ UI.setProfile = function(profile) {
     if (!profile || typeof profile !== "object") {
         return;
     }
+    if (typeof JobsClient !== "undefined" && JobsClient) {
+        JobsClient.profile = profile;
+    }
     if (profile.cash !== undefined) {
         UI.hud.cash = Number(profile.cash || 0) || 0;
         UI.hud.cashKnown = true;
@@ -840,6 +850,16 @@ UI.handleJobReward = function(jobId, xpGain, xpTotal, gradeBefore, gradeAfter, p
     if (jobId === "police") {
         UI.hud.policeGrade = Number(gradeAfter || 0) || 0;
     }
+
+    // Keep profile in sync immediately so persistent level bar/text updates without waiting for next full profile sync.
+    var profile = getActiveProfile();
+    if (profile && jobId) {
+        profile.jobs = profile.jobs || {};
+        profile.jobs[jobId] = profile.jobs[jobId] || {};
+        profile.jobs[jobId].experience = total;
+        profile.jobs[jobId].xp = total;
+        profile.jobs[jobId].level = Number(gradeAfter || 0) + 1;
+    }
 };
 
 // Network handler for passive XP updates
@@ -873,4 +893,79 @@ if (typeof addNetworkHandler === "function") {
             }, 2000);
         }
     });
+    
+    // Network handler for JobStats XP updates (from playtime system)
+    var handleJobStatsXPUpdate = function(data) {
+        console.log("[UI] jobStats_xpUpdate received:", JSON.stringify(data));
+        
+        if (!data || typeof data !== "object") {
+            console.log("[UI] Invalid XP update data");
+            return;
+        }
+        
+        var xpGained = Number(data.xpGained) || 0;
+        console.log("[UI] Processing XP gain:", xpGained);
+        var currentLevelXP = Number(data.currentLevelXP) || 0;
+        var requiredXP = Number(data.requiredXP) || 100;
+        var currentLevel = Number(data.currentLevel) || 1;
+        var jobType = data.jobType || "civilian";
+        var didLevelUp = Boolean(data.didLevelUp);
+        
+        if (xpGained > 0) {
+            // Update the profile data
+            var profile = getActiveProfile();
+            if (profile) {
+                if (!profile.jobs) {
+                    profile.jobs = {};
+                }
+                if (!profile.jobs[jobType]) {
+                    profile.jobs[jobType] = {};
+                }
+                profile.jobs[jobType].experience = currentLevelXP;
+                profile.jobs[jobType].xp = currentLevelXP;
+                profile.jobs[jobType].level = currentLevel;
+            }
+            
+            // Show XP gain notification
+            var levelText = didLevelUp ? "Level " + currentLevel + "! " : "";
+            UI.showXPGain(xpGained, levelText + "Playtime XP", jobType);
+            
+            // Trigger XP bar animation
+            var now = nowMs();
+            UI.hud.xpGainAt = now;
+            UI.hud.levelUpText = "+" + xpGained + " XP " + jobType;
+            if (didLevelUp) {
+                UI.hud.levelUpText = "Level " + currentLevel + "! " + UI.hud.levelUpText;
+            }
+            UI.hud.levelUpAt = now;
+            
+            // Auto-hide after duration
+            setTimeout(function() {
+                UI.hud.levelUpAt = 0;
+                UI.hud.levelUpText = "";
+            }, 3000);
+        }
+    };
+    
+    // Register with both network handler (for triggerNetworkEvent) and event handler (for triggerClientEvent/pushClientEvent)
+    if (typeof addNetworkHandler === "function") {
+        addNetworkHandler("jobStats_xpUpdate", handleJobStatsXPUpdate);
+    }
+    if (typeof addEventHandler === "function") {
+        addEventHandler("jobStats_xpUpdate", function(event, data) {
+            handleJobStatsXPUpdate(data);
+        });
+    }
+    
+    // TEST: Simple event that should definitely work
+    if (typeof addNetworkHandler === "function") {
+        addNetworkHandler("jobs.showPrompt", function(data) {
+            console.log("[UI] TEST: Received jobs.showPrompt:", data);
+        });
+    }
+    if (typeof addEventHandler === "function") {
+        addEventHandler("jobs.showPrompt", function(event, data) {
+            console.log("[UI] TEST: Received jobs.showPrompt via event:", data);
+        });
+    }
 }

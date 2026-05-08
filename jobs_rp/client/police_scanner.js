@@ -11,7 +11,7 @@ PoliceScanner.Manager = {
     enabled: true,
     _autoEnableTimer: null,
     structuredMode: true,
-    structuredMaxClips: 5,
+    structuredMaxClips: 8,
     _isPlaying: false,
     _currentSequence: null,
     _sequenceTimers: [],
@@ -37,9 +37,15 @@ PoliceScanner.Manager = {
                 "ATTENTION_ALL_UNITS": "ATTENTION_ALL_UNITS.wav", 
                 "DISPATCHING_TO": "DISPATCHING_TO.wav",
                 "THIS_IS_CONTROL": "THIS_IS_CONTROL.wav",
+                "INS_THIS_IS_CONTROL_WE_HAVE": "INS_THIS_IS_CONTROL_WE_HAVE.wav",
+                "INS_CIVILIANS_REPORT": "INS_CIVILIANS_REPORT.wav",
+                "INS_AVAILABLE_UNITS_RESPOND_TO": "INS_AVAILABLE_UNITS_RESPOND_TO.wav",
                 "UNITS_PLEASE_BE_ADVISED": "UNITS_PLEASE_BE_ADVISED.wav",
                 "ALL_UNITS_PLEASE_RESPOND": "ALL_UNITS_PLEASE_RESPOND.wav",
-                "SUSPECT_APPREHENDED": "SUSPECT_APPREHENDED.wav"
+                "SUSPECT_APPREHENDED": "SUSPECT_APPREHENDED.wav",
+                "DFROM_DISPATCH_2_UNITS_FROM": "DFROM_DISPATCH_2_UNITS_FROM.wav",
+                "DFROM_DISPATCH_3_UNITS_FROM": "DFROM_DISPATCH_3_UNITS_FROM.wav",
+                "DFROM_DISPATCH_AIR_UNIT_FROM": "DFROM_DISPATCH_AIR_UNIT_FROM.wav"
             },
             
             // Criminal activities
@@ -87,7 +93,21 @@ PoliceScanner.Manager = {
                 "HEADING_NORTH": "SUSPECT_HEADED_NORTH.wav",
                 "HEADING_SOUTH": "SUSPECT_HEADING_SOUTH.wav", 
                 "HEADING_EAST": "SUSPECT_HEADED_EAST.wav",
-                "HEADING_WEST": "SUSPECT_HEADED_WEST.wav"
+                "HEADING_WEST": "SUSPECT_HEADED_WEST.wav",
+                "LOOKS_LIKE_HES_HEADING": "LOOKS_LIKE_HES_HEADING.wav",
+                "ON_FOOT": "ON_FOOT.wav",
+                "LAST_SEEN": "LAST_SEEN.wav"
+            },
+
+            streets: {
+                "ALBANY_AVE": "Streets/ALBANY_AVE.wav",
+                "ALGONQUIN_BRIDGE": "Streets/ALGONQUIN_BRIDGE.wav",
+                "COLUMBUS_AVE": "Streets/COLUMBUS_AVE.wav",
+                "FRANKLIN_DRIVE": "Streets/FRANKLIN_DRIVE.wav",
+                "HARRISON_ST": "Streets/HARRISON_ST.wav",
+                "IVY_RD": "Streets/IVY_RD.wav",
+                "SARATOGA_AVE": "Streets/SARATOGA_AVE.wav",
+                "UNION_DRIVE_WEST": "Streets/UNION_DRIVE_WEST.wav"
             },
             
             // Vehicle categories
@@ -242,10 +262,20 @@ PoliceScanner.Manager = {
     buildStructuredSequence: function(calloutType, position) {
         var sequence = [];
 
-        // 1) Attention
-        sequence.push({ category: "dispatch", file: "ATTENTION_ALL_UNITS", delay: 0 });
+        // 1) Open with a realistic dispatch intro phrase
+        var intros = [
+            { category: "dispatch", file: "ATTENTION_ALL_UNITS", delay: 0 },
+            { category: "dispatch", file: "THIS_IS_CONTROL", delay: 0 },
+            { category: "dispatch", file: "INS_THIS_IS_CONTROL_WE_HAVE", delay: 0 }
+        ];
+        sequence.push(this.pickVariant(intros));
 
-        // 2) Callout type (core meaning)
+        // 2) Source context / report style
+        if (Math.random() < 0.6) {
+            sequence.push({ category: "dispatch", file: "INS_CIVILIANS_REPORT", delay: 900 });
+        }
+
+        // 3) Core incident phrase
         var calloutClip = null;
         switch (calloutType) {
             case "shooting":
@@ -265,25 +295,103 @@ PoliceScanner.Manager = {
             sequence.push(calloutClip);
         }
 
-        // 3) Area
+        // 4) Optional deployment phrase
+        if (Math.random() < 0.45) {
+            var unitDispatch = this.pickAvailable("dispatch", [
+                "DFROM_DISPATCH_2_UNITS_FROM",
+                "DFROM_DISPATCH_3_UNITS_FROM",
+                "DFROM_DISPATCH_AIR_UNIT_FROM"
+            ]);
+            if (unitDispatch) {
+                sequence.push({ category: "dispatch", file: unitDispatch, delay: 900 });
+            }
+        }
+
+        // 5) Location (area and/or street)
         var area = this.getAreaFromPosition(position);
         if (area) {
             sequence.push({ category: "areas", file: area, delay: 1200 });
         }
+        if (Math.random() < 0.5) {
+            var street = this.pickAvailable("streets", [
+                "ALBANY_AVE",
+                "ALGONQUIN_BRIDGE",
+                "COLUMBUS_AVE",
+                "FRANKLIN_DRIVE",
+                "HARRISON_ST",
+                "IVY_RD",
+                "SARATOGA_AVE",
+                "UNION_DRIVE_WEST"
+            ]);
+            if (street) {
+                sequence.push({ category: "streets", file: street, delay: 900 });
+            }
+        }
 
-        // 4) Optional direction (short, not always)
+        // 6) Optional suspect movement phrase
+        if (Math.random() < 0.6) {
+            sequence.push({ category: "directions", file: "LOOKS_LIKE_HES_HEADING", delay: 900 });
+        }
         if (Math.random() < 0.6) {
             var dirs = ["HEADING_NORTH", "HEADING_SOUTH", "HEADING_EAST", "HEADING_WEST"];
             var dir = dirs[Math.floor(Math.random() * dirs.length)];
             sequence.push({ category: "directions", file: dir, delay: 1200 });
         }
-
-        // Enforce max clip count for coherence
-        if (sequence.length > this.structuredMaxClips) {
-            sequence = sequence.slice(0, this.structuredMaxClips);
+        if (Math.random() < 0.35) {
+            sequence.push({ category: "directions", file: "ON_FOOT", delay: 700 });
         }
 
-        return sequence;
+        // 7) Close with response request occasionally
+        if (Math.random() < 0.45) {
+            var response = this.pickAvailable("dispatch", ["INS_AVAILABLE_UNITS_RESPOND_TO", "ALL_UNITS_PLEASE_RESPOND"]);
+            if (response) {
+                sequence.push({ category: "dispatch", file: response, delay: 900 });
+            }
+        }
+
+        return this.finalizeSequence(sequence);
+    },
+
+    hasClip: function(category, file) {
+        return !!(this.sounds && this.sounds[category] && this.sounds[category][file]);
+    },
+
+    pickAvailable: function(category, candidates) {
+        if (!Array.isArray(candidates) || candidates.length === 0) {
+            return null;
+        }
+        var available = [];
+        for (var i = 0; i < candidates.length; i++) {
+            if (this.hasClip(category, candidates[i])) {
+                available.push(candidates[i]);
+            }
+        }
+        if (available.length === 0) {
+            return null;
+        }
+        return available[Math.floor(Math.random() * available.length)];
+    },
+
+    pickVariant: function(items) {
+        if (!Array.isArray(items) || items.length === 0) {
+            return null;
+        }
+        var idx = Math.floor(Math.random() * items.length);
+        return items[idx];
+    },
+
+    finalizeSequence: function(sequence) {
+        var filtered = [];
+        for (var i = 0; i < sequence.length; i++) {
+            var item = sequence[i];
+            if (item && item.category && item.file && this.hasClip(item.category, item.file)) {
+                filtered.push(item);
+            }
+        }
+        if (filtered.length > this.structuredMaxClips) {
+            filtered = filtered.slice(0, this.structuredMaxClips);
+        }
+        return filtered;
     },
     
     getAreaFromPosition: function(position) {
@@ -305,6 +413,12 @@ PoliceScanner.Manager = {
             return;
         }
         
+        sequence = this.finalizeSequence(sequence || []);
+        if (!sequence.length) {
+            console.log("[PoliceScanner] No valid clips available for sequence");
+            return;
+        }
+
         // Stop any currently playing sequence to prevent overlap
         this.stopCurrentSequence();
         

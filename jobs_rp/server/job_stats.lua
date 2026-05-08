@@ -6,6 +6,76 @@ JobsRP.JobStats = JobsRP.JobStats or {}
 
 local JobStats = JobsRP.JobStats
 
+-- Load time statistics module
+local TimeStats = require("server.time_stats")
+if TimeStats then
+    JobsRP.TimeStats = TimeStats
+    print("[JobStats] Time statistics module loaded")
+else
+    print("[JobStats] Failed to load time statistics module")
+end
+
+local function getConnectedClients()
+    local clients = {}
+    if getOnlineClients then
+        local ok, result = pcall(getOnlineClients)
+        if ok and type(result) == "table" then
+            clients = result
+        end
+    end
+    if #clients == 0 and getClients then
+        local ok2, result2 = pcall(getClients)
+        if ok2 and type(result2) == "table" then
+            clients = result2
+        end
+    end
+    return clients
+end
+
+-- Resolve connected client by authenticated account id with safe fallbacks.
+local function findClientByAccountId(accountId)
+    if not accountId or accountId == "" then
+        return nil
+    end
+
+    local target = tostring(accountId)
+    local targetNorm = JobsRP.normalizeName(target)
+    local matchedByName = nil
+    local clients = getConnectedClients()
+
+    for _, client in ipairs(clients) do
+        local resolved = nil
+
+        if JobsRP and JobsRP.Auth and JobsRP.Auth.getAccountId then
+            local okAuth, account = pcall(JobsRP.Auth.getAccountId, client)
+            if okAuth and account then
+                resolved = tostring(account)
+            end
+        end
+
+        if not resolved and JobsRP and JobsRP.Store and JobsRP.Store.getPlayerId then
+            local okStore, account2 = pcall(JobsRP.Store.getPlayerId, client)
+            if okStore and account2 then
+                resolved = tostring(account2)
+            end
+        end
+
+        if resolved == target then
+            return client
+        end
+
+        local playerNameNorm = JobsRP.normalizeName(client.name or "")
+        if targetNorm ~= "" and playerNameNorm == targetNorm then
+            return client
+        end
+        if targetNorm ~= "" and playerNameNorm ~= "" and string.find(playerNameNorm, targetNorm, 1, true) then
+            matchedByName = matchedByName or client
+        end
+    end
+
+    return matchedByName
+end
+
 -- Player statistics storage
 JobStats.playerStats = JobStats.playerStats or {}
 
@@ -193,49 +263,14 @@ function JobStats.calculateExperienceGain(jobType, statName, value, operation)
     end
 end
 
--- Add experience to player
+-- XP system moved to Economy module - this function now redirects to Economy
 function JobStats.addExperience(accountId, jobType, experience)
-    local playerJobStats = JobStats.initPlayerStats(accountId, jobType)
-    
-    local oldLevel = playerJobStats.level
-    playerJobStats.experience = playerJobStats.experience + experience
-    
-    -- Check for level up
-    local newLevel = JobStats.calculateLevel(playerJobStats.experience)
-    if newLevel > oldLevel then
-        playerJobStats.level = newLevel
-        print("[JobStats] " .. accountId .. " leveled up to " .. newLevel .. " in " .. jobType)
-        
-        -- Trigger level up event
-        if triggerNetworkEvent then
-            local client = getClientFromName(accountId)
-            if client then
-                triggerNetworkEvent("jobStats_levelUp", client, {
-                    jobType = jobType,
-                    newLevel = newLevel,
-                    experience = playerJobStats.experience
-                })
-            end
-        end
-        
-        -- Check for achievements
-        JobStats.checkAchievements(accountId, jobType)
+    if JobsRP.Economy and JobsRP.Economy.applyJobReward then
+        JobsRP.Economy.applyJobReward(accountId, jobType, 0, experience, "jobstats_legacy")
+    else
+        print("[JobStats] ERROR: Economy module not available for XP handling")
     end
-    
-    return newLevel > oldLevel
-end
-
--- Calculate level based on experience (infinite levels with doubling requirements)
-function JobStats.calculateLevel(experience)
-    if experience < 100 then
-        return 1 -- Level 1 starts at 100XP
-    end
-    
-    -- Calculate level using additive progression (100, 200, 300, 400...)
-    local level = math.floor(experience / 100) + 1
-    -- This gives: 0-99XP = Level 1, 100-199XP = Level 2, 200-299XP = Level 3, etc.
-    if level < 1 then level = 1 end
-    return level
+    return false
 end
 
 -- Get XP required for a specific level (additive progression)
@@ -284,184 +319,14 @@ function JobStats.getAllPlayerStats()
     return allStats
 end
 
--- Check and unlock achievements
+-- Redirect to Achievement module
 function JobStats.checkAchievements(accountId, jobType)
-    local playerJobStats = JobStats.getPlayerStats(accountId, jobType)
-    if not playerJobStats then
-        return
+    if JobsRP.Achievements then
+        return JobsRP.Achievements.checkJobAchievements(accountId, jobType, JobStats.getPlayerStats(accountId, jobType).stats or {})
+    else
+        print("[JobStats] ERROR: Achievement module not available")
+        return {}
     end
-    
-    local achievements = {}
-    
-    -- Check for various achievement conditions
-    if jobType == "police" then
-        if playerJobStats.stats.arrests_made >= 1 then
-            table.insert(achievements, {
-                id = "first_arrest",
-                name = "First Arrest",
-                description = "Make your first arrest as a police officer",
-                job_type = "police"
-            })
-        end
-        
-        if playerJobStats.stats.arrests_made >= 50 then
-            table.insert(achievements, {
-                id = "veteran_officer",
-                name = "Veteran Officer",
-                description = "Make 50 arrests",
-                job_type = "police"
-            })
-        end
-        
-        if playerJobStats.stats.pursuits_completed >= 10 then
-            table.insert(achievements, {
-                id = "pursuit_master",
-                name = "Pursuit Master",
-                description = "Complete 10 vehicle pursuits",
-                job_type = "police"
-            })
-        end
-    elseif jobType == "medic" then
-        if playerJobStats.stats.lives_saved >= 1 then
-            table.insert(achievements, {
-                id = "first_save",
-                name = "First Save",
-                description = "Save your first life as a medic",
-                job_type = "medic"
-            })
-        end
-        
-        if playerJobStats.stats.lives_saved >= 25 then
-            table.insert(achievements, {
-                id = "lifesaver",
-                name = "Lifesaver",
-                description = "Save 25 lives",
-                job_type = "medic"
-            })
-        end
-    elseif jobType == "mechanic" then
-        if playerJobStats.stats.vehicles_repaired >= 1 then
-            table.insert(achievements, {
-                id = "first_repair",
-                name = "First Repair",
-                description = "Repair your first vehicle",
-                job_type = "mechanic"
-            })
-        end
-        
-        if playerJobStats.stats.vehicles_repaired >= 100 then
-            table.insert(achievements, {
-                id = "master_mechanic",
-                name = "Master Mechanic",
-                description = "Repair 100 vehicles",
-                job_type = "mechanic"
-            })
-        end
-    elseif jobType == "civilian" then
-        if playerJobStats.stats.missions_completed >= 1 then
-            table.insert(achievements, {
-                id = "first_mission",
-                name = "First Mission",
-                description = "Complete your first civilian mission",
-                job_type = "civilian"
-            })
-        end
-        
-        if playerJobStats.stats.properties_owned >= 1 then
-            table.insert(achievements, {
-                id = "property_owner",
-                name = "Property Owner",
-                description = "Own your first property",
-                job_type = "civilian"
-            })
-        end
-    end
-    
-    -- Level achievements
-    if playerJobStats.level >= 5 then
-        table.insert(achievements, {
-            id = "experienced_" .. jobType,
-            name = "Experienced " .. string.upper(string.sub(jobType, 1, 1)) .. string.sub(jobType, 2),
-            description = "Reach level 5 in " .. jobType,
-            job_type = jobType
-        })
-    end
-    
-    if playerJobStats.level >= 10 then
-        table.insert(achievements, {
-            id = "master_" .. jobType,
-            name = "Master " .. string.upper(string.sub(jobType, 1, 1)) .. string.sub(jobType, 2),
-            description = "Reach maximum level in " .. jobType,
-            job_type = jobType
-        })
-    end
-    
-    -- Send achievements to website if integration is enabled
-    if #achievements > 0 and JobsRP.Config.web_integration_enabled and JobsRP.HttpClient then
-        JobsRP.HttpClient.updateAchievements(accountId, achievements, function(success, response)
-            if success then
-                print("[JobStats] Updated achievements for " .. accountId .. ": " .. #achievements .. " new achievements")
-            else
-                print("[JobStats] Failed to update achievements for " .. accountId .. ": " .. tostring(response))
-            end
-        end)
-    end
-    
-    return achievements
-end
-
--- Update time-based stats (call this periodically)
-function JobStats.updateTimeStats()
-    local now = JobsRP.nowSeconds()
-    
-    for accountId, playerData in pairs(JobStats.playerStats) do
-        for jobType, jobData in pairs(playerData) do
-            -- Update time in service / time played
-            local timeDiff = now - jobData.lastUpdated
-            if timeDiff > 0 and timeDiff < 300 then -- Only count if reasonably recent (5 minutes)
-                if jobType == "civilian" then
-                    JobStats.updateStat(accountId, jobType, "time_played", timeDiff / 3600, "add") -- Convert to hours
-                else
-                    JobStats.updateStat(accountId, jobType, "time_in_service", timeDiff / 3600, "add")
-                end
-            end
-            jobData.lastUpdated = now
-        end
-    end
-end
-
--- Get leaderboard data for job type
-function JobStats.getLeaderboard(jobType, limit)
-    limit = limit or 10
-    local leaderboard = {}
-    
-    for accountId, playerData in pairs(JobStats.playerStats) do
-        local jobData = playerData[jobType]
-        if jobData then
-            table.insert(leaderboard, {
-                username = accountId,
-                level = jobData.level,
-                experience = jobData.experience,
-                stats = jobData.stats
-            })
-        end
-    end
-    
-    -- Sort by experience, then by level
-    table.sort(leaderboard, function(a, b)
-        if a.experience ~= b.experience then
-            return a.experience > b.experience
-        end
-        return a.level > b.level
-    end)
-    
-    -- Return top results
-    local results = {}
-    for i = 1, math.min(limit, #leaderboard) do
-        table.insert(results, leaderboard[i])
-    end
-    
-    return results
 end
 
 -- Playtime tracking functions for XP rewards
@@ -471,6 +336,26 @@ function JobStats.initPlayerSession(accountId)
     print("[JobStats] DEBUG: initPlayerSession called for " .. accountId)
     
     if not JobStats.playerSessions[accountId] then
+        -- Check if player already has XP (prevent duplicate first join XP)
+        -- Check both in-memory stats AND persisted profile
+        local existingXP = 0
+        
+        -- Check in-memory stats
+        if JobStats.playerStats[accountId] and JobStats.playerStats[accountId]["civilian"] then
+            existingXP = JobStats.playerStats[accountId]["civilian"].experience or 0
+        end
+        
+        -- Check persisted profile (more reliable for reconnections)
+        if existingXP == 0 and JobsRP.Store then
+            local profile = JobsRP.Store.getProfileById(accountId)
+            if not profile then
+                profile = JobsRP.Store.loadProfileById(accountId)
+            end
+            if profile and profile.jobs and profile.jobs["civilian"] then
+                existingXP = math.floor(profile.jobs["civilian"].experience or profile.jobs["civilian"].xp or 0)
+            end
+        end
+        
         JobStats.playerSessions[accountId] = {
             sessionStart = JobsRP.nowSeconds(),
             lastRewardTime = JobsRP.nowSeconds(),
@@ -480,14 +365,23 @@ function JobStats.initPlayerSession(accountId)
         }
         print("[JobStats] Initialized playtime session for " .. accountId)
         
-        -- Grant first join XP
-        JobStats.addExperience(accountId, "civilian", JobStats.playtimeRewards.firstJoinXP)
-        print("[JobStats] Granted " .. JobStats.playtimeRewards.firstJoinXP .. " XP to " .. accountId .. " for first join")
-    else
-        -- Reset session start time for reconnection
-        JobStats.playerSessions[accountId].sessionStart = JobsRP.nowSeconds()
-        JobStats.playerSessions[accountId].isFirstJoin = false
-        print("[JobStats] Reconnected player " .. accountId .. " - session reset")
+        -- Only grant first join XP if player doesn't already have XP
+        if existingXP == 0 then
+            JobStats.addExperience(accountId, "civilian", JobStats.playtimeRewards.firstJoinXP)
+            print("[JobStats] Granted " .. JobStats.playtimeRewards.firstJoinXP .. " XP to " .. accountId .. " for first join")
+        else
+            print("[JobStats] Skipped first join XP for " .. accountId .. " - already has " .. existingXP .. " XP")
+        end
+        
+        -- Load XP from profile if exists
+        if existingXP > 0 then
+            local playerJobStats = JobStats.playerStats[accountId]
+            if playerJobStats and playerJobStats["civilian"] then
+                playerJobStats["civilian"].experience = existingXP
+                playerJobStats["civilian"].level = JobStats.calculateLevel(existingXP)
+                print("[JobStats] Loaded XP from profile for " .. accountId .. ": " .. existingXP .. " XP, Level " .. playerJobStats["civilian"].level .. " (recalculated)")
+            end
+        end
     end
     
     -- Debug: Verify session was created
@@ -524,11 +418,15 @@ function JobStats.updatePlaytimeRewards(accountId)
             print("[JobStats] DEBUG: " .. accountId .. " - Double XP active (session: " .. sessionDuration .. "s >= " .. JobStats.playtimeRewards.doubleThreshold .. "s)")
         end
         
-        -- Grant XP reward
-        JobStats.addExperience(accountId, "civilian", xpReward)
+        -- Grant XP reward through Economy system
+        if JobsRP.Economy then
+            JobsRP.Economy.applyJobReward(accountId, "civilian", 0, xpReward, "passive_playtime")
+        end
         
-        -- Update playtime stats
-        JobStats.updateStat(accountId, "civilian", "time_played", sessionDuration, "add")
+        -- Update playtime stats using time stats module
+        if JobsRP.TimeStats then
+            JobsRP.TimeStats.updateTimeStats()
+        end
         
         -- Reset reward timer
         session.lastRewardTime = currentTime

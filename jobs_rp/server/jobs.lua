@@ -178,23 +178,36 @@ function Jobs.prompt(player, message, level)
 end
 
 local function requireAuthenticatedAccountId(player, silentPrompt)
-    if JobsRP.Config.auth_required then
-        if not JobsRP.Auth or not JobsRP.Auth.isAuthenticated(player) then
-            if not silentPrompt then
-                Jobs.prompt(player, "Use /jobauth register or /jobauth login before using jobs.", "warn")
-            end
-            return nil
-        end
+    -- Use the same method as JobStats - Auth.getAccountId which has multiple fallback methods
+    local playerId = nil
+    
+    print("[Jobs] DEBUG: requireAuthenticatedAccountId called")
+    print("[Jobs] DEBUG: player type: " .. type(player))
+    
+    if JobsRP.Auth and JobsRP.Auth.getAccountId then
+        print("[Jobs] DEBUG: Calling Auth.getAccountId")
+        playerId = JobsRP.Auth.getAccountId(player)
+        print("[Jobs] DEBUG: Auth.getAccountId returned: " .. tostring(playerId))
+    else
+        print("[Jobs] DEBUG: Auth.getAccountId not available")
     end
-
-    local playerId = JobsRP.Store.getPlayerId(player)
+    
+    -- Fallback to Store if Auth doesn't have accountId
+    if not playerId and JobsRP.Store then
+        print("[Jobs] DEBUG: Falling back to Store.getPlayerId")
+        playerId = JobsRP.Store.getPlayerId(player)
+        print("[Jobs] DEBUG: Store.getPlayerId returned: " .. tostring(playerId))
+    end
+    
     if not playerId then
+        print("[Jobs] DEBUG: No playerId found, returning nil")
         if not silentPrompt then
             Jobs.prompt(player, "Use /jobauth register or /jobauth login before using jobs.", "warn")
         end
         return nil
     end
 
+    print("[Jobs] DEBUG: Returning playerId: " .. tostring(playerId))
     return playerId
 end
 
@@ -1684,12 +1697,40 @@ addEventHandler("onResourceStart", function(event, resource)
     math.randomseed(JobsRP.nowSeconds())
     JobsRP.Store.startAutosave()
 
+    -- Initialize authentication system
+    local AuthInit = require("server.auth.init")
+    if AuthInit then
+        AuthInit.init()
+    else
+        print("[Jobs] Failed to load authentication system")
+    end
+
     -- Create hub elements
     createHubElements()
 
     if getClients then
         for _, client in ipairs(getClients()) do
             local resolved = resolveClient(client)
+            -- Load command system
+            if addEventHandler then
+                addEventHandler("OnResourceStart", function(res)
+                    if res and res ~= thisResource then
+                        return
+                    end
+                    
+                    -- Initialize command modules
+                    local CommandsInit = require("server.commands.init")
+                    if CommandsInit then
+                        CommandsInit.init()
+                    else
+                        print("[Jobs] Failed to load command modules")
+                    end
+                    
+                    -- Load recorded coordinates for broadcasting
+                    local list = loadRecordedCoords()
+                    broadcastRecordedCoords(list)
+                end)
+            end
             if resolved then
                 Jobs.handlePlayerJoin(resolved)
             end
@@ -1790,71 +1831,4 @@ function Jobs.handlePlayerLeave(player)
     end
 end
 
-if addCommandHandler then
-    -- Test XP gain command
-    addCommandHandler("testxp", function(parameters)
-        local player = client -- Fix client object reference
-        local playerId = requireAuthenticatedAccountId(player)
-        if not playerId then
-            return
-        end
-        
-        local profile = JobsRP.Store.getProfileByPlayer(player)
-        if not profile then
-            return
-        end
-        
-        -- Add test XP
-        local testAmount = 50
-        if JobsRP.Economy then
-            JobsRP.Economy.applyJobReward(playerId, profile.currentJobId or "civilian", 0, testAmount, "test_command")
-        end
-        
-        Jobs.prompt(player, "Test XP added: +" .. testAmount .. " XP", "success")
-    end)
-    
-    -- Fill XP bar command
-    addCommandHandler("fillxp", function(parameters)
-        local player = client -- Fix client object reference
-        local playerId = requireAuthenticatedAccountId(player)
-        if not playerId then
-            return
-        end
-        
-        local profile = JobsRP.Store.getProfileByPlayer(player)
-        if not profile then
-            return
-        end
-        
-        local currentJob = profile.currentJobId or "civilian"
-        
-        -- Add enough XP to reach next level threshold
-        local cfg = JobsRP.Config or {}
-        local thresholds = currentJob == "civilian" and cfg.civilian_xp_thresholds or {100, 200, 400} or cfg.grade_thresholds or {100, 250, 500}
-        
-        local currentXP = 0
-        if profile.jobs and profile.jobs[currentJob] then
-            currentXP = profile.jobs[currentJob].experience or 0
-        end
-        
-        local currentLevel = 1
-        if profile.jobs and profile.jobs[currentJob] then
-            currentLevel = profile.jobs[currentJob].level or 1
-        end
-        
-        -- Find next threshold
-        local nextThreshold = thresholds[currentLevel] or (thresholds[#thresholds] or 1000)
-        local xpNeeded = nextThreshold - currentXP
-        
-        if xpNeeded > 0 then
-            if JobsRP.Economy then
-                JobsRP.Economy.applyJobReward(playerId, currentJob, 0, xpNeeded, "fill_command")
-            end
-            Jobs.prompt(player, "XP bar filled: +" .. xpNeeded .. " XP (Level " .. (currentLevel + 1) .. ")", "success")
-        else
-            Jobs.prompt(player, "Already at max level or next threshold unknown", "info")
-        end
-    end)
-    
-    print("[Jobs] Player commands registered: /testxp, /fillxp")
 end
