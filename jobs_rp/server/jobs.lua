@@ -10,6 +10,50 @@ Jobs.groupByPlayerId = Jobs.groupByPlayerId or {}
 Jobs.groupCounter = Jobs.groupCounter or 0
 Jobs.hubElements = Jobs.hubElements or {}
 
+-- Runtime-safe module loader for environments without global require.
+local function safeRequire(moduleName)
+    if type(require) == "function" then
+        local ok, mod = pcall(require, moduleName)
+        if ok then
+            return mod
+        end
+        print("[Jobs] require failed for " .. tostring(moduleName) .. ": " .. tostring(mod))
+    end
+
+    local loader = loadstring or load
+    if type(loader) ~= "function" or type(loadTextFile) ~= "function" then
+        return nil
+    end
+
+    local modulePath = tostring(moduleName or ""):gsub("%.", "/")
+    local candidatePaths = {
+        moduleName .. ".lua",
+        modulePath .. ".lua",
+        "server/" .. moduleName .. ".lua",
+        "server/" .. modulePath .. ".lua",
+        "resources/jobs_rp/server/" .. moduleName .. ".lua",
+        "resources/jobs_rp/server/" .. modulePath .. ".lua"
+    }
+
+    for _, path in ipairs(candidatePaths) do
+        local okRead, source = pcall(loadTextFile, path)
+        if okRead and type(source) == "string" and source ~= "" then
+            local chunk, err = loader(source, "@" .. path)
+            if chunk then
+                local okExec, result = pcall(chunk)
+                if okExec then
+                    return result
+                end
+                print("[Jobs] module execution failed for " .. path .. ": " .. tostring(result))
+            else
+                print("[Jobs] module compile failed for " .. path .. ": " .. tostring(err))
+            end
+        end
+    end
+
+    return nil
+end
+
 
 local function unpackTable(values, index)
     local i = index or 1
@@ -1698,7 +1742,7 @@ addEventHandler("onResourceStart", function(event, resource)
     JobsRP.Store.startAutosave()
 
     -- Initialize authentication system
-    local AuthInit = require("server.auth.init")
+    local AuthInit = safeRequire("server.auth.init")
     if AuthInit then
         AuthInit.init()
     else
@@ -1719,7 +1763,7 @@ addEventHandler("onResourceStart", function(event, resource)
                     end
                     
                     -- Initialize command modules
-                    local CommandsInit = require("server.commands.init")
+                    local CommandsInit = safeRequire("server.commands.init")
                     if CommandsInit then
                         CommandsInit.init()
                     else
@@ -1829,6 +1873,4 @@ function Jobs.handlePlayerLeave(player)
     if playerId and Jobs.civilianStats[playerId] then
         Jobs.civilianStats[playerId] = nil
     end
-end
-
 end

@@ -7,18 +7,23 @@ local TimeStats = {}
 function TimeStats.updateTimeStats()
     local now = JobsRP.nowSeconds()
     
+    -- Direct update without calling back to JobStats to avoid circular dependency
     for accountId, playerData in pairs(JobsRP.JobStats.playerStats) do
         for jobType, jobData in pairs(playerData) do
             -- Update time in service / time played
             local timeDiff = now - jobData.lastUpdated
             if timeDiff > 0 and timeDiff < 300 then -- Only count if reasonably recent (5 minutes)
                 if jobType == "civilian" then
-                    JobsRP.JobStats.updateStat(accountId, jobType, "time_played", timeDiff / 3600, "add") -- Convert to hours
+                    -- Direct stat update to avoid circular dependency
+                    local timePlayed = (jobData.stats.time_played or 0) + (timeDiff / 3600)
+                    jobData.stats.time_played = timePlayed
+                    jobData.lastUpdated = now
                 else
-                    JobsRP.JobStats.updateStat(accountId, jobType, "time_in_service", timeDiff / 3600, "add")
+                    local timeInService = (jobData.stats.time_in_service or 0) + (timeDiff / 3600)
+                    jobData.stats.time_in_service = timeInService
+                    jobData.lastUpdated = now
                 end
             end
-            jobData.lastUpdated = now
         end
     end
 end

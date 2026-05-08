@@ -6,8 +6,47 @@ JobsRP.JobStats = JobsRP.JobStats or {}
 
 local JobStats = JobsRP.JobStats
 
--- Load time statistics module
-local TimeStats = require("server.time_stats")
+-- Load time statistics module in runtimes where global require may be unavailable.
+local function safeRequire(moduleName)
+    if type(require) == "function" then
+        local ok, mod = pcall(require, moduleName)
+        if ok then
+            return mod
+        end
+        print("[JobStats] require failed for " .. tostring(moduleName) .. ": " .. tostring(mod))
+    end
+
+    local loader = loadstring or load
+    if type(loader) ~= "function" or type(loadTextFile) ~= "function" then
+        return nil
+    end
+
+    local candidatePaths = {
+        moduleName .. ".lua",
+        "server/" .. moduleName .. ".lua",
+        "resources/jobs_rp/server/" .. moduleName .. ".lua"
+    }
+
+    for _, path in ipairs(candidatePaths) do
+        local okRead, source = pcall(loadTextFile, path)
+        if okRead and type(source) == "string" and source ~= "" then
+            local chunk, err = loader(source, "@" .. path)
+            if chunk then
+                local okExec, result = pcall(chunk)
+                if okExec then
+                    return result
+                end
+                print("[JobStats] module execution failed for " .. path .. ": " .. tostring(result))
+            else
+                print("[JobStats] module compile failed for " .. path .. ": " .. tostring(err))
+            end
+        end
+    end
+
+    return nil
+end
+
+local TimeStats = safeRequire("time_stats")
 if TimeStats then
     JobsRP.TimeStats = TimeStats
     print("[JobStats] Time statistics module loaded")
@@ -484,7 +523,11 @@ function JobStats.init()
     
     -- Set up periodic time updates (every 5 minutes)
     if setInterval then
-        setInterval(JobStats.updateTimeStats, 5 * 60 * 1000)
+        setInterval(function()
+            if JobsRP.TimeStats and JobsRP.TimeStats.updateTimeStats then
+                JobsRP.TimeStats.updateTimeStats()
+            end
+        end, 5 * 60 * 1000)
     end
     
     -- Set up playtime reward checks (every 1 minute)

@@ -13,19 +13,22 @@
   <script language="lua" type="server" src="server/db.lua" />
   <script language="lua" type="server" src="server/store.lua" />
   <script language="lua" type="server" src="server/economy.lua" />
-  <script language="lua" type="server" src="server/auth.lua" />
-  <script language="lua" type="server" src="server/role_commands.lua" />
-  <script language="lua" type="server" src="server/jobadmin.lua" />
-  <script language="lua" type="server" src="server/jobs.lua" />
-  <script language="lua" type="server" src="server/character_manager.lua" />
-  <script language="lua" type="server" src="server/universal_sync.lua" />
-  <script language="lua" type="server" src="server/commands.lua" />
-  <script language="lua" type="server" src="server/network.lua" />
-  <script language="lua" type="server" src="server/backup_system.lua" />
-  <script language="lua" type="server" src="server/gamemode_setup.lua" />
-  <script language="lua" type="server" src="server/phone_events.lua" />
-  <script language="lua" type="server" src="server/http_client.lua" />
-  <script language="lua" type="server" src="server/job_stats.lua" />
+  <script language="lua" type="server" src="server/auth/init.lua" />
+    <script language="lua" type="server" src="server/role_commands.lua" />
+    <script language="lua" type="server" src="server/jobadmin.lua" />
+    <script language="lua" type="server" src="server/jobs.lua" />
+    <script language="lua" type="server" src="server/character_manager.lua" />
+    <script language="lua" type="server" src="server/universal_sync.lua" />
+    <script language="lua" type="server" src="server/commands/init.lua" />
+    <script language="lua" type="server" src="server/network.lua" />
+    <script language="lua" type="server" src="server/backup_system.lua" />
+    <script language="lua" type="server" src="server/gamemode_setup.lua" />
+    <script language="lua" type="server" src="server/phone_events.lua" />
+    <script language="lua" type="server" src="server/http_client.lua" />
+    <script language="lua" type="server" src="server/job_stats.lua" />
+    <script language="lua" type="server" src="server/xp.lua" />
+    <script language="lua" type="server" src="server/achievement.lua" />
+    <script language="lua" type="server" src="server/time_stats.lua" />
   <script language="lua" type="server" src="server/account_data_store.lua" />
   <script language="lua" type="server" src="server/sync_scheduler.lua" />
   <script language="lua" type="server" src="server/web_integration.lua" />
