@@ -22,19 +22,58 @@ jobs_rp/
     config.lua
     job_defs.lua
     json.lua
+    character_defs.lua
   server/
     db.lua
     store.lua
     economy.lua
-    auth.lua
+    auth/                    # Modular authentication system
+      init.lua            # Auth module loader
+      core.lua            # Basic auth functions
+      session_manager.lua  # Session & token management
+      commands.lua         # Auth commands
     jobs.lua
-    commands.lua
+    commands/               # Modular command system
+      init.lua            # Commands module loader
+      core.lua            # Shared utilities
+      admin.lua           # Administrative commands
+      xp.lua              # XP-related commands
     network.lua
+    character_manager.lua
+    universal_sync.lua
+    backup_system.lua
+    gamemode_setup.lua
+    phone_events.lua
+    http_client.lua
+    job_stats.lua
+    account_data_store.lua
+    sync_scheduler.lua
+    web_integration.lua
+    xp.lua                  # Dedicated XP system
+    achievement.lua          # Achievement system
+    time_stats.lua          # Time-based statistics
+    role_commands.lua
+    jobadmin.lua
+    security.lua
+    vehicles.lua
   client/
-    ui.lua
+    ui.js
     auth_ui.js
     zones.lua
-    main.lua
+    main.js
+    jobsrpui/
+      mexui/             # UI framework
+    callouts.js
+    police_menu.js
+    character_selector.js
+    character_controller.js
+    keyboard_service.js
+    shared_utils.js
+    backup_system.js
+    police_scanner.js
+    phone.js
+    world_events.js
+    callout_ui.js
   data/
     accounts/
     profiles/
@@ -110,6 +149,13 @@ Admin access is account-id based (`config.admin_accounts`) and also requires log
 - `/jobadmin setcash <playerName> <amount>`
 - `/jobadmin setxp <playerName> <jobId> <amount>`
 - `/jobadmin reset <playerName>`
+
+### Testing & Debug
+
+- `/testxp` - Add 50 test XP to current job
+- `/fillxp` - Fill XP bar to next level
+- `/session` - Show current session status
+- `/logout` - Logout from current session
 
 ## Config
 
