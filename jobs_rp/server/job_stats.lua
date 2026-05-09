@@ -433,47 +433,50 @@ function JobStats.initPlayerSession(accountId)
 end
 
 -- Update player playtime and grant XP rewards
-function JobStats.updatePlaytimeRewards(accountId)
-    local session = JobStats.playerSessions[accountId]
-    if not session then
-        print("[JobStats] DEBUG: No session found for " .. accountId)
-        return
-    end
-    
-    local currentTime = JobsRP.nowSeconds()
-    local sessionDuration = currentTime - session.sessionStart
-    local totalDuration = session.totalPlaytime + sessionDuration
-    local timeSinceLastReward = currentTime - session.lastRewardTime
-    
-    print("[JobStats] DEBUG: " .. accountId .. " - Session: " .. sessionDuration .. "s, Total: " .. totalDuration .. "s, Since last reward: " .. timeSinceLastReward .. "s")
-    
-    -- Check if it's time for a reward (every 10 minutes)
-    if timeSinceLastReward >= JobStats.playtimeRewards.rewardInterval then
-        local xpReward = JobStats.playtimeRewards.tenMinuteXP
-        
-        -- Double XP after 1 hour of continuous playtime
-        if sessionDuration >= JobStats.playtimeRewards.doubleThreshold then
-            xpReward = JobStats.playtimeRewards.doubledXP
-            print("[JobStats] DEBUG: " .. accountId .. " - Double XP active (session: " .. sessionDuration .. "s >= " .. JobStats.playtimeRewards.doubleThreshold .. "s)")
+function JobStats.updatePlaytimeRewards()
+    for accountId, session in pairs(JobStats.playerSessions) do
+        -- Only reward authenticated players
+        local isAuthenticated = JobsRP.Auth and JobsRP.Auth.isAuthenticated and JobsRP.Auth.isAuthenticated(session.player)
+        if not isAuthenticated then
+            print("[JobStats] DEBUG: " .. accountId .. " - Skipping rewards (not authenticated)")
+            return
         end
         
-        -- Grant XP reward through Economy system
-        if JobsRP.Economy then
-            JobsRP.Economy.applyJobReward(accountId, "civilian", 0, xpReward, "passive_playtime")
+        local currentTime = JobsRP.nowSeconds()
+        local sessionDuration = currentTime - session.sessionStart
+        local totalDuration = session.totalPlaytime + sessionDuration
+        local timeSinceLastReward = currentTime - session.lastRewardTime
+        
+        print("[JobStats] DEBUG: " .. accountId .. " - Session: " .. sessionDuration .. "s, Total: " .. totalDuration .. "s, Since last reward: " .. timeSinceLastReward .. "s")
+        
+        -- Check if it's time for a reward (every 10 minutes)
+        if timeSinceLastReward >= JobStats.playtimeRewards.rewardInterval then
+            local xpReward = JobStats.playtimeRewards.tenMinuteXP
+            
+            -- Double XP after 1 hour of continuous playtime
+            if sessionDuration >= JobStats.playtimeRewards.doubleThreshold then
+                xpReward = JobStats.playtimeRewards.doubledXP
+                print("[JobStats] DEBUG: " .. accountId .. " - Double XP active (Session: " .. sessionDuration .. "s >= " .. JobStats.playtimeRewards.doubleThreshold .. "s)")
+            end
+            
+            -- Grant XP reward through Economy system
+            if JobsRP.Economy then
+                JobsRP.Economy.applyJobReward(accountId, "civilian", 0, xpReward, "passive_playtime")
+            end
+            
+            -- Update playtime stats using time stats module
+            if JobsRP.TimeStats then
+                JobsRP.TimeStats.updateTimeStats()
+            end
+            
+            -- Reset reward timer
+            session.lastRewardTime = currentTime
+            session.totalPlaytime = totalDuration
+            
+            print("[JobStats] Granted " .. xpReward .. " XP to " .. accountId .. " for playtime (total: " .. totalDuration .. "s)")
+        else
+            print("[JobStats] DEBUG: " .. accountId .. " - Not time for reward yet (need " .. (JobStats.playtimeRewards.rewardInterval - timeSinceLastReward) .. "s more)")
         end
-        
-        -- Update playtime stats using time stats module
-        if JobsRP.TimeStats then
-            JobsRP.TimeStats.updateTimeStats()
-        end
-        
-        -- Reset reward timer
-        session.lastRewardTime = currentTime
-        session.totalPlaytime = totalDuration
-        
-        print("[JobStats] Granted " .. xpReward .. " XP to " .. accountId .. " for playtime (total: " .. totalDuration .. "s)")
-    else
-        print("[JobStats] DEBUG: " .. accountId .. " - Not time for reward yet (need " .. (JobStats.playtimeRewards.rewardInterval - timeSinceLastReward) .. "s more)")
     end
 end
 
