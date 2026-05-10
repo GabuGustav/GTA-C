@@ -148,4 +148,8 @@ function XP.getPlayerXP(playerId, jobType)
     }
 end
 
+-- Assign to global JobsRP.XP for use by other modules
+JobsRP = JobsRP or {}
+JobsRP.XP = XP
+
 return XP

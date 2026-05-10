@@ -1,0 +1,166 @@
+<?xml version="1.0"?>
+<meta>
+  <info author="Codex" description="Roleplay jobs framework: Taxi, Robbery, Police" />
+
+  <script language="lua" type="server" src="shared/config.lua" />
+  <script language="lua" type="server" src="shared/job_defs.lua" />
+  <script language="lua" type="server" src="shared/json.lua" />
+  <script language="lua" type="server" src="shared/character_defs.lua" />
+  <script language="lua" type="server" src="auth_tokens_config.lua" />
+
+  <script language="lua" type="server" src="server/security.lua" />
+  <script language="lua" type="server" src="server/vehicles.lua" />
+  <script language="lua" type="server" src="server/db.lua" />
+  <script language="lua" type="server" src="server/store.lua" />
+  <script language="lua" type="server" src="server/economy.lua" />
+  <script language="lua" type="server" src="server/auth.lua" />
+  <script language="lua" type="server" src="server/role_commands.lua" />
+  <script language="lua" type="server" src="server/jobadmin.lua" />
+  <script language="lua" type="server" src="server/jobs.lua" />
+  <script language="lua" type="server" src="server/character_manager.lua" />
+  <script language="lua" type="server" src="server/universal_sync.lua" />
+  <script language="lua" type="server" src="server/commands.lua" />
+  <script language="lua" type="server" src="server/network.lua" />
+  <script language="lua" type="server" src="server/backup_system.lua" />
+  <script language="lua" type="server" src="server/gamemode_setup.lua" />
+  <script language="lua" type="server" src="server/phone_events.lua" />
+  <script language="lua" type="server" src="server/http_client.lua" />
+  <script language="lua" type="server" src="server/job_stats.lua" />
+  <script language="lua" type="server" src="server/account_data_store.lua" />
+  <script language="lua" type="server" src="server/sync_scheduler.lua" />
+  <script language="lua" type="server" src="server/web_integration.lua" />
+  <script language="javascript" type="server" src="shared/config.js" />
+  <script language="javascript" type="server" src="server/web_sync_bridge.js" />
+  <script language="javascript" type="client" src="shared/config.js" />
+  <script language="javascript" type="client" src="shared/job_defs.js" />
+  <script language="javascript" type="client" src="shared/character_defs.js" />
+  <script language="lua" type="client" src="client/universal_sync_client.lua" />
+
+  <file type="client" src="client/jobsrpui/mexui/Images/Message.png" />
+  <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ATTENTION_ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/DISPATCHING_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/THIS_IS_CONTROL.wav" />
+  <file type="client" src="Audio/PoliceScanner/UNITS_PLEASE_BE_ADVISED.wav" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS_PLEASE_RESPOND.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_APPREHENDED.wav" />
+  <file type="client" src="Audio/PoliceScanner/ARMED_AND_DANGEROUS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ASSISTANCE_REQUIRED.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_RESISTING_ARREST.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DOMESTIC_DISTURBANCE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DRUNKEN_DISTURBANCE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_GRAND_THEFT_AUTO.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_MEDICAL_EMERGENCY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_MUGGING.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_RECKLESS_DRIVER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_SHOOTING.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_SHOTS_FIRED.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_SUSPICIOUS_ACTIVITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_STOLEN_VEHICLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_IN_DANGER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_ASSAULT_ON_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_VIOLATION.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_ALERT.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_DANGEROUS_DRIVING.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SOUTH_BOHAN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN_DUKES.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALDERNEY_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CHARGE_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_NORTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADING_SOUTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_EAST.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_WEST.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SEDAN.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SPORTS_CAR.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/SUV.wav" />
+  <file type="client" src="Audio/PoliceScanner/VehicleCategory/TRUCK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_ADMIRAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_BANSHEE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_BLISTA.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_FUTO.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_INGOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_FACTION.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_LANDSTALKER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_ORACLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Model/MOD_SENTINEL.wav" />
+  <script language="javascript" type="client" src="client/shared_utils.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Utility.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/Transition.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/StyleableEntity.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/Component.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Control.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Entry.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Event.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Component/Window.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/ControlAxis.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entity/ControlWithEntries.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/DropDownItem.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/GridColumn.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/GridRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/ListRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/Tab.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Entry/TreeRow.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Button.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/CheckBox.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/DropDown.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Grid.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Image.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Line.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/List.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/ProgressBar.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RadioButton.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Rectangle.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/ScrollBar.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Slider.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TabPanel.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Text.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TextInput.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Tree.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Character.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Characters.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Day.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Date.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Digit.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Digits.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Hour.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Integer.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Letter.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/LetterDigit.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Letters.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/LettersDigits.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Minute.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Month.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Number.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Password.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/PositiveInteger.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/PositiveNumber.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RangedInteger.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/RangedNumber.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Second.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/TextArea.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Time.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Week.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/WeekDay.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Control/Year.js" />
+  <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Init.js" />
+  <script language="javascript" type="client" src="client/jobsrpui_bridge.js" />
+  <script language="javascript" type="client" src="client/police_menu.js" />
+  <script language="javascript" type="client" src="client/ui.js" />
+  <script language="javascript" type="client" src="client/keyboard_service.js" />
+  <script language="javascript" type="client" src="client/auth_ui.js" />
+  <script language="javascript" type="client" src="client/character_selector.js" />
+  <script language="javascript" type="client" src="client/character_controller.js" />
+  <script language="javascript" type="client" src="client/zones.js" />
+  <script language="javascript" type="client" src="client/main.js" />
+    <script language="javascript" type="client" src="client/callouts.js" />
+    <script language="javascript" type="client" src="client/police_scanner.js" />
+    <script language="javascript" type="client" src="client/phone.js" />
+    <script language="javascript" type="client" src="client/world_events.js" />
+    <script language="javascript" type="client" src="client/backup_system.js" />
+    <script language="javascript" type="client" src="client/callout_ui.js" />
+</meta>

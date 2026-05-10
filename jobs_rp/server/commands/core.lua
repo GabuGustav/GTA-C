@@ -75,7 +75,15 @@ end
 
 -- Check if value is a client object
 function Core.isClientObject(value)
-    return resolveClient(value) ~= nil
+    -- Try multiple resolveClient methods
+    if JobsRP and JobsRP.Auth and JobsRP.Auth.resolveClient then
+        return JobsRP.Auth.resolveClient(value) ~= nil
+    elseif type(resolveClient) == "function" then
+        return resolveClient(value) ~= nil
+    else
+        -- Fallback: check if it looks like a client
+        return type(value) == "table" and (value.name or value.index)
+    end
 end
 
 -- Convert parameters to words array
@@ -119,23 +127,68 @@ function Core.parseQuotedAndAngle(text)
     return out
 end
 
--- Extract client and parameters from command arguments
+-- Extract client and parameters from command arguments (matches original behavior)
 function Core.extractClientAndParams(commandName, ...)
     local args = { ... }
-    local player = Core.resolveClient(args[1])
+    local player = nil
+    
+    -- Find player in args (search backwards like original)
+    for i = #args, 1, -1 do
+        local resolved = Core.resolveClient(args[i])
+        if resolved then
+            player = resolved
+            break
+        end
+    end
+    
+    -- Fallback to global variables
+    if not player then
+        player = Core.resolveClient(_G and _G.client or nil)
+            or Core.resolveClient(_G and _G.source or nil)
+            or Core.resolveClient(_G and _G.this or nil)
+    end
+    
+    -- Fallback to single client
+    if not player and getClients then
+        local okClients, clients = pcall(getClients)
+        if okClients and type(clients) == "table" and #clients == 1 then
+            player = Core.resolveClient(clients[1])
+        end
+    end
     
     if not player then
         print("[Commands] /" .. commandName .. ": Could not resolve player")
-        return nil, {}
+        return nil, ""
     end
     
-    -- Remove first argument (player) and return the rest as parameters
-    local parameters = {}
-    for i = 2, #args do
-        parameters[#parameters + 1] = args[i]
+    -- Build fragments from non-client, non-command arguments
+    local fragments = {}
+    for _, value in ipairs(args) do
+        if Core.isClientObject(value) then
+            -- skip client/player objects
+        elseif type(value) == "string" then
+            local candidate = JobsRP.trim(value)
+            if candidate ~= "" and candidate ~= commandName then
+                fragments[#fragments + 1] = candidate
+            end
+        elseif type(value) == "table" then
+            local words = {}
+            for _, item in ipairs(value) do
+                words[#words + 1] = tostring(item)
+            end
+            local candidate = table.concat(words, " ")
+            candidate = JobsRP.trim(candidate)
+            if candidate ~= "" and candidate ~= commandName then
+                fragments[#fragments + 1] = candidate
+            end
+        end
     end
     
+    local parameters = table.concat(fragments, " ")
     return player, parameters
 end
+
+-- Expose Core globally so command modules can access it
+_G.Core = Core
 
 return Core

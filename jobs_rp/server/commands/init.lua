@@ -49,11 +49,18 @@ CommandsInit.init = function()
         return
     end
     
-    -- Load core utilities
-    local Core = safeRequire("commands.core")
-    if not Core then
+    -- Load core utilities first (must be global for other modules)
+    local CoreLoaded = safeRequire("commands.core")
+    if not CoreLoaded then
         print("[Commands] Failed to load core utilities")
         return
+    end
+    
+    -- Ensure Core is available globally
+    if not Core then
+        print("[Commands] WARNING: Core not set as global, commands may fail!")
+    else
+        print("[Commands] Core utilities loaded and available")
     end
     
     -- Load admin commands
@@ -70,6 +77,30 @@ CommandsInit.init = function()
         XPCommands.init()
     else
         print("[Commands] Failed to load XP commands")
+    end
+    
+    -- Load job commands
+    local JobCommands = safeRequire("commands.jobs")
+    if JobCommands then
+        JobCommands.register()
+    else
+        print("[Commands] Failed to load job commands")
+    end
+    
+    -- Load jobauth commands
+    local JobAuthCommands = safeRequire("commands.jobauth")
+    if JobAuthCommands then
+        JobAuthCommands.register()
+    else
+        print("[Commands] Failed to load jobauth commands")
+    end
+    
+    -- Load jobdiag commands
+    local JobDiagCommands = safeRequire("commands.jobdiag")
+    if JobDiagCommands then
+        JobDiagCommands.register()
+    else
+        print("[Commands] Failed to load jobdiag commands")
     end
     
     print("[Commands] All command modules initialized successfully")

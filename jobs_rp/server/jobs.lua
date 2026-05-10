@@ -392,6 +392,23 @@ local function nextGroupId()
     return tostring(JobsRP.nowSeconds()) .. "-" .. tostring(Jobs.groupCounter)
 end
 
+local function getActivePlayerCount()
+    local count = 0
+    if getClients then
+        local ok, clients = pcall(getClients)
+        if ok and type(clients) == "table" then
+            return #clients
+        end
+    end
+    if getPlayers then
+        local ok, players = pcall(getPlayers)
+        if ok and type(players) == "table" then
+            return #players
+        end
+    end
+    return count
+end
+
 local function getMinPlayers(jobDef)
     if not jobDef or type(jobDef.constraints) ~= "table" then
         return 1
@@ -1102,6 +1119,22 @@ function Jobs.joinJob(player, jobId)
 
     Jobs.syncProfile(player)
     Jobs.prompt(player, "Joined job: " .. jobDef.label .. ". Use /job start or press E at the hub.", "success")
+    
+    -- Update police HUD when joining police job
+    if normalizedJobId == "police" and pushClientEvent then
+        local client = resolveClient(player)
+        if client then
+            -- Send player name for HUD
+            local playerName = client.name or "Officer"
+            pushClientEvent(client, "jobs.police.updateName", playerName)
+            
+            -- Send police grade if available
+            if profile.jobs and profile.jobs.police and profile.jobs.police.grade then
+                pushClientEvent(client, "jobs.police.updateRank", profile.jobs.police.grade)
+            end
+        end
+    end
+    
     return true
 end
 
@@ -1385,14 +1418,16 @@ function Jobs.requestAction(player, actionType, payload, forced)
         return false
     end
 
-    local forced = false
-    if type(payload) == "table" and payload.__force == true and JobsRP.Config.debug_quick_test == true then
+    -- Resolve forced flag from payload or argument
+    local isForced = forced == true
+    if not isForced and type(payload) == "table" and payload.__force == true and JobsRP.Config.debug_quick_test == true then
         if JobsRP.Auth and JobsRP.Auth.isAdmin and JobsRP.Auth.isAdmin(player) then
-            forced = true
+            isForced = true
         else
             Jobs.prompt(player, "Force actions are admin-only.", "warn")
         end
     end
+    forced = isForced
 
     if actionType ~= "progress" then
         Jobs.prompt(player, "Unsupported action.", "error")
@@ -1575,6 +1610,11 @@ function Jobs.selectPoliceDuty(player, dutyId)
         Jobs.syncSession(player)
     end
 
+    -- Update police HUD with new duty
+    if pushClientEvent then
+        pushClientEvent(player, "jobs.police.updateDuty", dutyId)
+    end
+
     local dutyNames = {
         patrol = "Patrol Duty",
         traffic = "Traffic Control", 
@@ -1752,28 +1792,33 @@ addEventHandler("onResourceStart", function(event, resource)
     -- Create hub elements
     createHubElements()
 
+    -- Initialize command modules immediately (not in nested event handler)
+    -- Initialize command modules
+    local CommandsInit = safeRequire("server.commands.init")
+    if CommandsInit then
+        CommandsInit.init()
+    else
+        print("[Jobs] Failed to load command modules")
+    end
+
+    -- Register player join handler for auth system
+    if addEventHandler then
+        addEventHandler("onPlayerJoin", function(player)
+            local resolved = resolveClient(player)
+            if resolved and JobsRP.Auth and JobsRP.Auth.handlePlayerJoin then
+                JobsRP.Auth.handlePlayerJoin(resolved)
+            end
+            if resolved then
+                Jobs.handlePlayerJoin(resolved)
+            end
+        end)
+    end
+
     if getClients then
         for _, client in ipairs(getClients()) do
             local resolved = resolveClient(client)
-            -- Load command system
-            if addEventHandler then
-                addEventHandler("OnResourceStart", function(res)
-                    if res and res ~= thisResource then
-                        return
-                    end
-                    
-                    -- Initialize command modules
-                    local CommandsInit = safeRequire("server.commands.init")
-                    if CommandsInit then
-                        CommandsInit.init()
-                    else
-                        print("[Jobs] Failed to load command modules")
-                    end
-                    
-                    -- Load recorded coordinates for broadcasting
-                    local list = loadRecordedCoords()
-                    broadcastRecordedCoords(list)
-                end)
+            if resolved and JobsRP.Auth and JobsRP.Auth.handlePlayerJoin then
+                JobsRP.Auth.handlePlayerJoin(resolved)
             end
             if resolved then
                 Jobs.handlePlayerJoin(resolved)
@@ -1782,6 +1827,9 @@ addEventHandler("onResourceStart", function(event, resource)
     elseif getPlayers then
         for _, player in ipairs(getPlayers()) do
             local resolved = resolveClient(player)
+            if resolved and JobsRP.Auth and JobsRP.Auth.handlePlayerJoin then
+                JobsRP.Auth.handlePlayerJoin(resolved)
+            end
             if resolved then
                 Jobs.handlePlayerJoin(resolved)
             end
@@ -1794,65 +1842,6 @@ addEventHandler("onResourceStop", function(event, resource)
     JobsRP.Store.stopAutosave()
     JobsRP.Store.saveAll(true)
 end)
-
-    
-    -- Process all players
-    if getPlayers then
-        for _, player in ipairs(getPlayers()) do
-            local playerId = JobsRP.Store.getPlayerId(player)
-            if not playerId then
-                goto continue
-            end
-            
-            local profile = JobsRP.Store.getProfileByPlayer(player)
-            if not profile or profile.currentJobId ~= "civilian" then
-                goto continue
-            end
-            
-            -- Initialize or update civilian stats
-            if not Jobs.civilianStats[playerId] then
-                Jobs.civilianStats[playerId] = {
-                    sessionStart = JobsRP.nowMilliseconds(),
-                    lastXPGrant = JobsRP.nowMilliseconds(),
-                    totalSessionTime = 0
-                }
-            end
-            
-            local stats = Jobs.civilianStats[playerId]
-            local now = JobsRP.nowMilliseconds()
-            local sessionTime = now - stats.sessionStart
-            
-            -- Check if it's time to grant XP
-            if (now - stats.lastXPGrant) >= xpInterval then
-                -- Calculate XP amount (doubles after 1 hour)
-                local xpAmount = baseXP
-                if sessionTime >= doubleAfterHours then
-                    xpAmount = baseXP * 2
-                end
-                
-                -- Apply XP gain
-                if JobsRP.Economy then
-                    JobsRP.Economy.applyJobReward(playerId, "civilian", 0, xpAmount, "passive_time")
-                end
-                
-                -- Send notification to player
-                local timeStr = sessionTime >= doubleAfterHours and "doubled" or "base"
-                Jobs.prompt(player, string.format("Passive XP gained: +%d (%s rate)", xpAmount, timeStr), "info")
-                
-                -- Update last grant time
-                stats.lastXPGrant = now
-                
-                -- Send XP update to client for bar visualization
-                pushClientEvent(player, "jobs.passiveXPUpdate", {
-                    xpAmount = xpAmount,
-                    sessionTime = sessionTime,
-                    isDoubled = sessionTime >= doubleAfterHours
-                })
-            end
-            
-            ::continue::
-        end
-end
 
 function Jobs.handlePlayerJoin(player)
     -- Initialize civilian stats for joining players
@@ -1873,4 +1862,71 @@ function Jobs.handlePlayerLeave(player)
     if playerId and Jobs.civilianStats[playerId] then
         Jobs.civilianStats[playerId] = nil
     end
+end
+
+-- ============================================================================
+-- /JOB COMMAND HANDLER
+-- ============================================================================
+-- Registers the /job command with subcommands: help, list, join, leave, start, stop, status
+local function resolveClientForJobCommand(args)
+    for _, value in ipairs(args) do
+        if type(value) == "userdata" or type(value) == "table" then
+            local resolved = nil
+            local okLinked = pcall(function()
+                if value.player ~= nil then resolved = value end
+            end)
+            if okLinked and resolved then return resolved end
+            
+            local okIdentity = pcall(function()
+                if value.index ~= nil and value.name ~= nil then resolved = value end
+            end)
+            if okIdentity and resolved then return resolved end
+            
+            local okPos = pcall(function()
+                if value.getPosition ~= nil or value.getVariable ~= nil then resolved = value end
+            end)
+            if okPos and resolved then return resolved end
+        end
+    end
+    if _G and _G.client then return _G.client end
+    if _G and _G.source then return _G.source end
+    return nil
+end
+
+local function chatToPlayer(player, text, r, g, b)
+    local messageText = tostring(text or "")
+    if messageText == "" then return end
+    
+    if messageClient and player then
+        local ok, result = pcall(function() return messageClient(messageText, player) end)
+        if ok and result ~= false then return end
+    end
+    
+    if outputChatBox then
+        local variants = {
+            function() return outputChatBox(messageText, player, r or 255, g or 255, b or 255) end,
+            function() return outputChatBox(player, messageText, r or 255, g or 255, b or 255) end,
+            function() return outputChatBox(messageText, player) end,
+            function() return outputChatBox(messageText) end
+        }
+        for _, writer in ipairs(variants) do
+            local ok, result = pcall(writer)
+            if ok and result ~= false then return end
+        end
+    end
+    print("[jobs_rp] " .. messageText)
+end
+
+-- /job command handler moved to commands/jobs.lua (modular system)
+
+-- Also register `/jobs` as an alias
+if addCommandHandler then
+    addCommandHandler("jobs", function(...)
+        local args = {...}
+        local player = resolveClientForJobCommand(args)
+        if player and JobsRP.Jobs then
+            JobsRP.Jobs.requestList(player)
+        end
+    end)
+    print("[Jobs] /jobs alias command registered")
 end

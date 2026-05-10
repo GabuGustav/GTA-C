@@ -54,10 +54,14 @@ AuthInit.init = function()
         JobsRP.Auth.resolveClient = AuthCore.resolveClient
         JobsRP.Auth.getAccountId = AuthCore.getAccountId
         JobsRP.Auth.isAuthenticated = AuthCore.isAuthenticated
+        JobsRP.Auth.isAdmin = AuthCore.isAdmin
         JobsRP.Auth.sendState = AuthCore.sendState
         JobsRP.Auth.register = AuthCore.register
         JobsRP.Auth.login = AuthCore.login
+        JobsRP.Auth.logout = AuthCore.logout
         JobsRP.Auth.handlePlayerQuit = AuthCore.handlePlayerQuit
+        JobsRP.Auth.handlePlayerJoin = AuthCore.handlePlayerJoin
+        JobsRP.Auth.loginWithTokens = AuthCore.loginWithTokens
         print("[Auth] Core authentication loaded")
     else
         print("[Auth] Failed to load core authentication")

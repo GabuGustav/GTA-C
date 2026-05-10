@@ -49,6 +49,7 @@ var JobsAuthUI = {
     refreshExpiresAt: 0,
     tokensLoaded: false,
     autoLoginAttempted: false,
+    manualAuthInProgress: false,
     font: null,
     fontTried: false,
     cursorBlink: true,
@@ -107,6 +108,7 @@ var Hex = {
 var AuthKeyboardService = {
     active: false,
     shiftDown: false,
+    ctrlDown: false,
     bindings: [],
     charBindings: 0,
     specialBindings: 0
@@ -494,7 +496,12 @@ function handleKeyboardSpecial(action) {
     }
 
     if (action === "ctrl_down") {
-        // Control toggle handled in key event with modifier mask.
+        AuthKeyboardService.ctrlDown = true;
+        return;
+    }
+
+    if (action === "ctrl_up") {
+        AuthKeyboardService.ctrlDown = false;
         return;
     }
 
@@ -540,6 +547,11 @@ function handleKeyboardSpecial(action) {
 
 function handleKeyboardCharacter(canonical) {
     if (!canCaptureInput() || JobsAuthUI.waitingTokenAck) {
+        return;
+    }
+
+    if (AuthKeyboardService.ctrlDown && String(canonical || "").toLowerCase() === "v") {
+        pasteFromClipboard();
         return;
     }
 
@@ -601,6 +613,9 @@ function startAuthKeyboardService() {
     bindSpecial("ctrl_down", ["lctrl", "leftctrl", "left ctrl", "SDLK_LCTRL"], "down");
     bindSpecial("ctrl_down", ["rctrl", "rightctrl", "right ctrl", "SDLK_RCTRL"], "down");
     bindSpecial("ctrl_down", ["ctrl", "control", "SDLK_CTRL"], "down");
+    bindSpecial("ctrl_up", ["lctrl", "leftctrl", "left ctrl", "SDLK_LCTRL"], "up");
+    bindSpecial("ctrl_up", ["rctrl", "rightctrl", "right ctrl", "SDLK_RCTRL"], "up");
+    bindSpecial("ctrl_up", ["ctrl", "control", "SDLK_CTRL"], "up");
     bindSpecial("shift_up", ["lshift", "leftshift", "left shift", "SDLK_LSHIFT"], "up");
     bindSpecial("shift_up", ["rshift", "rightshift", "right shift", "SDLK_RSHIFT"], "up");
     bindSpecial("shift_up", ["shift"], "up");
@@ -621,8 +636,74 @@ function stopAuthKeyboardService() {
     unbindAuthKeyboardService();
     AuthKeyboardService.active = false;
     AuthKeyboardService.shiftDown = false;
+    AuthKeyboardService.ctrlDown = false;
     AuthKeyboardService.charBindings = 0;
     AuthKeyboardService.specialBindings = 0;
+}
+
+function getClipboardTextSafe() {
+    var value = null;
+    try {
+        if (typeof getClipboardText === "function") {
+            value = getClipboardText();
+        }
+    } catch (e0) {
+    }
+    if (!value) {
+        try {
+            if (typeof getClipboard === "function") {
+                value = getClipboard();
+            }
+        } catch (e1) {
+        }
+    }
+    if (!value) {
+        try {
+            if (typeof gui !== "undefined" && gui && typeof gui.getClipboardText === "function") {
+                value = gui.getClipboardText();
+            }
+        } catch (e2) {
+        }
+    }
+    return String(value || "");
+}
+
+function pasteFromClipboard() {
+    var raw = getClipboardTextSafe();
+    if (raw === "") {
+        setStatus("Clipboard is empty or unavailable.", "warn");
+        return false;
+    }
+
+    var text = String(raw).replace(/[\r\n\t]/g, " ");
+    var i;
+    if (JobsAuthUI.activeField === "account") {
+        var maxAccountLen = 24;
+        for (i = 0; i < text.length; i++) {
+            var c = text.charAt(i).toLowerCase();
+            if (!/[a-z0-9_\-]/.test(c)) {
+                continue;
+            }
+            if (JobsAuthUI.accountInput.length >= maxAccountLen) {
+                break;
+            }
+            JobsAuthUI.accountInput += c;
+        }
+    } else {
+        var maxPasswordLen = getConfigNumber("auth_ui_max_password_len", 64);
+        for (i = 0; i < text.length; i++) {
+            if (JobsAuthUI.tokenInput.length >= maxPasswordLen) {
+                break;
+            }
+            JobsAuthUI.tokenInput += text.charAt(i);
+        }
+    }
+
+    if (JobsAuthUI.useMexui) {
+        syncMexuiInputsFromState();
+    }
+    setStatus("Pasted from clipboard.", "info");
+    return true;
 }
 
 function nowMs() {
@@ -1464,17 +1545,23 @@ function submit() {
     }
 
     if (JobsAuthUI.mode === "register") {
+        JobsAuthUI.manualAuthInProgress = true;
+        JobsAuthUI.autoLoginAttempted = true;
         if (sendServer("jobs.authRegister", account, password)) {
             setStatus("Register request sent...", "info");
         } else {
+            JobsAuthUI.manualAuthInProgress = false;
             setStatus("Could not send register request.", "error");
         }
         return;
     }
 
+    JobsAuthUI.manualAuthInProgress = true;
+    JobsAuthUI.autoLoginAttempted = true;
     if (sendServer("jobs.authLogin", account, password)) {
         setStatus("Login request sent...", "info");
     } else {
+        JobsAuthUI.manualAuthInProgress = false;
         setStatus("Could not send login request.", "error");
     }
 }
@@ -1650,13 +1737,19 @@ function onAuthState() {
 
 function onAuthResult() {
     var result = extractAuthResult(arguments);
+    var isAutoLoginFailure = (!result.ok && result.code === "auto_login");
     if (result.message !== "") {
-        setStatus(result.message, result.ok ? "success" : "warn");
+        if (isAutoLoginFailure) {
+            setStatus("Auto-login token expired. Please login manually.", "info");
+        } else {
+            setStatus(result.message, result.ok ? "success" : "warn");
+        }
     }
 
     if (result.ok) {
         if (result.code === "registered" || result.code === "logged_in" || result.code === "already_logged_in" || result.code === "auto_login") {
             JobsAuthUI.authState.authenticated = true;
+            JobsAuthUI.manualAuthInProgress = false;
 
             if (JobsClient && JobsClient.UI && typeof JobsClient.UI.startHud === "function") {
                 JobsClient.UI.startHud();
@@ -1674,6 +1767,7 @@ function onAuthResult() {
             JobsAuthUI.authState.authenticated = false;
             JobsAuthUI.waitingTokenAck = false;
             JobsAuthUI.autoLoginAttempted = false;
+            JobsAuthUI.manualAuthInProgress = false;
             
             // Clear tokens on logout
             clearTokens();
@@ -1683,9 +1777,13 @@ function onAuthResult() {
             }
         }
     } else {
+        if (result.code !== "auto_login") {
+            JobsAuthUI.manualAuthInProgress = false;
+        }
         // Reset auto-login attempt on failed authentication
         if (result.code === "auto_login") {
             JobsAuthUI.autoLoginAttempted = false;
+            clearTokens();
         }
     }
 
@@ -1986,6 +2084,7 @@ function onKeyDownEvent(ev, key) {
     var keyText = (keyArg === null || typeof keyArg === "undefined") ? "null" : String(keyArg);
     var evCode = getEventKeyCode(evArg);
     var evText = (evCode === null || typeof evCode === "undefined") ? "null" : String(evCode);
+    var modMask = getEventMod(evArg);
     sendDiag("auth_ui.key", "keyArg=" + keyText + " evCode=" + evText, false);
 
     // mode toggle handled via dedicated key (F3)
@@ -1997,6 +2096,14 @@ function onKeyDownEvent(ev, key) {
     }
 
     if (AuthKeyboardService.active) {
+        consumeEvent(evArg);
+        return;
+    }
+
+    var ctrlHeld = (modMask & 0x00C0) !== 0; // SDL KMOD_LCTRL|KMOD_RCTRL
+    var shiftHeld = (modMask & 0x0003) !== 0; // SDL KMOD_LSHIFT|KMOD_RSHIFT
+    if ((ctrlHeld && matchesKey(keyArg, "SDLK_v", 118)) || (shiftHeld && matchesKey(keyArg, "SDLK_INSERT", 277))) {
+        pasteFromClipboard();
         consumeEvent(evArg);
         return;
     }
@@ -2052,6 +2159,13 @@ function onKeyUpEvent(ev) {
         matchesKey(keyArg, "SHIFT", 16)
     ) {
         AuthKeyboardService.shiftDown = false;
+    }
+    if (
+        matchesKey(keyArg, "SDLK_LCTRL", 306) ||
+        matchesKey(keyArg, "SDLK_RCTRL", 305) ||
+        matchesKey(keyArg, "CTRL", 17)
+    ) {
+        AuthKeyboardService.ctrlDown = false;
     }
 }
 
@@ -2308,7 +2422,7 @@ addNetworkHandler("jobs.authState", function() {
     
     debugLog("[Auth] State update - required: " + authRequired + ", authenticated: " + authenticated + ", autoLoginAttempted: " + JobsAuthUI.autoLoginAttempted);
     
-    if (authRequired && !authenticated && !JobsAuthUI.autoLoginAttempted && JobsAuthUI.serverToken) {
+    if (authRequired && !authenticated && !JobsAuthUI.autoLoginAttempted && !JobsAuthUI.manualAuthInProgress && JobsAuthUI.serverToken) {
         setTimeout(function() {
             debugLog("[Auth] Fallback auto-login attempt from auth state handler");
             attemptAutoLogin();
@@ -2451,7 +2565,7 @@ function isTokenExpired(expiresAt) {
 }
 
 function attemptAutoLogin() {
-    if (JobsAuthUI.autoLoginAttempted) {
+    if (JobsAuthUI.autoLoginAttempted || JobsAuthUI.manualAuthInProgress) {
         return false;
     }
     
@@ -2507,7 +2621,7 @@ addNetworkHandler("jobs.authServerToken", function() {
         debugLog("[Auth] Auth state: required=" + JobsAuthUI.authState.authRequired + ", authenticated=" + JobsAuthUI.authState.authenticated);
         
         // v-admin style: Try auto-login immediately when server token received
-        if (!JobsAuthUI.authState.authenticated && !JobsAuthUI.autoLoginAttempted) {
+        if (!JobsAuthUI.authState.authenticated && !JobsAuthUI.autoLoginAttempted && !JobsAuthUI.manualAuthInProgress) {
             setTimeout(function() {
                 debugLog("[Auth] Immediate auto-login attempt (v-admin style)");
                 attemptAutoLogin();

@@ -24,19 +24,18 @@ end
 -- Test XP command
 XPCommands.registerTestXP = function()
     addCommandHandler("testxp", function(...)
-        local player = Core.extractClientAndParams("testxp", ...)
-        
-        if not player then
+        local client, parameters = Core.extractClientAndParams("testxp", ...)
+        if not client then
             print("[XPCommands] /testxp: Could not resolve player")
             return
         end
         
-        local playerId = requireAuthenticatedAccountId(player)
+        local playerId = requireAuthenticatedAccountId(client)
         if not playerId then
             return
         end
         
-        local profile = JobsRP.Store.getProfileByPlayer(player)
+        local profile = JobsRP.Store.getProfileByPlayer(client)
         if not profile then
             return
         end
@@ -44,29 +43,32 @@ XPCommands.registerTestXP = function()
         -- Add test XP
         local testAmount = 50
         if JobsRP.Economy then
-            JobsRP.Economy.applyJobReward(playerId, profile.currentJobId or "civilian", 0, testAmount, "test_command")
+            JobsRP.Economy.applyJobReward(playerId, profile.currentJobId or "civilian", 0, testAmount, "test_command", client)
         end
         
-        Jobs.prompt(player, "Test XP added: +" .. testAmount .. " XP", "success")
+        if JobsRP and JobsRP.Jobs and JobsRP.Jobs.prompt then
+            JobsRP.Jobs.prompt(client, "Test XP added: +" .. testAmount .. " XP", "success")
+        else
+            chat(client, "[Jobs] Test XP added: +" .. testAmount .. " XP", 0, 255, 0)
+        end
     end)
 end
 
 -- Fill XP command
 XPCommands.registerFillXP = function()
     addCommandHandler("fillxp", function(...)
-        local player = Core.extractClientAndParams("fillxp", ...)
-        
-        if not player then
+        local client, parameters = Core.extractClientAndParams("fillxp", ...)
+        if not client then
             print("[XPCommands] /fillxp: Could not resolve player")
             return
         end
         
-        local playerId = requireAuthenticatedAccountId(player)
+        local playerId = requireAuthenticatedAccountId(client)
         if not playerId then
             return
         end
         
-        local profile = JobsRP.Store.getProfileByPlayer(player)
+        local profile = JobsRP.Store.getProfileByPlayer(client)
         if not profile then
             return
         end
@@ -93,11 +95,19 @@ XPCommands.registerFillXP = function()
         
         if xpNeeded > 0 then
             if JobsRP.Economy then
-                JobsRP.Economy.applyJobReward(playerId, currentJob, 0, xpNeeded, "fill_command")
+                JobsRP.Economy.applyJobReward(playerId, currentJob, 0, xpNeeded, "fill_command", client)
             end
-            Jobs.prompt(player, "XP bar filled: +" .. xpNeeded .. " XP (Level " .. (currentLevel + 1) .. ")", "success")
+            if JobsRP and JobsRP.Jobs and JobsRP.Jobs.prompt then
+                JobsRP.Jobs.prompt(client, "XP bar filled: +" .. xpNeeded .. " XP (Level " .. (currentLevel + 1) .. ")", "success")
+            else
+                chat(client, "[Jobs] XP bar filled: +" .. xpNeeded .. " XP (Level " .. (currentLevel + 1) .. ")", 0, 255, 0)
+            end
         else
-            Jobs.prompt(player, "Already at max level or next threshold unknown", "info")
+            if JobsRP and JobsRP.Jobs and JobsRP.Jobs.prompt then
+                JobsRP.Jobs.prompt(client, "Already at max level or next threshold unknown", "info")
+            else
+                chat(client, "[Jobs] Already at max level or next threshold unknown", 255, 255, 0)
+            end
         end
     end)
 end

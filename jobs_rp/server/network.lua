@@ -399,6 +399,22 @@ addNetworkHandler("jobs.authLogin", function(...)
     end
 end)
 
+addNetworkHandler("jobs.authWithTokens", function(...)
+    local client, sessionToken, refreshToken = extractClientAndArgs(...)
+    if not client then
+        return
+    end
+
+    if JobsRP.Auth and JobsRP.Auth.loginWithTokens then
+        JobsRP.Auth.loginWithTokens(client, sessionToken, refreshToken)
+    else
+        pushClientEvent(client, "jobs.authResult", false, "auto_login", "Token auth is not available on this server.")
+        if JobsRP.Auth and JobsRP.Auth.sendState then
+            JobsRP.Auth.sendState(client)
+        end
+    end
+end)
+
 addNetworkHandler("jobs.authLogout", function(...)
     local client = extractClientAndArgs(...)
     if not client then
@@ -452,7 +468,6 @@ addNetworkHandler("jobs.requestHubElements", function(...)
     pushClientEvent(client, "jobs.syncHubElements", hubElements)
     print("[jobs_rp] Hub elements sent to client")
 end)
-
 
 
 

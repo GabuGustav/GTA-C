@@ -436,10 +436,32 @@ end
 function JobStats.updatePlaytimeRewards()
     for accountId, session in pairs(JobStats.playerSessions) do
         -- Only reward authenticated players
-        local isAuthenticated = JobsRP.Auth and JobsRP.Auth.isAuthenticated and JobsRP.Auth.isAuthenticated(session.player)
+        -- Check authentication by accountId (the session table key IS the accountId)
+        local isAuthenticated = false
+        
+        -- Method 1: Check if accountId exists in Store's attached players
+        if JobsRP.Store and JobsRP.Store.playerToId then
+            for _, storedId in pairs(JobsRP.Store.playerToId) do
+                if storedId == accountId then
+                    isAuthenticated = true
+                    break
+                end
+            end
+        end
+        
+        -- Method 2: Check Auth sessions
+        if not isAuthenticated and JobsRP.Auth and JobsRP.Auth.sessionsByPlayer then
+            for _, authSession in pairs(JobsRP.Auth.sessionsByPlayer) do
+                if authSession.accountId == accountId then
+                    isAuthenticated = true
+                    break
+                end
+            end
+        end
+        
         if not isAuthenticated then
             print("[JobStats] DEBUG: " .. accountId .. " - Skipping rewards (not authenticated)")
-            return
+            goto continue
         end
         
         local currentTime = JobsRP.nowSeconds()
@@ -477,6 +499,7 @@ function JobStats.updatePlaytimeRewards()
         else
             print("[JobStats] DEBUG: " .. accountId .. " - Not time for reward yet (need " .. (JobStats.playtimeRewards.rewardInterval - timeSinceLastReward) .. "s more)")
         end
+        ::continue::
     end
 end
 
@@ -557,8 +580,8 @@ function JobStats.init()
                         print("[JobStats] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
                     end
                     
-                    -- Final fallback: Use player name as accountId if still no accountId
-                    if not accountId and client.name then
+                    -- Final fallback: only allowed when auth is not required.
+                    if not accountId and client.name and not (JobsRP and JobsRP.Config and JobsRP.Config.auth_required == true) then
                         accountId = JobsRP.normalizeName(client.name)
                         print("[JobStats] DEBUG: Using player name as accountId: " .. accountId)
                         
@@ -589,7 +612,7 @@ function JobStats.init()
                         
                         JobStats.updatePlaytimeRewards(accountId)
                     else
-                        print("[JobStats] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId - using name fallback")
+                        print("[JobStats] DEBUG: Player " .. (client.name or "Unknown") .. " has no authenticated accountId - skipping")
                     end
                 end
             else

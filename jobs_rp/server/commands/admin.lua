@@ -35,7 +35,10 @@ Admin.registerRecordCoord = function()
             return
         end
         
-        handleCommand("recordcoord", parameters, client)
+        -- Call handleCommand with parameters string (like original)
+        if handleCommand then
+            handleCommand("recordcoord", parameters, client)
+        end
     end)
 end
 
@@ -48,7 +51,10 @@ Admin.registerPhone = function()
             return
         end
         
-        handleCommand("phone", parameters, client)
+        -- Call handleCommand with parameters string (like original)
+        if handleCommand then
+            handleCommand("phone", parameters, client)
+        end
     end)
 end
 
@@ -61,7 +67,10 @@ Admin.registerCharacter = function()
             return
         end
         
-        handleCommand("character", parameters, client)
+        -- Call handleCommand with parameters string (like original)
+        if handleCommand then
+            handleCommand("character", parameters, client)
+        end
     end)
     
     -- Short form command
@@ -72,7 +81,10 @@ Admin.registerCharacter = function()
             return
         end
         
-        handleCommand("character", parameters, client)
+        -- Call handleCommand with parameters string (like original)
+        if handleCommand then
+            handleCommand("character", parameters, client)
+        end
     end)
 end
 

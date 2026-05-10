@@ -88,8 +88,8 @@ function UniversalSync.initializePlaytimeTrackingDelayed(client)
         print("[UniversalSync] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
     end
     
-    -- Final fallback: Use player name as accountId if still no accountId
-    if not accountId and client.name then
+    -- Final fallback: only allowed when auth is not required.
+    if not accountId and client.name and not (JobsRP and JobsRP.Config and JobsRP.Config.auth_required == true) then
         accountId = JobsRP.normalizeName(client.name)
         print("[UniversalSync] DEBUG: Using player name as accountId: " .. accountId)
         

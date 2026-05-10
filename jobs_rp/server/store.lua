@@ -376,6 +376,10 @@ function Store.getAccountPath(accountId)
     return string.format("%s/%s.json", JobsRP.Config.accounts_dir, safeId)
 end
 
+function Store.getProfile(playerId)
+    return Store.getProfileById(playerId)
+end
+
 function Store.getProfileById(playerId)
     return Store.profilesById[playerId]
 end

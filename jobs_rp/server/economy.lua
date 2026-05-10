@@ -127,7 +127,7 @@ function Economy.addCash(playerId, delta, reason, bypassPayoutCap)
     return true, nextCash, nil
 end
 
-function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
+function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason, client)
     local profile = getProfile(playerId)
     if not profile then
         return nil
@@ -171,6 +171,11 @@ function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
     profile.stats.totalRuns = (JobsRP.toNumber(profile.stats.totalRuns, 0) or 0) + 1
     profile.stats.totalEarned = (JobsRP.toNumber(profile.stats.totalEarned, 0) or 0) + paid
     JobsRP.Store.markDirty(playerId)
+
+    -- Sync profile to update client UI with new XP/level
+    if client and JobsRP and JobsRP.Jobs and JobsRP.Jobs.syncProfile then
+        JobsRP.Jobs.syncProfile(client)
+    end
 
     return {
         payoutRaw = rawPayout,
