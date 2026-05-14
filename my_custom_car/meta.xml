@@ -1,0 +1,13 @@
+<meta>
+    <info author="Gabu" type="script" name="F1_Addon" />
+    
+    <client_file src="stream/F1.wft" />
+    <client_file src="stream/F1.wtd" />
+    
+    <!-- This line is the 'glue' that connects your file to the Emperor hash -->
+    <replace model="-685276541" with="stream/F1.wft" />
+    <replace_texture model="-685276541" with="stream/F1.wtd" />
+    
+    <script src="server.js" type="server" language="javascript" />
+    <script src="client.js" type="client" language="javascript" />
+</meta>

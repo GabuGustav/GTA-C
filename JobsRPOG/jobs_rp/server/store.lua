@@ -376,6 +376,13 @@ function Store.getAccountPath(accountId)
     return string.format("%s/%s.json", JobsRP.Config.accounts_dir, safeId)
 end
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/store.lua
+function Store.getProfile(playerId)
+    return Store.getProfileById(playerId)
+end
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/store.lua
 function Store.getProfileById(playerId)
     return Store.profilesById[playerId]
 end

@@ -127,7 +127,11 @@ function Economy.addCash(playerId, delta, reason, bypassPayoutCap)
     return true, nextCash, nil
 end
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/economy.lua
+function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason, client)
+=======
 function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/economy.lua
     local profile = getProfile(playerId)
     if not profile then
         return nil
@@ -140,8 +144,31 @@ function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
     local rawPayout = JobsRP.round((JobsRP.toNumber(basePayout, 0) or 0) * payoutMultiplier)
     local xpGain = JobsRP.round(JobsRP.toNumber(baseXp, 0) or 0)
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/economy.lua
+<<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/economy.lua
     jobState.xp = (JobsRP.toNumber(jobState.xp, 0) or 0) + xpGain
     jobState.grade = Economy.computeGrade(jobState.xp)
+========
+    -- Handle XP through dedicated XP module
+    if JobsRP.XP then
+        JobsRP.XP.addXP(playerId, jobId, xpGain, reason)
+    else
+        print("[Economy] ERROR: XP module not available")
+    end
+    
+    -- Update job state with XP module result
+    local xpInfo = JobsRP.XP and JobsRP.XP.getPlayerXP(playerId, jobId)
+    if xpInfo then
+        jobState.xp = xpInfo.xp
+        jobState.level = xpInfo.level
+        -- XP module is level-based; map grade from level directly for stable rank UI.
+        jobState.grade = math.max(0, (JobsRP.toNumber(xpInfo.level, 1) or 1) - 1)
+    end
+>>>>>>>> Stashed changes:resources/jobs_rp/server/economy.lua
+=======
+    jobState.xp = (JobsRP.toNumber(jobState.xp, 0) or 0) + xpGain
+    jobState.grade = Economy.computeGrade(jobState.xp)
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/economy.lua
     jobState.completedRuns = (JobsRP.toNumber(jobState.completedRuns, 0) or 0) + 1
 
     local paid = 0
@@ -160,6 +187,14 @@ function Economy.applyJobReward(playerId, jobId, basePayout, baseXp, reason)
     profile.stats.totalEarned = (JobsRP.toNumber(profile.stats.totalEarned, 0) or 0) + paid
     JobsRP.Store.markDirty(playerId)
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/economy.lua
+    -- Sync profile to update client UI with new XP/level
+    if client and JobsRP and JobsRP.Jobs and JobsRP.Jobs.syncProfile then
+        JobsRP.Jobs.syncProfile(client)
+    end
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/economy.lua
     return {
         payoutRaw = rawPayout,
         payoutGranted = paid,

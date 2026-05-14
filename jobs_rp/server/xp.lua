@@ -3,6 +3,39 @@
 
 local XP = {}
 
+local function findClientForAccountId(accountId)
+    local targetId = tostring(accountId or "")
+    if targetId == "" or type(getClients) ~= "function" then
+        return nil
+    end
+
+    local okClients, clients = pcall(getClients)
+    if not okClients or type(clients) ~= "table" then
+        return nil
+    end
+
+    for _, client in ipairs(clients) do
+        local resolvedId = nil
+        if JobsRP and JobsRP.Auth and type(JobsRP.Auth.getAccountId) == "function" then
+            local okAuth, authId = pcall(JobsRP.Auth.getAccountId, client)
+            if okAuth and authId then
+                resolvedId = tostring(authId)
+            end
+        end
+        if not resolvedId and JobsRP and JobsRP.Store and type(JobsRP.Store.getPlayerId) == "function" then
+            local okStore, storeId = pcall(JobsRP.Store.getPlayerId, client)
+            if okStore and storeId then
+                resolvedId = tostring(storeId)
+            end
+        end
+        if resolvedId == targetId then
+            return client
+        end
+    end
+
+    return nil
+end
+
 -- Get XP required for a specific level (additive progression)
 function XP.getXPForLevel(level)
     -- Use civilian additive thresholds from config if available, otherwise default
@@ -70,7 +103,8 @@ function XP.addXP(playerId, jobType, xpGain, reason)
     jobState.experience = newLevelXP
     jobState.xp = newLevelXP
     jobState.level = newLevel
-    jobState.grade = 0 -- Could be calculated based on job type if needed
+    -- Keep grade consistent with level-based progression to avoid rank flicker/reset.
+    jobState.grade = math.max(0, newLevel - 1)
     
     -- Mark profile as dirty for persistence
     JobsRP.Store.markDirty(playerId)
@@ -97,10 +131,7 @@ end
 -- Send XP update event to client
 function XP.sendXPUpdate(playerId, jobType, xpGained, currentLevelXP, requiredXP, currentLevel, didLevelUp)
     -- Find client for this player
-    local client = nil
-    if findClientByAccountId then
-        client = findClientByAccountId(playerId)
-    end
+    local client = findClientForAccountId(playerId)
     
     if client and pushClientEvent then
         local ok, err = pcall(function()

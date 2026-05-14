@@ -1,0 +1,181 @@
+{
+  "dispatch_structure": {
+    "callouts": {
+      "armed_suspect": {
+        "priority": "high",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_SUSPECT_ARMED_AND_DANGEROUS.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "CRIM_SUSPECT.wav", "delay": 3000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_01.wav", "delay": 4000}
+        ]
+      },
+      "shooting": {
+        "priority": "critical",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_SHOOTING.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_02.wav", "delay": 3000},
+          {"category": "PoliceScanner", "file": "REPEAT.wav", "delay": 4000},
+          {"category": "PoliceScanner", "file": "CRIM_SHOTS_FIRED.wav", "delay": 5000}
+        ]
+      },
+      "vehicle_pursuit": {
+        "priority": "high",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_CRIMINAL_IN_A_STOLEN_VEHICLE.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_03.wav", "delay": 3000},
+          {"category": "PoliceScanner", "file": "SUSPECT_FLED_VEHICLE_AND_IS_CONTINUING_ON_FOOT.wav", "delay": 4000}
+        ]
+      },
+      "assault_on_officer": {
+        "priority": "critical",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_AN_ASSAULT_ON_AN_OFFICER.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_04.wav", "delay": 3000},
+          {"category": "PoliceScanner", "file": "CRIM_AN_OFFICER_IN_DANGER.wav", "delay": 4000}
+        ]
+      },
+      "officer_down": {
+        "priority": "critical",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_AN_OFFICER_DOWN.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_05.wav", "delay": 3000},
+          {"category": "PoliceScanner", "file": "CRIM_AN_OFFICER_IN_NEED_OF_ASSISTANCE.wav", "delay": 4000}
+        ]
+      },
+      "traffic_violation": {
+        "priority": "low",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "INS_TRAFFIC_ALERT_FOR.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_TRAFFIC_VIOLATION.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_06.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "SUSPECT_LAST_SEEN.wav", "delay": 3000}
+        ]
+      },
+      "domestic_disturbance": {
+        "priority": "medium",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_DOMESTIC_DISTURBANCE.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_07.wav", "delay": 3000}
+        ]
+      },
+      "drug_deal": {
+        "priority": "high",
+        "variations": 5,
+        "sequence": [
+          {"category": "PoliceScanner", "file": "ATTENTION_ALL_UNITS.wav", "delay": 0},
+          {"category": "PoliceScanner", "file": "CRIM_A_DRUG_DEAL.wav", "delay": 1000},
+          {"category": "PoliceScanner", "file": "INS_AVAILABLE_UNITS_RESPOND_TO.wav", "delay": 2000},
+          {"category": "PoliceScanner", "file": "RANDOMCHAT_08.wav", "delay": 3000}
+        ]
+      }
+    },
+    "background_scanner": {
+      "ambient": {
+        "category": "Resident",
+        "files": [
+          "Scanner_Resident/CROSSTALK.wav",
+          "Scanner_Resident/IN_01.wav",
+          "Scanner_Resident/IN_02.wav",
+          "Scanner_Resident/NOISE_LOOP_A.wav",
+          "Scanner_Resident/NOISE_LOOP_B.wav"
+        ]
+      },
+      "effects": {
+        "category": "Resident",
+        "files": [
+          "Amb_Resident/CUFFS_TIGHTEN_01.wav",
+          "Amb_Resident/TASER_DEPLOY.wav"
+        ]
+      }
+    },
+    "voice_variations": {
+      "officer_types": {
+        "male_white": {
+          "category": "Speech/M_Y_COP_WHITE",
+          "variations": 17
+        },
+        "male_black": {
+          "category": "Speech/M_Y_COP_BLACK",
+          "variations": 11
+        },
+        "male_hispanic": {
+          "category": "Speech/M_Y_COP_HISPANIC",
+          "variations": 3
+        },
+        "fib": {
+          "category": "Speech/M_Y_FIB",
+          "variations": 1
+        },
+        "swat": {
+          "category": "Speech/M_Y_SWAT_WHITE",
+          "variations": 1
+        },
+        "helicopter": {
+          "category": "Speech/M_Y_HELI_COP",
+          "variations": 5
+        }
+      }
+    },
+    "location_data": {
+      "areas": [
+        "Areas/ALDERNEY.wav",
+        "Areas/ACTER_INDUSTRIAL.wav",
+        "Areas/BOHAN.wav",
+        "Areas/CHARGE_ISLAND.wav",
+        "Areas/DUKES.wav",
+        "Areas/FRANCIS_INTERNATIONAL.wav",
+        "Areas/HAPPINESS_ISLAND.wav",
+        "Areas/LOWER_EASTSIDE.wav"
+      ],
+      "directions": [
+        "Directions/EAST.wav",
+        "Directions/EASTBOUND.wav",
+        "Directions/NORTH.wav",
+        "Directions/NORTHBOUND.wav",
+        "Directions/SOUTH.wav",
+        "Directions/SOUTHBOUND.wav",
+        "Directions/WEST.wav",
+        "Directions/WESTBOUND.wav"
+      ],
+      "vehicles": {
+        "categories": [
+          "VehicleCategory/CAR.wav",
+          "VehicleCategory/TRUCK.wav",
+          "VehicleCategory/MOTORCYCLE.wav",
+          "VehicleCategory/BOAT.wav",
+          "VehicleCategory/HELICOPTER.wav"
+        ],
+        "models": [
+          "Model/MOD_ADMIRAL.wav",
+          "Model/MOD_BANSHEE.wav",
+          "Model/MOD_BLISTA.wav",
+          "Model/MOD_FUTO.wav",
+          "Model/MOD_INGOT.wav",
+          "Model/MOD_FACTION.wav",
+          "Model/MOD_LANDSTALKER.wav",
+          "Model/MOD_ORACLE.wav",
+          "Model/MOD_SENTINEL.wav"
+        ]
+      }
+    }
+  }
+}

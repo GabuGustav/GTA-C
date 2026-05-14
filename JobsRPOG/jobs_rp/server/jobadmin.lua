@@ -371,7 +371,15 @@ local function getPlayerAdminLevel(client)
         return 99999999
     end
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/jobadmin.lua
+    if JobsRP.Auth and JobsRP.Auth.requireTrustedAdmin then
+        if JobsRP.Auth.requireTrustedAdmin(client) then
+            return 1
+        end
+    elseif JobsRP.Auth and JobsRP.Auth.isAdmin then
+=======
     if JobsRP.Auth and JobsRP.Auth.isAdmin then
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/jobadmin.lua
         if JobsRP.Auth.isAdmin(client) then
             return 1
         end
@@ -431,6 +439,17 @@ function JobAdmin.handleCommand(client, parameters)
         return
     end
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/jobadmin.lua
+    if JobsRP.Auth and JobsRP.Auth.isIdentityConsistent then
+        local consistent = JobsRP.Auth.isIdentityConsistent(client)
+        if not consistent then
+            chat(client, "[JobsAdmin] Security validation failed.", 255, 120, 120)
+            return
+        end
+    end
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/jobadmin.lua
     local words = toWords(parameters)
     if words[1] and normalizeToken(words[1]) == JobAdmin.commandRoot then
         table.remove(words, 1)

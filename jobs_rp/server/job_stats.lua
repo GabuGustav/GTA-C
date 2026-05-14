@@ -468,6 +468,19 @@ function JobStats.updatePlaytimeRewards()
         local sessionDuration = currentTime - session.sessionStart
         local totalDuration = session.totalPlaytime + sessionDuration
         local timeSinceLastReward = currentTime - session.lastRewardTime
+<<<<<<< Updated upstream:jobs_rp/server/job_stats.lua
+=======
+
+        -- Passive playtime XP is civilian-only while actively on civilian job.
+        local profile = JobsRP.Store and JobsRP.Store.getProfileById and JobsRP.Store.getProfileById(accountId) or nil
+        if not profile and JobsRP.Store and JobsRP.Store.loadProfileById then
+            profile = JobsRP.Store.loadProfileById(accountId)
+        end
+        if not profile or profile.currentJobId ~= "civilian" then
+            print("[JobStats] DEBUG: " .. accountId .. " - Skipping rewards (active job is not civilian)")
+            goto continue
+        end
+>>>>>>> Stashed changes:resources/jobs_rp/server/job_stats.lua
         
         print("[JobStats] DEBUG: " .. accountId .. " - Session: " .. sessionDuration .. "s, Total: " .. totalDuration .. "s, Since last reward: " .. timeSinceLastReward .. "s")
         

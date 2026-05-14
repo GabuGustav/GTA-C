@@ -274,6 +274,24 @@ function calcXpPercent(xp, thresholds) {
     return clamp01((xp - prevValue) / (nextValue2 - prevValue));
 }
 
+function getJobLevelFromState(jobState) {
+    if (!jobState || typeof jobState !== "object") {
+        return 1;
+    }
+
+    var level = Number(jobState.level);
+    if (level && level > 0) {
+        return Math.floor(level);
+    }
+
+    var grade = Number(jobState.grade);
+    if (!isNaN(grade) && grade >= 0) {
+        return Math.floor(grade) + 1;
+    }
+
+    return 1;
+}
+
 function getPoliceRankName(grade) {
     var cfg = JobsRP && JobsRP.Config ? JobsRP.Config : {};
     var names = cfg.police_rank_names || [
@@ -286,6 +304,29 @@ function getPoliceRankName(grade) {
     ];
     var idx = Math.max(0, Math.min(names.length - 1, Number(grade) || 0));
     return names[idx] || "";
+}
+
+function normalizeJobId(jobId) {
+    return String(jobId || "").toLowerCase().replace(/^\s+|\s+$/g, "");
+}
+
+function isPoliceUiActive() {
+    if (normalizeJobId(UI.hud.currentJobId) === "police") {
+        return true;
+    }
+
+    if (typeof JobsClient !== "undefined" && JobsClient) {
+        if (JobsClient.profile && normalizeJobId(JobsClient.profile.currentJobId) === "police") {
+            UI.hud.currentJobId = "police";
+            return true;
+        }
+        if (JobsClient.session && normalizeJobId(JobsClient.session.jobId) === "police") {
+            UI.hud.currentJobId = "police";
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function initHudUi() {
@@ -465,7 +506,7 @@ function updateHudUi() {
 
     var rankText = UI.hud.uiControls.rankText;
     var pipRects = UI.hud.uiControls.pipRects;
-    if (UI.hud.currentJobId === "police") {
+    if (isPoliceUiActive()) {
         var pipCount = pipRects.length;
         var grade = Math.max(0, Math.min(pipCount - 1, Number(UI.hud.policeGrade) || 0));
         var pipW = 18 * scale;
@@ -562,11 +603,11 @@ function updateHudUi() {
     if (profile && profile.jobs) {
         if (profile.jobs[currentJob]) {
             currentXp = Number(profile.jobs[currentJob].experience != null ? profile.jobs[currentJob].experience : profile.jobs[currentJob].xp) || 0;
-            currentLevel = Number(profile.jobs[currentJob].level) || 1;
+            currentLevel = getJobLevelFromState(profile.jobs[currentJob]);
         } else if (profile.jobs.civilian) {
             // Fallback to civilian
             currentXp = Number(profile.jobs.civilian.experience != null ? profile.jobs.civilian.experience : profile.jobs.civilian.xp) || 0;
-            currentLevel = Number(profile.jobs.civilian.level) || 1;
+            currentLevel = getJobLevelFromState(profile.jobs.civilian);
         }
     }
 
@@ -655,7 +696,7 @@ function drawHud() {
         drawTextSimple("$" + String(Math.floor(UI.hud.cash || 0)), cashTextX, cashTextY, 0xFFFFFFFF);
     }
 
-    if (UI.hud.currentJobId === "police") {
+    if (isPoliceUiActive()) {
         var pipCount = 6;
         var grade = Math.max(0, Math.min(pipCount - 1, Number(UI.hud.policeGrade) || 0));
         var pipW = 0.018 * scale;
@@ -815,9 +856,16 @@ UI.setProfile = function(profile) {
         UI.hud.cash = Number(profile.cash || 0) || 0;
         UI.hud.cashKnown = true;
     }
-    UI.hud.currentJobId = profile.currentJobId || null;
+    UI.hud.currentJobId = normalizeJobId(profile.currentJobId) || null;
     if (profile.jobs && profile.jobs.police) {
         UI.hud.policeGrade = Number(profile.jobs.police.grade || 0) || 0;
+    }
+
+    if (!UI.hud.active) {
+        var authOk = !JobsClient || !JobsClient.authState || JobsClient.authState.authenticated !== false;
+        if (authOk && typeof UI.startHud === "function") {
+            UI.startHud();
+        }
     }
 };
 
@@ -848,6 +896,7 @@ UI.handleJobReward = function(jobId, xpGain, xpTotal, gradeBefore, gradeAfter, p
     UI.hud.xpJobId = jobId || null;
 
     if (jobId === "police") {
+        UI.hud.currentJobId = "police";
         UI.hud.policeGrade = Number(gradeAfter || 0) || 0;
     }
 
@@ -950,6 +999,15 @@ if (typeof addNetworkHandler === "function") {
     // Register with both network handler (for triggerNetworkEvent) and event handler (for triggerClientEvent/pushClientEvent)
     if (typeof addNetworkHandler === "function") {
         addNetworkHandler("jobStats_xpUpdate", handleJobStatsXPUpdate);
+    }
+    if (typeof addNetworkHandler === "function") {
+        addNetworkHandler("jobs.police.updateRank", function(grade) {
+            UI.hud.currentJobId = "police";
+            UI.hud.policeGrade = Number(grade || 0) || 0;
+            if (!UI.hud.active && typeof UI.startHud === "function") {
+                UI.startHud();
+            }
+        });
     }
     if (typeof addEventHandler === "function") {
         addEventHandler("jobStats_xpUpdate", function(event, data) {

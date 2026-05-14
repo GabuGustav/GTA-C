@@ -49,6 +49,10 @@ var JobsAuthUI = {
     refreshExpiresAt: 0,
     tokensLoaded: false,
     autoLoginAttempted: false,
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    manualAuthInProgress: false,
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     font: null,
     fontTried: false,
     cursorBlink: true,
@@ -107,6 +111,10 @@ var Hex = {
 var AuthKeyboardService = {
     active: false,
     shiftDown: false,
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    ctrlDown: false,
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     bindings: [],
     charBindings: 0,
     specialBindings: 0
@@ -494,7 +502,16 @@ function handleKeyboardSpecial(action) {
     }
 
     if (action === "ctrl_down") {
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+        AuthKeyboardService.ctrlDown = true;
+        return;
+    }
+
+    if (action === "ctrl_up") {
+        AuthKeyboardService.ctrlDown = false;
+=======
         // Control toggle handled in key event with modifier mask.
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
         return;
     }
 
@@ -543,6 +560,14 @@ function handleKeyboardCharacter(canonical) {
         return;
     }
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    if (AuthKeyboardService.ctrlDown && String(canonical || "").toLowerCase() === "v") {
+        pasteFromClipboard();
+        return;
+    }
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     var ch = keyToCharacter(canonical);
     if (!ch) {
         return;
@@ -601,6 +626,12 @@ function startAuthKeyboardService() {
     bindSpecial("ctrl_down", ["lctrl", "leftctrl", "left ctrl", "SDLK_LCTRL"], "down");
     bindSpecial("ctrl_down", ["rctrl", "rightctrl", "right ctrl", "SDLK_RCTRL"], "down");
     bindSpecial("ctrl_down", ["ctrl", "control", "SDLK_CTRL"], "down");
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    bindSpecial("ctrl_up", ["lctrl", "leftctrl", "left ctrl", "SDLK_LCTRL"], "up");
+    bindSpecial("ctrl_up", ["rctrl", "rightctrl", "right ctrl", "SDLK_RCTRL"], "up");
+    bindSpecial("ctrl_up", ["ctrl", "control", "SDLK_CTRL"], "up");
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     bindSpecial("shift_up", ["lshift", "leftshift", "left shift", "SDLK_LSHIFT"], "up");
     bindSpecial("shift_up", ["rshift", "rightshift", "right shift", "SDLK_RSHIFT"], "up");
     bindSpecial("shift_up", ["shift"], "up");
@@ -621,10 +652,82 @@ function stopAuthKeyboardService() {
     unbindAuthKeyboardService();
     AuthKeyboardService.active = false;
     AuthKeyboardService.shiftDown = false;
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    AuthKeyboardService.ctrlDown = false;
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     AuthKeyboardService.charBindings = 0;
     AuthKeyboardService.specialBindings = 0;
 }
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+function getClipboardTextSafe() {
+    var value = null;
+    try {
+        if (typeof getClipboardText === "function") {
+            value = getClipboardText();
+        }
+    } catch (e0) {
+    }
+    if (!value) {
+        try {
+            if (typeof getClipboard === "function") {
+                value = getClipboard();
+            }
+        } catch (e1) {
+        }
+    }
+    if (!value) {
+        try {
+            if (typeof gui !== "undefined" && gui && typeof gui.getClipboardText === "function") {
+                value = gui.getClipboardText();
+            }
+        } catch (e2) {
+        }
+    }
+    return String(value || "");
+}
+
+function pasteFromClipboard() {
+    var raw = getClipboardTextSafe();
+    if (raw === "") {
+        setStatus("Clipboard is empty or unavailable.", "warn");
+        return false;
+    }
+
+    var text = String(raw).replace(/[\r\n\t]/g, " ");
+    var i;
+    if (JobsAuthUI.activeField === "account") {
+        var maxAccountLen = 24;
+        for (i = 0; i < text.length; i++) {
+            var c = text.charAt(i).toLowerCase();
+            if (!/[a-z0-9_\-]/.test(c)) {
+                continue;
+            }
+            if (JobsAuthUI.accountInput.length >= maxAccountLen) {
+                break;
+            }
+            JobsAuthUI.accountInput += c;
+        }
+    } else {
+        var maxPasswordLen = getConfigNumber("auth_ui_max_password_len", 64);
+        for (i = 0; i < text.length; i++) {
+            if (JobsAuthUI.tokenInput.length >= maxPasswordLen) {
+                break;
+            }
+            JobsAuthUI.tokenInput += text.charAt(i);
+        }
+    }
+
+    if (JobsAuthUI.useMexui) {
+        syncMexuiInputsFromState();
+    }
+    setStatus("Pasted from clipboard.", "info");
+    return true;
+}
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
 function nowMs() {
     if (Date && Date.now) {
         return Date.now();
@@ -1464,17 +1567,35 @@ function submit() {
     }
 
     if (JobsAuthUI.mode === "register") {
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+        JobsAuthUI.manualAuthInProgress = true;
+        JobsAuthUI.autoLoginAttempted = true;
         if (sendServer("jobs.authRegister", account, password)) {
             setStatus("Register request sent...", "info");
         } else {
+            JobsAuthUI.manualAuthInProgress = false;
+=======
+        if (sendServer("jobs.authRegister", account, password)) {
+            setStatus("Register request sent...", "info");
+        } else {
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
             setStatus("Could not send register request.", "error");
         }
         return;
     }
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    JobsAuthUI.manualAuthInProgress = true;
+    JobsAuthUI.autoLoginAttempted = true;
     if (sendServer("jobs.authLogin", account, password)) {
         setStatus("Login request sent...", "info");
     } else {
+        JobsAuthUI.manualAuthInProgress = false;
+=======
+    if (sendServer("jobs.authLogin", account, password)) {
+        setStatus("Login request sent...", "info");
+    } else {
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
         setStatus("Could not send login request.", "error");
     }
 }
@@ -1650,13 +1771,27 @@ function onAuthState() {
 
 function onAuthResult() {
     var result = extractAuthResult(arguments);
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    var isAutoLoginFailure = (!result.ok && result.code === "auto_login");
+    if (result.message !== "") {
+        if (isAutoLoginFailure) {
+            setStatus("Auto-login token expired. Please login manually.", "info");
+        } else {
+            setStatus(result.message, result.ok ? "success" : "warn");
+        }
+=======
     if (result.message !== "") {
         setStatus(result.message, result.ok ? "success" : "warn");
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     }
 
     if (result.ok) {
         if (result.code === "registered" || result.code === "logged_in" || result.code === "already_logged_in" || result.code === "auto_login") {
             JobsAuthUI.authState.authenticated = true;
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+            JobsAuthUI.manualAuthInProgress = false;
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
 
             if (JobsClient && JobsClient.UI && typeof JobsClient.UI.startHud === "function") {
                 JobsClient.UI.startHud();
@@ -1674,6 +1809,10 @@ function onAuthResult() {
             JobsAuthUI.authState.authenticated = false;
             JobsAuthUI.waitingTokenAck = false;
             JobsAuthUI.autoLoginAttempted = false;
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+            JobsAuthUI.manualAuthInProgress = false;
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
             
             // Clear tokens on logout
             clearTokens();
@@ -1683,9 +1822,19 @@ function onAuthResult() {
             }
         }
     } else {
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+        if (result.code !== "auto_login") {
+            JobsAuthUI.manualAuthInProgress = false;
+        }
         // Reset auto-login attempt on failed authentication
         if (result.code === "auto_login") {
             JobsAuthUI.autoLoginAttempted = false;
+            clearTokens();
+=======
+        // Reset auto-login attempt on failed authentication
+        if (result.code === "auto_login") {
+            JobsAuthUI.autoLoginAttempted = false;
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
         }
     }
 
@@ -1986,6 +2135,10 @@ function onKeyDownEvent(ev, key) {
     var keyText = (keyArg === null || typeof keyArg === "undefined") ? "null" : String(keyArg);
     var evCode = getEventKeyCode(evArg);
     var evText = (evCode === null || typeof evCode === "undefined") ? "null" : String(evCode);
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    var modMask = getEventMod(evArg);
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     sendDiag("auth_ui.key", "keyArg=" + keyText + " evCode=" + evText, false);
 
     // mode toggle handled via dedicated key (F3)
@@ -2001,6 +2154,17 @@ function onKeyDownEvent(ev, key) {
         return;
     }
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    var ctrlHeld = (modMask & 0x00C0) !== 0; // SDL KMOD_LCTRL|KMOD_RCTRL
+    var shiftHeld = (modMask & 0x0003) !== 0; // SDL KMOD_LSHIFT|KMOD_RSHIFT
+    if ((ctrlHeld && matchesKey(keyArg, "SDLK_v", 118)) || (shiftHeld && matchesKey(keyArg, "SDLK_INSERT", 277))) {
+        pasteFromClipboard();
+        consumeEvent(evArg);
+        return;
+    }
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
     if (matchesKey(keyArg, "SDLK_TAB", 9) || matchesKey(keyArg, "TAB", 9)) {
         handleTabPressed();
         consumeEvent(evArg);
@@ -2053,6 +2217,16 @@ function onKeyUpEvent(ev) {
     ) {
         AuthKeyboardService.shiftDown = false;
     }
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    if (
+        matchesKey(keyArg, "SDLK_LCTRL", 306) ||
+        matchesKey(keyArg, "SDLK_RCTRL", 305) ||
+        matchesKey(keyArg, "CTRL", 17)
+    ) {
+        AuthKeyboardService.ctrlDown = false;
+    }
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
 }
 
 function onCharacterEvent(ev, ch) {
@@ -2308,7 +2482,11 @@ addNetworkHandler("jobs.authState", function() {
     
     debugLog("[Auth] State update - required: " + authRequired + ", authenticated: " + authenticated + ", autoLoginAttempted: " + JobsAuthUI.autoLoginAttempted);
     
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    if (authRequired && !authenticated && !JobsAuthUI.autoLoginAttempted && !JobsAuthUI.manualAuthInProgress && JobsAuthUI.serverToken) {
+=======
     if (authRequired && !authenticated && !JobsAuthUI.autoLoginAttempted && JobsAuthUI.serverToken) {
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
         setTimeout(function() {
             debugLog("[Auth] Fallback auto-login attempt from auth state handler");
             attemptAutoLogin();
@@ -2451,7 +2629,11 @@ function isTokenExpired(expiresAt) {
 }
 
 function attemptAutoLogin() {
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+    if (JobsAuthUI.autoLoginAttempted || JobsAuthUI.manualAuthInProgress) {
+=======
     if (JobsAuthUI.autoLoginAttempted) {
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
         return false;
     }
     
@@ -2507,7 +2689,11 @@ addNetworkHandler("jobs.authServerToken", function() {
         debugLog("[Auth] Auth state: required=" + JobsAuthUI.authState.authRequired + ", authenticated=" + JobsAuthUI.authState.authenticated);
         
         // v-admin style: Try auto-login immediately when server token received
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/auth_ui.js
+        if (!JobsAuthUI.authState.authenticated && !JobsAuthUI.autoLoginAttempted && !JobsAuthUI.manualAuthInProgress) {
+=======
         if (!JobsAuthUI.authState.authenticated && !JobsAuthUI.autoLoginAttempted) {
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/auth_ui.js
             setTimeout(function() {
                 debugLog("[Auth] Immediate auto-login attempt (v-admin style)");
                 attemptAutoLogin();

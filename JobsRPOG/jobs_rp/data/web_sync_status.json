@@ -1,8 +1,22 @@
 ﻿{
   "isProcessing": false,
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/data/web_sync_status.json
+<<<<<<<< Updated upstream:JobsRPOG/jobs_rp/data/web_sync_status.json
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/data/web_sync_status.json
   "lastAttemptAt": "2026-05-08T02:51:14.811Z",
   "lastError": null,
   "lastResponseCode": 200,
   "processedCount": 1,
   "lastSuccessAt": "2026-05-08T02:51:14.811Z"
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/data/web_sync_status.json
+========
+  "lastAttemptAt": "2026-05-14T10:19:58.163Z",
+  "lastError": null,
+  "lastResponseCode": 200,
+  "processedCount": 1,
+  "lastSuccessAt": "2026-05-14T10:19:58.165Z"
+>>>>>>>> Stashed changes:resources/jobs_rp/data/web_sync_status.json
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/data/web_sync_status.json
 }

@@ -399,6 +399,25 @@ addNetworkHandler("jobs.authLogin", function(...)
     end
 end)
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/network.lua
+addNetworkHandler("jobs.authWithTokens", function(...)
+    local client, sessionToken, refreshToken = extractClientAndArgs(...)
+    if not client then
+        return
+    end
+
+    if JobsRP.Auth and JobsRP.Auth.loginWithTokens then
+        JobsRP.Auth.loginWithTokens(client, sessionToken, refreshToken)
+    else
+        pushClientEvent(client, "jobs.authResult", false, "auto_login", "Token auth is not available on this server.")
+        if JobsRP.Auth and JobsRP.Auth.sendState then
+            JobsRP.Auth.sendState(client)
+        end
+    end
+end)
+
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/network.lua
 addNetworkHandler("jobs.authLogout", function(...)
     local client = extractClientAndArgs(...)
     if not client then
@@ -459,4 +478,7 @@ end)
 
 
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/network.lua
+=======
 
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/network.lua

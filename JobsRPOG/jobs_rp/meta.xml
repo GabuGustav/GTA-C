@@ -13,6 +13,10 @@
   <script language="lua" type="server" src="server/db.lua" />
   <script language="lua" type="server" src="server/store.lua" />
   <script language="lua" type="server" src="server/economy.lua" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+<<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <script language="lua" type="server" src="server/auth.lua" />
   <script language="lua" type="server" src="server/role_commands.lua" />
   <script language="lua" type="server" src="server/jobadmin.lua" />
@@ -26,6 +30,33 @@
   <script language="lua" type="server" src="server/phone_events.lua" />
   <script language="lua" type="server" src="server/http_client.lua" />
   <script language="lua" type="server" src="server/job_stats.lua" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+========
+  <script language="lua" type="server" src="server/auth/init.lua" />
+    <script language="lua" type="server" src="server/role_commands.lua" />
+    <script language="lua" type="server" src="server/jobadmin.lua" />
+    <script language="lua" type="server" src="server/jobs.lua" />
+    <script language="lua" type="server" src="server/character_manager.lua" />
+    <script language="lua" type="server" src="server/universal_sync.lua" />
+    <script language="lua" type="server" src="server/commands/core.lua" />
+  <script language="lua" type="server" src="server/commands/admin.lua" />
+  <script language="lua" type="server" src="server/commands/xp.lua" />
+  <script language="lua" type="server" src="server/commands/jobs.lua" />
+  <script language="lua" type="server" src="server/commands/jobauth.lua" />
+  <script language="lua" type="server" src="server/commands/jobdiag.lua" />
+  <script language="lua" type="server" src="server/commands/init.lua" />
+    <script language="lua" type="server" src="server/network.lua" />
+    <script language="lua" type="server" src="server/backup_system.lua" />
+    <script language="lua" type="server" src="server/gamemode_setup.lua" />
+    <script language="lua" type="server" src="server/phone_events.lua" />
+    <script language="lua" type="server" src="server/http_client.lua" />
+    <script language="lua" type="server" src="server/job_stats.lua" />
+    <script language="lua" type="server" src="server/xp.lua" />
+    <script language="lua" type="server" src="server/achievement.lua" />
+    <script language="lua" type="server" src="server/time_stats.lua" />
+>>>>>>>> Stashed changes:resources/jobs_rp/meta.xml
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <script language="lua" type="server" src="server/account_data_store.lua" />
   <script language="lua" type="server" src="server/sync_scheduler.lua" />
   <script language="lua" type="server" src="server/web_integration.lua" />
@@ -36,6 +67,43 @@
   <script language="javascript" type="client" src="shared/character_defs.js" />
   <script language="lua" type="client" src="client/universal_sync_client.lua" />
 
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+  <!-- MexUI Images -->
+  <file type="client" src="client/jobsrpui/mexui/Images/Message.png" />
+  <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
+  <file type="client" src="Audio/dispatch_structure.json" />
+
+  <!-- ========================================================================
+       POLICE SCANNER AUDIO FILES - ALL LOADED ON CLIENT
+       ======================================================================== -->
+
+  <!-- Dispatch Intros -->
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS_ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/ATTENTION_ALL_UNITS.wav" />
+  <file type="client" src="Audio/PoliceScanner/DISPATCHING_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/DISPATCH_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/THIS_IS_CONTROL.wav" />
+  <file type="client" src="Audio/PoliceScanner/UNITS_PLEASE_BE_ADVISED.wav" />
+  <file type="client" src="Audio/PoliceScanner/ALL_UNITS_PLEASE_RESPOND.wav" />
+  <file type="client" src="Audio/PoliceScanner/I_REPEAT.wav" />
+  <file type="client" src="Audio/PoliceScanner/REPEAT.wav" />
+
+  <!-- Dispatch Report Phrases -->
+  <file type="client" src="Audio/PoliceScanner/INS_THIS_IS_CONTROL_WE_HAVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_CIVILIANS_REPORT.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_AVAILABLE_UNITS_RESPOND_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_ALL_HANDS_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_ATTENTION_ALL_UNITS_WE_HAVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_UNITS_REPORT.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_WE_HAVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_WEVE_GOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_WE_HAVE_A_REPORT_OF_ERRR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_UNIT_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_TRAFFIC_ALERT_FOR.wav" />
+
+  <!-- Criminal Activities -->
+=======
   <file type="client" src="client/jobsrpui/mexui/Images/Message.png" />
   <file type="client" src="client/jobsrpui/mexui/Images/down-arrow.png" />
   <file type="client" src="Audio/PoliceScanner/ALL_UNITS.wav" />
@@ -45,6 +113,7 @@
   <file type="client" src="Audio/PoliceScanner/UNITS_PLEASE_BE_ADVISED.wav" />
   <file type="client" src="Audio/PoliceScanner/ALL_UNITS_PLEASE_RESPOND.wav" />
   <file type="client" src="Audio/PoliceScanner/SUSPECT_APPREHENDED.wav" />
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <file type="client" src="Audio/PoliceScanner/ARMED_AND_DANGEROUS.wav" />
   <file type="client" src="Audio/PoliceScanner/ASSISTANCE_REQUIRED.wav" />
   <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_RESISTING_ARREST.wav" />
@@ -58,6 +127,87 @@
   <file type="client" src="Audio/PoliceScanner/CRIM_SHOTS_FIRED.wav" />
   <file type="client" src="Audio/PoliceScanner/CRIM_SUSPICIOUS_ACTIVITY.wav" />
   <file type="client" src="Audio/PoliceScanner/CRIM_A_STOLEN_VEHICLE.wav" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_SHOOT_OUT.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DRUG_DEAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_FIRE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_FELONY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_PERFORMING_DRIVEBY_ACTIVITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CIVILIAN_CAUSING_TROUBLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CIVILIAN_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_FLEEING_A_CRIME_SCENE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_IN_A_STOLEN_CAR.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_CRIMINAL_IN_A_STOLEN_VEHICLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_DANGEROUS_DRIVING.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_DRUNKEN_BRAWL.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_FIREARM_ATTACK_ON_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_SHOTS_FIRED_AT_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_SUSPECT_ARMED_AND_DANGEROUS.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_SUSPECT_RESISTING_ARREST.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_CRIMINALS_PERFORMING_DRIVEBY_ACTIVITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_CRIMINALS_DISTURBING_THE_PEACE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_UNCONCIOUS_CIVILIAN.wav" />
+
+  <!-- Officer Status -->
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_IN_DANGER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_ASSAULT_ON_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_STRUCK.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_IN_NEED_OF_ASSISTANCE.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_ATTACK_ON_AN_OFFICER.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_ASSAULT.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_AIR_UNIT_DOWN_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_AN_AIR_UNIT_DOWN_02.wav" />
+
+  <!-- Traffic -->
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_VIOLATION.wav" />
+  <file type="client" src="Audio/PoliceScanner/CRIM_A_TRAFFIC_ALERT.wav" />
+
+  <!-- Unit Dispatch Variants -->
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_2_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_3_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_4_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_5_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_6_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_7_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_UNIT_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_AIR_UNIT_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_AIR_UNITS_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_AIR_SQUAD_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_NOOSE_TEAM_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_NOOSE_TEAM_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_NOOSE_WATER_UNIT.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_SWAT_TEAM_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_FIB_TEAM_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_FIB_TEAM_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_AN_FIB_TEAM_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_ERR_FIB_TEAM_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_POLICE_BOAT.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_POLICE_BOAT_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_POLICE_BOATS_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_PATROL_BOAT_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_WATER_UNIT_FROM.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_WATER_PATROL_UNITS_FROM_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/DFROM_DISPATCH_A_COASTGUARD_UNIT_FROM_ERR.wav" />
+
+  <!-- Pursuit Dynamics -->
+  <file type="client" src="Audio/PoliceScanner/DOING_50.wav" />
+  <file type="client" src="Audio/PoliceScanner/DOING_60.wav" />
+  <file type="client" src="Audio/PoliceScanner/DOING_70.wav" />
+  <file type="client" src="Audio/PoliceScanner/DOING_80.wav" />
+  <file type="client" src="Audio/PoliceScanner/DOING_90.wav" />
+  <file type="client" src="Audio/PoliceScanner/HAS_ABANDONED_VEHICLE_AND_IS_CONTINUING_ON_FOOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/HAS_FLED_VEHICLE_AND_IS_CONTINUING_ON_FOOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/HES_STILL_IN.wav" />
+  <file type="client" src="Audio/PoliceScanner/HES_STILL_ON.wav" />
+  <file type="client" src="Audio/PoliceScanner/IS_NOW_DRIVING_A_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/LOOKS_LIKE_HES_GOING.wav" />
+  <file type="client" src="Audio/PoliceScanner/AT_SEA.wav" />
+  <file type="client" src="Audio/PoliceScanner/THE_SEA.wav" />
+
+  <!-- Suspect/Direction Phrases -->
+  <file type="client" src="Audio/PoliceScanner/SUSPECT.wav" />
+=======
   <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_DOWN.wav" />
   <file type="client" src="Audio/PoliceScanner/CRIM_AN_OFFICER_IN_DANGER.wav" />
   <file type="client" src="Audio/PoliceScanner/CRIM_AN_ASSAULT_ON_AN_OFFICER.wav" />
@@ -69,14 +219,244 @@
   <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN_DUKES.wav" />
   <file type="client" src="Audio/PoliceScanner/Areas/ALDERNEY_CITY.wav" />
   <file type="client" src="Audio/PoliceScanner/Areas/CHARGE_ISLAND.wav" />
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_NORTH.wav" />
   <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADING_SOUTH.wav" />
   <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_EAST.wav" />
   <file type="client" src="Audio/PoliceScanner/SUSPECT_HEADED_WEST.wav" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+  <file type="client" src="Audio/PoliceScanner/LOOKS_LIKE_HES_HEADING.wav" />
+  <file type="client" src="Audio/PoliceScanner/ON_FOOT.wav" />
+  <file type="client" src="Audio/PoliceScanner/LAST_SEEN.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_LAST_SEEN.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_LAST_SEEN_IN.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_LAST_SEEN_ON.wav" />
+
+  <!-- Callout Resolution -->
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_APPREHENDED.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_NEUTRALIZED.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_TAKEN_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_PACIFIED.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_IS_BAGGED_AND_TAGGED.wav" />
+  <file type="client" src="Audio/PoliceScanner/SUSPECT_IS_DOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/WE_HAVE_THE_SUSPECT_IN_CUSTODY.wav" />
+
+  <!-- Random Chatter -->
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_02.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_03.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_05.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_06.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_07.wav" />
+  <file type="client" src="Audio/PoliceScanner/RANDOMCHAT_08.wav" />
+
+  <!-- Fire/Medical Emergency -->
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_A_MEDIC_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_A_MEDICAL_TEAM_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_A_MEDICAL_TEAM_FOR_ERRR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_A_PARAMEDIC_TEAM_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_A_PARAMEDIC_TEAM_TO_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_AN_AMBULANCE_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_AN_AMBULANCE_FOR_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_AVAILABLE_FIREFIGHTERS_RESPOND_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_AVAILABLE_FIREFIGHTERS_RESPOND_TO_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_AVAILABLE_FIRETRUCKS_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_FIREMEN_REQUIRED_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_FIREFIGHTING_TEAM_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_MEDIC_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_MEDICAL_TEAM_FOR_ERRR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_MEDICAL_TEAM_TO_INVESTIGATE.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_MEDICAL_TEAM_TO_RESPOND_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_I_NEED_A_MEDICAL_TEAM_TO_RESPOND_TO_ERRR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_DISPATCH_FIRE_FIGHTERS_IN_RESPONSE_TO.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_MEDEVAC_TEAM_REQUIRED_FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/INS_THIS_IS_CONTROL_I_NEED_ASSISTANCE_FOR.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - AREAS (All 92 Liberty City Zones)
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Areas/ACTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ACTER_INDUSTRIAL_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALDERNEY_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN_BRIDGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ALGONQUIN_DUKES.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ASAHARA_RD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BEECHWOOD_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BERCHEM.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BOABO.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BOULEVARD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BROKER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BROKER_BAY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/BROKER_BRIDGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CASTLE_GARDEN_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CASTLE_GARDENS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CERVAZA_HEIGHTS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CERVEZA_HEIGHTS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CHARGE_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CHASE_POINT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CHINATOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/CITY_HALL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/COLONY_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/DOWNTOWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EAST_ALDERNEY_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EAST_HOLLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EAST_HOOK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EAST_ISLAND_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EAST_LEFTWOOD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EASTERN_ACTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EASTERN_ACTER_INDUSTRIAL_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EASTERN_FRANCIS_INTERNATIONAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/EASTON.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FIREFLY_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FIREFLY_PROJECTS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FISH_MARKET_NORTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FISHMARKET_SOUTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FORTSIDE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/FRANCIS_INTERNATIONAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/GOLF_COURSE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/HAPPINESS_ISLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/HATTON_GARDENS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/HOVE_BEACH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/HOVE_GARDEN_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/INDUSTRIAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LANCASTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LANCET.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LEFTWOOD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LITTLE_BAY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LITTLE_ITALY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/LOWER_EASTON.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/MEADOW_HILLS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/MEADOWS_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/MIDDLE_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/MIDDLE_PARK_EAST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/MIDDLE_PARK_WEST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/NORMANDY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/NORTH_HOLLAND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/NORTHERN_FRANCIS_INTERNATIONAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/NORTHERN_GARDENS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/NORTHWOOD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/OUTLOOK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/OUTLOOK_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/PORT_TUDOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/PRESIDENTS_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/PURGATORY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/ROTTERDAM_HILL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SCHOTTLER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SOUTH_BOHAN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SOUTH_SLOPES.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SOUTHERN_FRANCIS_INTERNATIONAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/STAR_JUNCTION.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/STEIN_WAY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/SUFFOLK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/THE_EXCHANGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/THE_MEAT_QUARTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/THE_TRIANGLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/TRIANGLE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/TUDOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/VARSITY_HEIGHTS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WEST_ALDERNEY_CITY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WEST_LEFTWOOD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WESTDYK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WESTERN_ACTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WESTERN_ACTER_INDUSTRIAL_PARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WESTERN_FRANCIS_INTERNATIONAL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WESTMINSTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Areas/WILLIS.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - STREETS
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Streets/ALBANY_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/ALGONQUIN_BRIDGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/COLUMBUS_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/FRANKLIN_DRIVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/HARRISON_ST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/IVY_RD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/SARATOGA_AVE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Streets/UNION_DRIVE_WEST.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - VEHICLE COLOURS (22)
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Colour/BEAT_UP.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BEATEN_UP.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BEIGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BLACK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BLUE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BRIGHT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/BROWN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/DARK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/DEWBAUCHEE_GREEN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/GOLD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/GRAPHITE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/GREEN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/GREY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/GROTTI_RED.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/LIGHT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/ORANGE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/PINK.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/RED.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/SILVER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/WHITE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/WRECKED.wav" />
+  <file type="client" src="Audio/PoliceScanner/Colour/YELLOW.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - VEHICLE MANUFACTURERS (34)
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_ALBANY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_ANNIS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_BENEFACTOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_BRAVADO.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_BRUTE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_CABLE_CAR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_CLASSIQUE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_CUSTOM.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_DECLASSE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_DEWBAUCHEE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_DINKA.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_DUNDREARY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_EMPEROR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_ENUS.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_GROTTI.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_HVY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_IMPONTE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_INVETERO.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_JOEBUILT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_KARIN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_MAIBATSU.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_MAMMOTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_MOTORCYCLE_W_COMPANY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_MTL.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_PEGASI.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_PFISTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_SCHYSTER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_SHITZU.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_STEEL_HORSE.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_UBERMACHT.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_VAPID.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_VULCAR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_WESTERN_COMPANY.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_WILLARD.wav" />
+  <file type="client" src="Audio/PoliceScanner/Manufacturer/MAN_ZIREONIUM.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - VEHICLE CATEGORIES
+       ======================================================================== -->
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <file type="client" src="Audio/PoliceScanner/VehicleCategory/SEDAN.wav" />
   <file type="client" src="Audio/PoliceScanner/VehicleCategory/SPORTS_CAR.wav" />
   <file type="client" src="Audio/PoliceScanner/VehicleCategory/SUV.wav" />
   <file type="client" src="Audio/PoliceScanner/VehicleCategory/TRUCK.wav" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+
+  <!-- ========================================================================
+       POLICE SCANNER - VEHICLE MODELS
+       ======================================================================== -->
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <file type="client" src="Audio/PoliceScanner/Model/MOD_ADMIRAL.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_BANSHEE.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_BLISTA.wav" />
@@ -86,6 +466,91 @@
   <file type="client" src="Audio/PoliceScanner/Model/MOD_LANDSTALKER.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_ORACLE.wav" />
   <file type="client" src="Audio/PoliceScanner/Model/MOD_SENTINEL.wav" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+<<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+========
+
+  <!-- ========================================================================
+       POLICE SCANNER - DIRECTIONS
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Directions/EAST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/EASTBOUND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/NORTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/NORTHBOUND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/SOUTH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/SOUTHBOUND.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/WEST.wav" />
+  <file type="client" src="Audio/PoliceScanner/Directions/WESTBOUND.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - SPEECH FILLERS / CONJUNCTIVES
+       ======================================================================== -->
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_05.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_AH.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_ERR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_LONGER.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_NEW_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_NEW_02.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/A_NEW_03.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/DOING.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_02.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_03.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_04.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_05.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_06.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_07.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_08.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_09.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_10.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_11.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_12.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_13.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_14.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_15.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_16.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ERR_ERRR_17.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/FOR.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/HES.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/IN_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/IN_IN.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_01.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_02.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_03.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_04.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_05.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_06.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_07.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_08.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_09.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_10.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/ON_11.wav" />
+  <file type="client" src="Audio/PoliceScanner/Conjunctives/UMM.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - BACKGROUND NOISE (Resident Scanner)
+       ======================================================================== -->
+  <file type="client" src="Audio/Resident/Scanner_Resident/CROSSTALK.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/END_NOISE_01.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/ENDING_03.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/IN_01.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/IN_02.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/IN_NOISE_01.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/NOISE_LOOP_A.wav" />
+  <file type="client" src="Audio/Resident/Scanner_Resident/NOISE_LOOP_B.wav" />
+
+  <!-- ========================================================================
+       POLICE SCANNER - AMBIENT EFFECTS
+       ======================================================================== -->
+  <file type="client" src="Audio/Resident/Amb_Resident/CUFFS_TIGHTEN_01.wav" />
+  <file type="client" src="Audio/Resident/Amb_Resident/TASER_DEPLOY.wav" />
+
+  <!-- ========================================================================
+       CLIENT SCRIPTS
+       ======================================================================== -->
+>>>>>>>> Stashed changes:resources/jobs_rp/meta.xml
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <script language="javascript" type="client" src="client/shared_utils.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui.js" />
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Native.js" />
@@ -150,6 +615,11 @@
   <script language="javascript" type="client" src="client/jobsrpui/mexui/Core/Init.js" />
   <script language="javascript" type="client" src="client/jobsrpui_bridge.js" />
   <script language="javascript" type="client" src="client/police_menu.js" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+  <script language="javascript" type="client" src="client/police_hud.js" />
+  <script language="javascript" type="client" src="client/dispatch_audio.js" />
+=======
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
   <script language="javascript" type="client" src="client/ui.js" />
   <script language="javascript" type="client" src="client/keyboard_service.js" />
   <script language="javascript" type="client" src="client/auth_ui.js" />
@@ -157,10 +627,19 @@
   <script language="javascript" type="client" src="client/character_controller.js" />
   <script language="javascript" type="client" src="client/zones.js" />
   <script language="javascript" type="client" src="client/main.js" />
+<<<<<<< Updated upstream:JobsRPOG/jobs_rp/meta.xml
+  <script language="javascript" type="client" src="client/callouts.js" />
+  <script language="javascript" type="client" src="client/police_scanner.js" />
+  <script language="javascript" type="client" src="client/phone.js" />
+  <script language="javascript" type="client" src="client/world_events.js" />
+  <script language="javascript" type="client" src="client/backup_system.js" />
+  <script language="javascript" type="client" src="client/callout_ui.js" />
+=======
     <script language="javascript" type="client" src="client/callouts.js" />
     <script language="javascript" type="client" src="client/police_scanner.js" />
     <script language="javascript" type="client" src="client/phone.js" />
     <script language="javascript" type="client" src="client/world_events.js" />
     <script language="javascript" type="client" src="client/backup_system.js" />
     <script language="javascript" type="client" src="client/callout_ui.js" />
+>>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/meta.xml
 </meta>

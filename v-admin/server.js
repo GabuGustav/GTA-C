@@ -47,6 +47,7 @@ bindEventHandler("onResourceStop", thisResource, (event, resource) => {
 
     getClients().forEach((client) => {
         client.removeData("b.admin"); // Remove admin data from all players
+        client.removeData("b.admin.auth");
         client.removeData("b.weapons"); // Remove weapon data from all players
         client.removeData("b.token"); // Remove token data from all players
     });
@@ -502,7 +503,7 @@ addCommandHandler("scripts", (command, params, client) => {
         return false;
     }
 
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -862,7 +863,7 @@ addCommandHandler("lastbanip", (command, params, client) => {
 // ----------------------------------------------------------------------------
 
 addCommandHandler("a", (command, params, client) => {
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -880,7 +881,7 @@ addCommandHandler("a", (command, params, client) => {
 // ----------------------------------------------------------------------------
 
 addCommandHandler("announce", (command, params, client) => {
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -903,7 +904,7 @@ addCommandHandler("blockscript", (command, params, client) => {
         return false;
     }
 
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -960,6 +961,7 @@ addCommandHandler("makeadmin", (command, params, client) => {
 
     if (targetClient) {
         targetClient.setData("b.admin", 2, true);
+        targetClient.setData("b.admin.auth", 1, true);
         triggerNetworkEvent("b.admin.token.save", targetClient, token, scriptConfig.serverToken);
     }
 
@@ -1010,6 +1012,7 @@ addCommandHandler("makemod", (command, params, client) => {
 
     if (targetClient) {
         targetClient.setData("b.admin", 1, true);
+        targetClient.setData("b.admin.auth", 1, true);
         triggerNetworkEvent("b.admin.token.save", targetClient, token, scriptConfig.serverToken);
     }
 
@@ -1226,6 +1229,7 @@ addCommandHandler("demote", (command, params, client) => {
     const online = getClients().find(c => c.name.toLowerCase() === target.name.toLowerCase());
     if (online) {
         online.setData("b.admin", 0, true);
+        online.setData("b.admin.auth", 0, true);
     }
 
     const msg = `Demoted ${target.name} (removed ${targetRole} permissions)${reason ? ` Reason: ${reason}` : ''}`;
@@ -1407,7 +1411,7 @@ addCommandHandler("disableweapons", (command, params, client) => {
 // ----------------------------------------------------------------------------
 
 addCommandHandler("ip", (command, params, client) => {
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -1433,7 +1437,7 @@ addCommandHandler("ip", (command, params, client) => {
 // ----------------------------------------------------------------------------
 
 addCommandHandler("geoip", (command, params, client) => {
-    if (client.getData("b.admin") < getLevelForCommand(command)) {
+    if (getPlayerAdminLevel(client) < getLevelForCommand(command)) {
         messageClient("You are not authorized to use this command!", client, errorMessageColour);
         return false;
     }
@@ -1845,6 +1849,7 @@ function escapeJSONString(str) {
 function applyPlayerPermissions() {
     getClients().forEach((client) => {
         client.setData("b.admin", 0, true); // Reset admin level
+        client.setData("b.admin.auth", 0, true);
 
         const playerData = Array.isArray(playersData) ? playersData.find(p => p.token === client.getData("b.token")) : null;
         if (typeof client.trainers != "undefined") {
@@ -1857,6 +1862,7 @@ function applyPlayerPermissions() {
 
         if (playerData && playerData.admin) {
             client.setData("b.admin", playerData.admin.level || 1, true);
+            client.setData("b.admin.auth", 1, true);
         }
     });
 
@@ -2138,17 +2144,12 @@ addNetworkHandler("b.admin.token", function (fromClient, token) {
     if (playerData && playerData.admin) {
         if (token && playerData.token === token) {
             tokenValid = true;
-        } else if (playerData.ip === fromClient.ip || playerData.ip === "0.0.0.0") {
-            tokenValid = true;
-            messageAdmins(`${fromClient.name} has no valid token but IP matches or is placeholder (${playerData.ip}). Granting ${playerData.admin.role} access.`);
-            playerData.ip = fromClient.ip; // Update placeholder IP
-            triggerNetworkEvent("b.admin.token.save", fromClient, playerData.token, scriptConfig.serverToken);
-            savePlayers({ silent: true });
         }
     }
 
     if (tokenValid) {
         fromClient.setData("b.admin", playerData.admin.level || 1, true);
+        fromClient.setData("b.admin.auth", 1, true);
         messageAdmins(`${fromClient.name} passed authentication and was given ${playerData.admin.role} permissions!`);
         logAdminAction(fromClient, "login", "", `Authenticated as ${playerData.admin.role} (Level ${playerData.admin.level})`);
     } else if (isAdminName(fromClient.name)) {
@@ -2159,6 +2160,7 @@ addNetworkHandler("b.admin.token", function (fromClient, token) {
         return false;
     } else {
         fromClient.setData("b.admin", 0, true);
+        fromClient.setData("b.admin.auth", 0, true);
     }
 
     // Check for bans by token
@@ -2424,12 +2426,23 @@ function getPlayerAdminLevel(client) {
     if (client.console == true) {
         return 99999999;
     }
-
-    if (client.getData("b.admin") == null) {
+    if (!client) {
         return 0;
     }
-
-    return client.getData("b.admin");
+    const token = client.getData("b.token");
+    if (!token || !Array.isArray(playersData)) {
+        return 0;
+    }
+    const record = playersData.find(p => p && p.token === token);
+    if (!record || !record.admin) {
+        return 0;
+    }
+    const serverLevel = Number(record.admin.level) || 0;
+    const clientAuthFlag = Number(client.getData("b.admin.auth")) || 0;
+    if (clientAuthFlag !== 1) {
+        return 0;
+    }
+    return serverLevel;
 }
 
 // ----------------------------------------------------------------------------
