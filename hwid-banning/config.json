@@ -1,0 +1,19 @@
+{
+  "commandLevels": {
+    "hwidban": 2,
+    "hwidunban": 2,
+    "hwidbanlist": 1,
+    "hwidwhoami": 1,
+    "hwidreload": 2
+  },
+  "disconnectMessage": "You are banned from this server (HWID).",
+  "allowConsoleBypass": true,
+  "admins": [
+    {
+      "name": "YourAdminNameHere",
+      "level": 2
+    }
+  ],
+  "autoBanOnJoinCheck": true,
+  "maxLogEntries": 1000
+}
