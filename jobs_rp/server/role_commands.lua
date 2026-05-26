@@ -11,12 +11,9 @@ local Store = JobsRP.Store
 
 -- Helper function to check if player is admin
 function RoleCommands.isAdmin(player)
-<<<<<<< Updated upstream:JobsRPOG/jobs_rp/server/role_commands.lua
     if JobsRP.Auth and JobsRP.Auth.requireTrustedAdmin then
         return JobsRP.Auth.requireTrustedAdmin(player)
     end
-=======
->>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/server/role_commands.lua
     return JobsRP.Auth and JobsRP.Auth.isAdmin(player)
 end
 

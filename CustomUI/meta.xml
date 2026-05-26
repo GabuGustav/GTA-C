@@ -1,0 +1,36 @@
+<!--
+    meta.xml  –  GTA Connected resource descriptor for ui_renderer
+    Place this file (along with the scripts) in:
+        <server root>/resources/ui_renderer/meta.xml
+
+    The ui_renderer.dll module must be in:
+        <GTAC client>/modules/client/ui_renderer.dll
+
+    Module loading is configured in the server's config.xml:
+        <module src="ui_renderer.dll" type="client" />
+-->
+
+<meta>
+    <!-- ── Resource info ───────────────────────────────────────────── -->
+    <info
+        name        = "ui_renderer"
+        version     = "1.0"
+        author      = "yourname"
+        description = "Client-side UI element system using GTA IV natives"
+    />
+
+    <!-- ── Client scripts ──────────────────────────────────────────── -->
+    <!--  Use ONE of the two language options below.                   -->
+
+    <!-- JavaScript version -->
+    <script language="javascript" type="client" src="hud_overlay.js" />
+
+    <!-- Lua version (comment out the JS line and uncomment this) -->
+    <!-- <script language="lua" type="client" src="hud_overlay.lua" /> -->
+
+    <!-- ── Client-side module dependency declaration ─────────────────  -->
+    <!--  Tells GTAC to ensure the C++ module is loaded before this   -->
+    <!--  resource starts.  Exact attribute name may vary by GTAC      -->
+    <!--  server version; check wiki.gtaconnected.com/Modules          -->
+    <module name="ui_renderer" type="client" />
+</meta>

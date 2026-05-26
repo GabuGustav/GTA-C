@@ -1,0 +1,26 @@
+﻿# Ignore sensitive/shared config and generated sync files
+jobs_rp/shared/
+jobs_rp/data/
+
+# Ignore large upload/media/output folders
+uploads/
+Upload/
+upload/
+Audio/
+logs/
+cache/
+tmp/
+temp/
+
+# Ignore archives and binaries commonly uploaded/generated
+*.zip
+*.rar
+*.7z
+*.bak
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp

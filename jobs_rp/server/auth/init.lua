@@ -54,13 +54,10 @@ AuthInit.init = function()
         JobsRP.Auth.resolveClient = AuthCore.resolveClient
         JobsRP.Auth.getAccountId = AuthCore.getAccountId
         JobsRP.Auth.isAuthenticated = AuthCore.isAuthenticated
-<<<<<<< Updated upstream:jobs_rp/server/auth/init.lua
-=======
         JobsRP.Auth.requireAuthenticated = AuthCore.requireAuthenticated
         JobsRP.Auth.isIdentityConsistent = AuthCore.isIdentityConsistent
         JobsRP.Auth.requireTrustedAdmin = AuthCore.requireTrustedAdmin
         JobsRP.Auth.logSecurityEvent = AuthCore.logSecurityEvent
->>>>>>> Stashed changes:resources/jobs_rp/server/auth/init.lua
         JobsRP.Auth.isAdmin = AuthCore.isAdmin
         JobsRP.Auth.sendState = AuthCore.sendState
         JobsRP.Auth.register = AuthCore.register

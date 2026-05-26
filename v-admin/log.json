@@ -1,1 +1,34 @@
-﻿
+﻿[
+	{
+		"timestamp": "2026-05-16T19:15:28.282Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server started"
+	},
+	{
+		"timestamp": "2026-05-16T19:17:44.365Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-17T09:16:40.727Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-17T09:20:42.508Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	}
+]

@@ -17,9 +17,12 @@ root.Config = root.Config or {
     db_password = "",
     db_charset = "utf8mb4",
     -- Supabase configuration
-    supabase_url = "https://your-project.supabase.co",
-    supabase_key = "your-anon-key",
-    supabase_service_key = "your-service-key",
+    supabase_url = "https://yfsgmytvwnfotgymskxz.supabase.co",
+    supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmc2dteXR2d25mb3RneW1za3h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2Mjg2NDAsImV4cCI6MjA5MjIwNDY0MH0.zD3CJ9NUgvW297HI2r2vs_yF1Y8vUfpaaicxpz0-jKM
+",
+    supabase_service_key = "https://yfsgmytvwnfotgymskxz.supabase.co
+service roe:
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmc2dteXR2d25mb3RneW1za3h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjYyODY0MCwiZXhwIjoyMDkyMjA0NjQwfQ.OHD6cYtUwQSrJQW83IFOmJIQFk3XA7bCqJb1p5kWLJM",
     db_table_prefix = "jobs_rp_",
     db_connect_options = "",
     autosave_ms = 90000,
@@ -96,7 +99,7 @@ root.Config = root.Config or {
     web_integration_enabled = true,
     website_api_url = "https://bgfr-gta-connected.netlify.app/.netlify/functions",
     website_sync_api_url = "http://127.0.0.1:3001/api",
-    api_secret_key = "gta-server-api-key",
+    api_secret_key = "poxhcNUcGhya2Gl44ZDv+06A1LOpfNwA+csaifFV23UqWWBdEKmYMGNUVszjGEl9",
     web_bridge_enabled = true,
     web_bridge_queue_file = "data/web_api_queue.json",
     web_bridge_status_file = "data/web_sync_status.json",

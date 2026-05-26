@@ -163,15 +163,9 @@ ShootingCallout.prototype.start = function() {
         debugLog("[ShootingCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
-<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/callouts.js
-    // Play police scanner audio with layered variations
-    if (typeof DispatchAudio !== "undefined" && DispatchAudio.playCallout) {
-        DispatchAudio.playCallout("shooting", position);
-=======
     // Play police scanner audio
     if (typeof PoliceScanner !== "undefined" && PoliceScanner.Manager) {
         PoliceScanner.Manager.playDispatch("shooting", position);
->>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/callouts.js
     }
     
     // Show callout message
@@ -277,15 +271,9 @@ PursuitCallout.prototype.start = function() {
         debugLog("[PursuitCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
-<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/callouts.js
-    // Play police scanner audio with layered variations
-    if (typeof DispatchAudio !== "undefined" && DispatchAudio.playCallout) {
-        DispatchAudio.playCallout("vehicle_pursuit", position);
-=======
     // Play police scanner audio
     if (typeof PoliceScanner !== "undefined" && PoliceScanner.Manager) {
         PoliceScanner.Manager.playDispatch("pursuit", position);
->>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/callouts.js
     }
     
     if (JobsClient.UI) {
@@ -356,15 +344,9 @@ BrawlCallout.prototype.start = function() {
         debugLog("[BrawlCallout] Blip created successfully with ID: " + this.blip.id);
     }
     
-<<<<<<< Updated upstream:JobsRPOG/jobs_rp/client/callouts.js
-    // Play police scanner audio with layered variations
-    if (typeof DispatchAudio !== "undefined" && DispatchAudio.playCallout) {
-        DispatchAudio.playCallout("domestic_disturbance", position);
-=======
     // Play police scanner audio
     if (typeof PoliceScanner !== "undefined" && PoliceScanner.Manager) {
         PoliceScanner.Manager.playDispatch("brawl", position);
->>>>>>> Stashed changes:resources/JobsRPOG/jobs_rp/client/callouts.js
     }
     
     if (JobsClient.UI) {

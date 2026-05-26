@@ -1,0 +1,117 @@
+/**
+ * hud.css  –  Styles for the GTAC health bar HUD overlay
+ *
+ * Placed in the  css/  folder of the resource.
+ * Loaded at runtime via:  module.ui.loadCSS("css/hud.css")
+ * Applied via:            module.ui.applyStyle(handle, "hud-bg")
+ *
+ * SUPPORTED PROPERTIES (see css_parser.h for full list):
+ *   left, top, width, height   (px, %, vw, vh, or bare float)
+ *   background-color           rgba(), rgb(), #hex, named
+ *   color                      (text elements only)
+ *   opacity                    0.0 – 1.0
+ *   border                     <width> solid <color>
+ *   border-width, border-color
+ *   border-radius              (approximated with 5-rect technique)
+ *   font-size                  (px → SET_TEXT_SCALE)
+ *   display: none / visibility: hidden
+ *
+ * UNSUPPORTED (silently ignored):
+ *   margin, padding, flex, grid, z-index, background-image,
+ *   transform, transition, pseudo-classes
+ */
+
+/* ── Dark background panel ──────────────────────────────────────────────── */
+.hud-bg {
+    left:   1%;
+    top:    1%;
+    width:  22%;
+    height: 4.2%;
+    background-color: rgba(10, 10, 10, 0.80);
+    border: 2px solid rgba(100, 180, 255, 0.75);
+    border-radius: 4px;
+    opacity: 1.0;
+}
+
+/* ── Blue accent line (thin strip at panel top) ─────────────────────────── */
+.hud-accent {
+    left:   1%;
+    top:    1%;
+    width:  22%;
+    height: 0.3%;
+    background-color: rgba(100, 180, 255, 0.85);
+    opacity: 1.0;
+}
+
+/* ── Health fill bar (full = green) ─────────────────────────────────────── */
+.hud-bar-full {
+    left:   1.4%;
+    top:    1.6%;
+    width:  21%;           /* overridden each frame by fill calculation */
+    height: 3%;
+    background-color: rgba(80, 220, 80, 0.90);
+    border-radius: 2px;
+    opacity: 1.0;
+}
+
+/* ── Health fill bar (mid = yellow) ─────────────────────────────────────── */
+.hud-bar-mid {
+    left:   1.4%;
+    top:    1.6%;
+    width:  21%;
+    height: 3%;
+    background-color: rgba(230, 200, 30, 0.90);
+    border-radius: 2px;
+    opacity: 1.0;
+}
+
+/* ── Health fill bar (low = red) ─────────────────────────────────────────── */
+.hud-bar-low {
+    left:   1.4%;
+    top:    1.6%;
+    width:  21%;
+    height: 3%;
+    background-color: rgba(220, 60, 60, 0.90);
+    border-radius: 2px;
+    opacity: 1.0;
+}
+
+/* ── HUD label text ──────────────────────────────────────────────────────── */
+.hud-label {
+    left:      1.5%;
+    top:       1.7%;
+    color:     rgba(255, 255, 255, 1.0);
+    font-size: 10px;       /* → SET_TEXT_SCALE ~0.23 */
+    opacity:   1.0;
+}
+
+/* ── Notification banner (appears top-centre) ────────────────────────────── */
+.notify-bg {
+    left:             39%;
+    top:              5%;
+    width:            22%;
+    height:           5%;
+    background-color: rgba(0, 0, 0, 0.75);
+    border:           1px solid rgba(255, 255, 100, 0.60);
+    border-radius:    3px;
+    opacity:          1.0;
+}
+
+/* ── Notification text ───────────────────────────────────────────────────── */
+.notify-text {
+    left:      40%;
+    top:       6%;
+    color:     rgba(255, 255, 100, 1.0);
+    font-size: 11px;
+    opacity:   1.0;
+}
+
+/* ── Example: hidden element (display:none) ──────────────────────────────── */
+.hidden-panel {
+    left:             0.5%;
+    top:              0.5%;
+    width:            10%;
+    height:           10%;
+    background-color: rgba(255, 0, 0, 0.5);
+    display:          none;
+}
