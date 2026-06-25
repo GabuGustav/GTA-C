@@ -424,10 +424,24 @@ BackupSystem.Manager = {
             }
             
             // Try to update blip coordinates directly if native functions are available
-            var blipApi = Zones.resolveNativeBlipApi();
-            if (blipApi.obj && typeof blipApi.obj.setBlipCoordinates === "function") {
+            var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
+            var nativeSources = [
+                globalEnv.natives,
+                globalEnv.Native,
+                globalEnv.gta && globalEnv.gta.natives,
+                globalEnv.game && globalEnv.game.natives,
+                globalEnv.world && globalEnv.world.natives
+            ];
+            var blipApi = null;
+            for (var i = 0; i < nativeSources.length; i++) {
+                if (nativeSources[i] && typeof nativeSources[i].setBlipCoordinates === "function") {
+                    blipApi = nativeSources[i];
+                    break;
+                }
+            }
+            if (blipApi) {
                 try {
-                    blipApi.obj.setBlipCoordinates(officerBlip.blip, newPosition.x, newPosition.y, newPosition.z);
+                    blipApi.setBlipCoordinates(officerBlip.blip, newPosition.x, newPosition.y, newPosition.z);
                     debugLog("[BackupSystem] Updated blip coordinates for: " + officerName);
                 } catch (e) {
                     debugLog("[BackupSystem] Failed to update blip coordinates: " + String(e));

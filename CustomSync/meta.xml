@@ -1,0 +1,30 @@
+<resource>
+    <!-- ============================================
+         sync_manager — Custom Sync Layer for GTA Connected (GTA IV)
+         
+         Key discovery: language="javascript" attribute is required.
+         Shared files are loaded explicitly for each context.
+         ============================================ -->
+
+    <!-- Shared config — loaded for server then client -->
+    <script language="javascript" type="server" src="shared/config.js" />
+    <script language="javascript" type="client" src="shared/config.js" />
+
+    <!-- Server scripts — order matters -->
+    <script language="javascript" type="server" src="server/main.js" />
+    <script language="javascript" type="server" src="server/ownership.js" />
+    <script language="javascript" type="server" src="server/validation.js" />
+    <script language="javascript" type="server" src="server/interest.js" />
+
+    <!-- Client scripts — order matters -->
+    <script language="javascript" type="client" src="client/main.js" />
+    <script language="javascript" type="client" src="client/snapshot.js" />
+    <script language="javascript" type="client" src="client/interpolator.js" />
+    <script language="javascript" type="client" src="client/extrapolator.js" />
+    <script language="javascript" type="client" src="client/traffic.js" />
+
+    <!-- Diagnostics — set DEBUG_HUD: false in config for production -->
+    <script language="javascript" type="client" src="diagnostics/diag_logger.js" />
+    <script language="javascript" type="client" src="diagnostics/diag_hud.js" />
+
+</resource>

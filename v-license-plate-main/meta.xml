@@ -1,0 +1,8 @@
+<meta>
+	<info title="v-license-plate" author="Vortrex" version="1.0" description="Shows a license plate of the nearest vehicle" />
+
+	<script src="client.js" type="client" language="javascript" />
+	
+	<file type="client" src="background.png" />
+	<file type="client" src="font.ttf" />
+</meta>

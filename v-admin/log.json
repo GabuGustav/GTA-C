@@ -30,5 +30,85 @@
 		"command": "server",
 		"params": "",
 		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-31T15:15:05.030Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-31T18:02:41.404Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-31T18:03:51.185Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-05-31T18:45:07.171Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-08T00:43:56.163Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-08T01:51:25.494Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-08T11:06:54.042Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-08T11:53:04.135Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-08T22:25:35.025Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
+	},
+	{
+		"timestamp": "2026-06-09T11:50:29.308Z",
+		"client": "System",
+		"ip": "0.0.0.0",
+		"command": "server",
+		"params": "",
+		"details": "Server stopped"
 	}
 ]

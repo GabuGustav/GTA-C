@@ -66,6 +66,28 @@ JobsClient.sendServer = function(eventName) {
     return false;
 };
 
+function getNativeBlipSources() {
+    var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
+    return [
+        { name: "natives", obj: globalEnv.natives },
+        { name: "Native", obj: globalEnv.Native },
+        { name: "gta.natives", obj: globalEnv.gta && globalEnv.gta.natives },
+        { name: "game.natives", obj: globalEnv.game && globalEnv.game.natives },
+        { name: "world.natives", obj: globalEnv.world && globalEnv.world.natives }
+    ];
+}
+
+function hasNativeBlipFunction(funcName) {
+    var sources = getNativeBlipSources();
+    for (var i = 0; i < sources.length; i++) {
+        var source = sources[i];
+        if (source.obj && typeof source.obj[funcName] === "function") {
+            return true;
+        }
+    }
+    return false;
+}
+
 function bindInteractKey() {
     if (typeof bindKey !== "function") {
         return false;
@@ -404,13 +426,7 @@ addEventHandler("onResourceStart", function() {
                 info += "Use native blips: " + (JobsClient.Zones.useNativeBlips ? "yes" : "no") + "\n";
                 info += "Interact available: " + (JobsClient.Zones.interactAvailable !== false ? "yes" : "no") + "\n";
                 
-                // Test native blip APIs (NOT gta.createBlip - developers said to use natives only)
-                var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
-                var hasNativeBlip = (
-                    (globalEnv.natives && typeof globalEnv.natives.addBlipForCoord === "function") ||
-                    (globalEnv.Native && typeof globalEnv.Native.addBlipForCoord === "function") ||
-                    (globalEnv.gta && globalEnv.gta.natives && typeof globalEnv.gta.natives.addBlipForCoord === "function")
-                );
+                var hasNativeBlip = hasNativeBlipFunction("addBlipForCoord");
                 info += "Native blip API available: " + (hasNativeBlip ? "yes" : "no");
                 
                 if (JobsClient.UI) {
@@ -438,25 +454,7 @@ addEventHandler("onResourceStart", function() {
             
             for (var i = 0; i < blipFunctions.length; i++) {
                 var funcName = blipFunctions[i];
-                var available = false;
-                
-                // Check all native sources
-                var sources = [
-                    { name: "natives", obj: globalEnv.natives },
-                    { name: "Native", obj: globalEnv.Native },
-                    { name: "gta.natives", obj: globalEnv.gta && globalEnv.gta.natives },
-                    { name: "game.natives", obj: globalEnv.game && globalEnv.game.natives },
-                    { name: "world.natives", obj: globalEnv.world && globalEnv.world.natives }
-                ];
-                
-                for (var j = 0; j < sources.length; j++) {
-                    var source = sources[j];
-                    if (source.obj && typeof source.obj[funcName] === "function") {
-                        available = true;
-                        break;
-                    }
-                }
-                
+                var available = hasNativeBlipFunction(funcName);
                 info += funcName + ": " + (available ? "yes" : "no") + "\n";
             }
             
@@ -659,7 +657,7 @@ addNetworkHandler("jobs.diagRequest", function() {
         "gta.createBlip=" + ((globalEnv.gta && typeof globalEnv.gta.createBlip === "function") ? "yes" : "no"),
         "createBlip=" + (typeof globalEnv.createBlip === "function" ? "yes" : "no"),
         "addBlip=" + (typeof globalEnv.addBlip === "function" ? "yes" : "no"),
-        "addBlipForCoord=" + (typeof globalEnv.addBlipForCoord === "function" ? "yes" : "no"),
+        "addBlipForCoord=" + (hasNativeBlipFunction("addBlipForCoord") ? "yes" : "no"),
         "createMapBlip=" + (typeof globalEnv.createMapBlip === "function" ? "yes" : "no")
     ].join(" ");
 

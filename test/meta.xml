@@ -1,0 +1,15 @@
+<meta>
+
+<info title="test" author="Gustavo" version="1.0" />
+
+<!-- Shared Scripts -->
+<script language="javascript" type="server" src="shared/GTAIVVehicles.js" />
+<script language="javascript" type="client" src="shared/GTAIVVehicles.js" />
+
+<!-- Server Scripts -->
+<script language="javascript" type="server" src="server/server.js" />
+
+<!-- Client Scripts -->
+<script language="javascript" type="client" src="client/taxipassenger.js" />
+
+</meta>

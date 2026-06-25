@@ -1,1 +1,32 @@
-﻿[]
+﻿[
+	{
+		"name": "Noob Player",
+		"ip": "172.29.223.195",
+		"token": "iksXX0wNKLgG9sDnNbharGwOtrc2jw50nT4bbMktHgmFoehXw2J3fVQ1ZSWtZZvBa4hzjYCK9cIvg2HnxcOVNr4yd4o8wJl4txuz6ryeJJzjNYUcl2R1mGk7ULUYGIru",
+		"bans": null,
+		"trainers": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"weapons": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"admin": null
+	},
+	{
+		"name": "Noob",
+		"ip": "10.180.161.88",
+		"token": "",
+		"bans": null,
+		"trainers": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"weapons": {
+			"status": true,
+			"addedBy": "System"
+		},
+		"admin": null
+	}
+]

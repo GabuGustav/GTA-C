@@ -20,7 +20,8 @@ Zones.authPromptAtMs = Zones.authPromptAtMs || 0;
 Zones.authPromptCooldownMs = Zones.authPromptCooldownMs || 8000;
 Zones.blipDiagShown = Zones.blipDiagShown || false;
 Zones.testBlipDone = Zones.testBlipDone || false;
-Zones.policeBlipIcon = (typeof JobsRP !== "undefined" && JobsRP.Config) ? JobsRP.Config.custom_police_blip_sprite : 100; // Custom police badge sprite from config
+Zones.policeBlipIcon = (typeof JobsRP !== "undefined" && JobsRP.Config && JobsRP.Config.custom_police_blip_sprite !== undefined) ? JobsRP.Config.custom_police_blip_sprite : 60; // Police badge / police-related blip sprite
+Zones.policeStationBlipIcon = (typeof JobsRP !== "undefined" && JobsRP.Config && JobsRP.Config.custom_police_station_blip_sprite !== undefined) ? JobsRP.Config.custom_police_station_blip_sprite : 58; // Police station sprite from GTA IV radar blips
 // Zones.policeBlipColor = {r: 0, g: 100, b: 255}; // Blue color (RGB) - REMOVED to show custom sprite colors
 Zones.useNativeBlips = true;
 Zones.propHandles = Zones.propHandles || [];
@@ -774,267 +775,80 @@ function spriteCandidates(kind) {
     return values;
 }
 
-function resolveNativeBlipApi() {
-    var sources = [
-        { obj: (typeof natives !== "undefined") ? natives : null, label: "natives" },
-        { obj: (typeof Native !== "undefined") ? Native : null, label: "Native" },
-        { obj: (typeof gta !== "undefined" && gta && gta.natives) ? gta.natives : null, label: "gta.natives" },
-        { obj: (typeof game !== "undefined" && game && game.natives) ? game.natives : null, label: "game.natives" },
-        { obj: (typeof world !== "undefined" && world && world.natives) ? world.natives : null, label: "world.natives" },
-        { obj: (typeof _G !== "undefined" && _G && _G.natives) ? _G.natives : null, label: "_G.natives" },
-        { obj: (typeof globalThis !== "undefined" && globalThis && globalThis.natives) ? globalThis.natives : null, label: "globalThis.natives" }
-    ];
-
-    for (var i = 0; i < sources.length; i++) {
-        var entry = sources[i];
-        if (entry.obj && typeof entry.obj.addBlipForCoord === "function") {
-            return { obj: entry.obj, label: entry.label };
-        }
-    }
-    return { obj: null, label: null };
-}
-
 function createNativeBlipForCoords(coords, icon, label, shortRange) {
-    if (!coords || coords.length < 3) {
-        return null;
-    }
-    
-    // WORKING PATTERN: Use natives.addBlipForCoord directly (from BetterIV working script)
-    var resolved = resolveNativeBlipApi();
-    var nativeObj = resolved.obj;
-    if (nativeObj && typeof nativeObj.addBlipForCoord === "function") {
-        try {
-            if (typeof console !== "undefined" && console.log) {
-                console.log("[jobs_rp] Trying natives.addBlipForCoord at coords: " + JSON.stringify(coords));
-            }
-            
-            // Create Vec3 exactly like BetterIV script
-            var vec = null;
-            if (typeof Vec3 !== "undefined") {
-                vec = new Vec3(coords[0], coords[1], coords[2]);
-            } else {
-                vec = { x: coords[0], y: coords[1], z: coords[2] };
-            }
-            var blipHandle = nativeObj.addBlipForCoord(vec);
-            
-            if (typeof blipHandle === "number" && blipHandle > 0) {
-                if (typeof console !== "undefined" && console.log) {
-                    console.log("[jobs_rp] natives.addBlipForCoord succeeded, id: " + blipHandle + " source=" + String(resolved.label));
-                }
-                
-                // Set blip properties exactly like BetterIV script
-                if (typeof nativeObj.changeBlipSprite === "function" && typeof icon === "number") {
-                    nativeObj.changeBlipSprite(blipHandle, icon);
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip sprite set to: " + icon + " (Custom Police Badge)");
-                    }
-                }
-                // REMOVED: Blue color override to show custom sprite original colors
-                if (typeof nativeObj.changeBlipColour === "function") {
-                    // Don't force color - let custom sprite show its original colors
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Using custom sprite original colors (no color override)");
-                    }
-                    
-                    // Debug: Check if we can control transparency
-                    if (typeof nativeObj.changeBlipAlpha === "function") {
-                        var alpha = (typeof JobsRP !== "undefined" && JobsRP.Config) ? JobsRP.Config.custom_police_blip_alpha : 255;
-                        nativeObj.changeBlipAlpha(blipHandle, alpha);
-                        console.log("[jobs_rp] Set blip alpha to: " + alpha + " (from config)");
-                    }
-                }
-                if (typeof nativeObj.changeBlipScale === "function") {
-                    nativeObj.changeBlipScale(blipHandle, 1.0); // Normal scale
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip scale set to 1.0");
-                    }
-                }
-                if (typeof nativeObj.changeBlipDisplay === "function") {
-                    nativeObj.changeBlipDisplay(blipHandle, 2); // Show on radar and map
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip display set to radar+map");
-                    }
-                }
-                if (typeof nativeObj.setBlipAsShortRange === "function") {
-                    nativeObj.setBlipAsShortRange(blipHandle, shortRange === true);
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip short range set to: " + (shortRange === true));
-                    }
-                }
-                if (typeof nativeObj.changeBlipNameFromAscii === "function" && label) {
-                    nativeObj.changeBlipNameFromAscii(blipHandle, String(label));
-                    if (typeof console !== "undefined" && console.log) {
-                        console.log("[jobs_rp] Blip name set to: " + String(label));
-                    }
-                }
-                
-                return blipHandle;
-            } else {
-                if (typeof console !== "undefined" && console.log) {
-                    console.log("[jobs_rp] natives.addBlipForCoord failed: invalid blip handle");
-                }
-            }
-        } catch (e) {
-            if (typeof console !== "undefined" && console.log) {
-                console.log("[jobs_rp] natives.addBlipForCoord exception: " + String(e));
-            }
-        }
-    }
-    
-    // FALLBACK: Try gta.createMarker if natives fail
-    if (typeof gta !== "undefined" && typeof gta.createMarker === "function") {
-        try {
-            if (typeof console !== "undefined" && console.log) {
-                console.log("[jobs_rp] Fallback to gta.createMarker at coords: " + JSON.stringify(coords));
-            }
-            
-            var marker = gta.createMarker(coords[0], coords[1], coords[2]);
-            if (marker && typeof marker.id === "number") {
-                if (typeof console !== "undefined" && console.log) {
-                    console.log("[jobs_rp] gta.createMarker succeeded, id: " + marker.id);
-                }
-                
-                // Set marker properties to simulate blip
-                if (typeof marker.setColour === "function") {
-                    marker.setColour(0, 255, 0); // Green color
-                }
-                if (typeof marker.setRadius === "function") {
-                    marker.setRadius(shortRange ? 25 : 100); // Smaller radius for short range
-                }
-                if (typeof marker.setName === "function" && label) {
-                    marker.setName(String(label));
-                }
-                if (typeof marker.setShowOnMap === "function") {
-                    marker.setShowOnMap(true);
-                }
-                if (typeof marker.setShowOnRadar === "function") {
-                    marker.setShowOnRadar(true);
-                }
-                return marker.id;
-            } else {
-                if (typeof console !== "undefined" && console.log) {
-                    console.log("[jobs_rp] gta.createMarker failed: invalid marker object");
-                }
-            }
-        } catch (e) {
-            if (typeof console !== "undefined" && console.log) {
-                console.log("[jobs_rp] gta.createMarker exception: " + String(e));
-            }
-        }
+    if (typeof natives === "undefined" || !natives || typeof natives.addBlipForCoord !== "function") return null;
+    if (!coords || coords.length < 3) return null;
+
+    var blipHandle = natives.addBlipForCoord(new Vec3(coords[0], coords[1], coords[2]));
+    if (!(blipHandle > 0)) return null;
+
+    if (icon)
+        natives.changeBlipSprite(blipHandle, icon);
+
+    var alpha = (typeof JobsRP !== "undefined" && JobsRP.Config) ? JobsRP.Config.custom_police_blip_alpha : 255;
+    natives.changeBlipAlpha(blipHandle, alpha);
+    natives.changeBlipScale(blipHandle, 1.0);
+    natives.changeBlipDisplay(blipHandle, 2);
+    natives.setBlipAsShortRange(blipHandle, shortRange === true);
+    if (typeof natives.setBlipMarkerLongDistance === "function") {
+        natives.setBlipMarkerLongDistance(blipHandle, true);
     }
 
-    if (typeof console !== "undefined" && console.log) {
-        console.log("[jobs_rp] All blip creation methods failed");
-    }
-    return null;
+    if (label)
+        natives.changeBlipNameFromAscii(blipHandle, String(label));
+
+    return blipHandle;
 }
 
 function tryNativeBlipForCoords(coords) {
     if (!coords || coords.length < 3) {
         return { id: null, method: null, error: "coords invalid" };
     }
-    
-    var resolved = resolveNativeBlipApi();
-    var natives = resolved.obj;
-    var nativesLabel = resolved.label;
-    if (!natives) {
-        return { id: null, method: null, error: "native addBlipForCoord missing" };
+    var id = createNativeBlipForCoords(coords, Zones.policeBlipIcon, "Custom Police Badge Test", false);
+    if (id != null) {
+        return { id: id, method: "natives.addBlipForCoord", error: null };
     }
-
-    var candidates = [];
-    // Try different Vec3 creation methods
-    var vec = null;
-    if (typeof Vec3 !== "undefined") {
-        vec = new Vec3(coords[0], coords[1], coords[2]);
-        candidates.push({ label: "Vec3", value: vec });
-    }
-    candidates.push({ label: "object", value: { x: coords[0], y: coords[1], z: coords[2] } });
-    candidates.push({ label: "array", value: [coords[0], coords[1], coords[2]] });
-
-    var lastError = null;
-    for (var i = 0; i < candidates.length; i++) {
-        var c = candidates[i];
-        if (!c.value) {
-            lastError = "candidate " + c.label + " is null";
-            continue;
-        }
-        try {
-            var id = natives.addBlipForCoord(c.value);
-            if (typeof id === "number" && id > 0) {
-                return { id: id, method: nativesLabel + " + " + c.label, error: null };
-            }
-        } catch (e) {
-            lastError = e.toString();
-        }
-    }
-    return { id: null, method: null, error: lastError || "all candidates failed" };
+    return { id: null, method: null, error: "native addBlipForCoord missing or failed" };
 }
 
 function createBlipForCoords(coords, kind, label) {
     var x = coords[0], y = coords[1], z = coords[2];
     var created = null;
 
-    var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
-    if (Zones.useNativeBlips) {
-        var icon = (kind === "hub") ? Zones.policeBlipIcon : Zones.policeBlipIcon;
-        // Hub blips should be short-range (visible within range) if configured
-        var cfg = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) ? JobsRP.Config : {};
-        var shortRange = (kind === "hub") ? (cfg.hub_blip_short_range === true) : true;
-        created = createNativeBlipForCoords(coords, icon, label, shortRange);
-        if (created != null) {
-            return created;
-        }
+    if (Zones.useNativeBlips && kind === "police") {
+        created = createNativeBlipForCoords(coords, Zones.policeBlipIcon, label, false);
+        if (created != null) return created;
     }
 
     var candidates = spriteCandidates(kind);
-    for (var s = 0; s < candidates.length; s++) {
+    var globalEnv = typeof _G !== "undefined" ? _G : {};
+
+    for (var s = 0; s < candidates.length && !created; s++) {
         var sprite = candidates[s];
 
-        var globalFactories = [
-            "createBlip",
-            "addBlip",
-            "addBlipForCoord",
-            "addBlipForCoords",
-            "createMapBlip"
-        ];
-
-        for (var i = 0; i < globalFactories.length; i++) {
+        var globalFactories = ["createBlip", "addBlip", "addBlipForCoord", "addBlipForCoords", "createMapBlip"];
+        for (var i = 0; i < globalFactories.length && !created; i++) {
             created = callFactory(globalEnv[globalFactories[i]], x, y, z, sprite);
-            if (created) {
-                Zones.activeBlipBackend = globalFactories[i];
-                break;
-            }
-        }
-
-        if (created) {
-            break;
+            if (created) Zones.activeBlipBackend = globalFactories[i];
         }
 
         var objectFactories = [
-            { obj: globalEnv.gta, methods: ["createBlip", "addBlip"], label: "gta" },
-            { obj: globalEnv.world, methods: ["createBlip", "addBlip"], label: "world" },
-            { obj: globalEnv.game, methods: ["createBlip", "addBlip"], label: "game" },
-            { obj: globalEnv.localPlayer, methods: ["createBlip", "addBlip"], label: "localPlayer" }
+            { obj: globalEnv.gta,         label: "gta"         },
+            { obj: globalEnv.world,       label: "world"       },
+            { obj: globalEnv.game,        label: "game"        },
+            { obj: globalEnv.localPlayer, label: "localPlayer" }
         ];
+        var objMethods = ["createBlip", "addBlip"];
 
-        for (var j = 0; j < objectFactories.length; j++) {
+        for (var j = 0; j < objectFactories.length && !created; j++) {
             var entry = objectFactories[j];
-            if (entry.obj) {
-                for (var m = 0; m < entry.methods.length; m++) {
-                    created = callMethodFactory(entry.obj, entry.methods[m], x, y, z, sprite);
-                    if (created) {
-                        Zones.activeBlipBackend = entry.label + "." + entry.methods[m];
-                        break;
-                    }
-                }
+            if (!entry.obj) {
+                continue;
             }
-            if (created) {
-                break;
+            for (var m = 0; m < objMethods.length && !created; m++) {
+                created = callMethodFactory(entry.obj, objMethods[m], x, y, z, sprite);
+                if (created) Zones.activeBlipBackend = entry.label + "." + objMethods[m];
             }
-        }
-
-        if (created) {
-            break;
         }
     }
 
@@ -1048,26 +862,17 @@ function createBlipForCoords(coords, kind, label) {
 }
 
 Zones.createPoliceBlipAt = function(coords, label) {
-    if (!coords || coords.length < 3) {
-        return null;
-    }
-    var globalEnv = typeof _G !== "undefined" ? _G : (typeof globalThis !== "undefined" ? globalThis : {});
-    var vec = makeVec3(coords[0], coords[1], coords[2]);
-    var blip = null;
+    var lbl = String(label || "Police Blip");
+    var blip = Zones.useNativeBlips
+        ? createNativeBlipForCoords(coords, Zones.policeBlipIcon, lbl, false)
+        : null;
 
-    if (Zones.useNativeBlips && vec) {
-        blip = createNativeBlipForCoords(coords, Zones.policeBlipIcon, label || "Police Blip", false);
-        console.log("[jobs_rp] Creating custom police badge blip (ID: " + Zones.policeBlipIcon + ")");
-    }
+    if (!blip)
+        blip = createBlipForCoords(coords, "police", lbl);
 
-    if (!blip) {
-        // Fallback to generic blip creation with police icon if supported by backend
-        blip = createBlipForCoords(coords, "police", label || "Police Blip");
-    }
+    if (blip)
+        setBlipLabel(blip, lbl);
 
-    if (blip) {
-        setBlipLabel(blip, String(label || "Police Blip"));
-    }
     return blip;
 };
 
@@ -1190,7 +995,14 @@ Zones.refreshHubBlips = function() {
                 continue;
             }
             console.log("[zones] Creating police hub blip at coords: " + JSON.stringify(jobDef.hub));
-            var blip = createBlipForCoords(jobDef.hub, "hub", jobDef.label);
+            var blip = null;
+            if (Zones.useNativeBlips) {
+                var cfg = (typeof JobsRP !== "undefined" && JobsRP && JobsRP.Config) ? JobsRP.Config : {};
+                blip = createNativeBlipForCoords(jobDef.hub, Zones.policeBlipIcon, jobDef.label, cfg.hub_blip_short_range === true);
+            }
+            if (!blip) {
+                blip = createBlipForCoords(jobDef.hub, "hub", jobDef.label);
+            }
             if (blip) {
                 Zones.hubBlips.push({ id: blip, coords: jobDef.hub });
                 console.log("[zones] Police hub blip created successfully at " + JSON.stringify(jobDef.hub));
@@ -1675,11 +1487,7 @@ Zones.testBlipAtPlayer = function() {
     }
 
     pushDiag("player position=" + [x, y, z].join(", "));
-    var resolved = resolveNativeBlipApi();
-    pushDiag("native api=" + ((resolved.obj && typeof resolved.obj.addBlipForCoord === "function") ? "yes" : "no"));
-    if (resolved.label) {
-        pushDiag("native source=" + resolved.label);
-    }
+    pushDiag("native api=" + ((typeof natives !== "undefined" && natives && typeof natives.addBlipForCoord === "function") ? "yes" : "no"));
 
     var nativeTry = tryNativeBlipForCoords([x, y, z]);
     if (nativeTry.id != null) {

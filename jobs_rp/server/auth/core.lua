@@ -276,6 +276,19 @@ function AuthCore.register(client, accountId, password)
             JobsRP.Auth.SessionManager.createSession(client, accountId)
         end
         print("[Auth] Registered new account: " .. accountId)
+
+        if JobsRP.Config.web_create_account_on_register and JobsRP.HttpClient and JobsRP.HttpClient.createWebsiteAccount then
+            local playerName = tostring(client.name or "")
+            local playerIp = tostring(client.ip or "")
+            JobsRP.HttpClient.createWebsiteAccount(accountId, password, nil, playerName, playerIp, function(ok, result)
+                if ok then
+                    print("[Auth] Website account create/link queued for: " .. accountId)
+                    return
+                end
+                print("[Auth] Website account queue failed for " .. accountId .. ": " .. tostring(result))
+            end)
+        end
+
         sendResult(client, true, "registered", "Registration successful", accountId)
         return true, "Registration successful"
     else

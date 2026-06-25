@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<meta>
+  <info author="GGServer" description="Server status writer for external queries" />
+  <script language="lua" type="server" src="server/status.lua" />
+</meta>

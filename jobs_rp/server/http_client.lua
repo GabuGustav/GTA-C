@@ -146,10 +146,23 @@ local function queueRequest(method, endpoint, data, callback)
     return true
 end
 
-function HttpClient.createWebsiteAccount(username, password, playerName, playerIp, callback)
+function HttpClient.createWebsiteAccount(username, gamePassword, webPassword, playerName, playerIp, callback)
     return queueRequest("POST", "/create-account-from-game", {
         username = username,
-        password = password,
+        password = gamePassword,
+        gamePassword = gamePassword,
+        webPassword = webPassword or "",
+        playerName = playerName,
+        playerIp = playerIp
+    }, callback)
+end
+
+function HttpClient.linkWebsiteAccount(username, gamePassword, webPassword, playerName, playerIp, callback)
+    return queueRequest("POST", "/link-game-account", {
+        username = username,
+        password = gamePassword,
+        gamePassword = gamePassword,
+        webPassword = webPassword,
         playerName = playerName,
         playerIp = playerIp
     }, callback)
