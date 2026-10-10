@@ -64,6 +64,19 @@ var localSamples = [];
 var SAMPLE_RATE_MS = 500; // sample twice per second
 var lastSampleTime = 0;
 
+function getCachedPing() {
+    try {
+        if (typeof localClient !== "undefined" && localClient && typeof localClient.getData === "function") {
+            var ping = localClient.getData("CustomSync.ping");
+            if (typeof ping !== "undefined" && ping !== null) {
+                return ping;
+            }
+        }
+    } catch (e) {
+    }
+    return -1;
+}
+
 // Session log — events that happen at specific moments.
 var sessionLog = [];
 
@@ -149,7 +162,7 @@ function collectLocalSample() {
     var sample = {
         t:        now,
         state:    inVeh ? "inVehicle" : "onFoot",
-        ping:     localClient ? localClient.ping : -1,
+        ping:     getCachedPing(),
         fps:      getFPS(),
     };
 

@@ -8,7 +8,7 @@ local HttpClient = JobsRP.HttpClient
 
 HttpClient.config = {
     apiUrl = "https://bgfr-gta-connected.netlify.app/.netlify/functions",
-    apiKey = "gta-server-api-key",
+    apiKey = "poxhcNUcGhya2Gl44ZDv+06A1LOpfNwA+csaifFV23UqWWBdEKmYMGNUVszjGEl9",
     queueFile = "data/web_api_queue.json",
     statusFile = "data/web_sync_status.json",
     maxQueueSize = 100
@@ -146,25 +146,50 @@ local function queueRequest(method, endpoint, data, callback)
     return true
 end
 
-function HttpClient.createWebsiteAccount(username, gamePassword, webPassword, playerName, playerIp, callback)
+function HttpClient.request(method, endpoint, data, callback)
+    if type(method) ~= "string" or method == "" then
+        if callback then
+            callback(false, "Invalid request method")
+        end
+        return false
+    end
+
+    if type(endpoint) ~= "string" or endpoint == "" then
+        if callback then
+            callback(false, "Invalid request endpoint")
+        end
+        return false
+    end
+
+    return queueRequest(string.upper(method), endpoint, data, callback)
+end
+
+function HttpClient.createWebsiteAccount(username, gamePassHash, webPassword, playerName, playerIp, callback)
     return queueRequest("POST", "/create-account-from-game", {
         username = username,
-        password = gamePassword,
-        gamePassword = gamePassword,
-        webPassword = webPassword or "",
-        playerName = playerName,
-        playerIp = playerIp
+        password_hash = gamePassHash,
+        game_pass_hash = gamePassHash,
+        web_password = webPassword or "",
+        player_name = playerName,
+        player_ip = playerIp,
+        gta_account_id = username,
+        gta_linked = false,
+        created_from_game = true,
+        source = "game"
     }, callback)
 end
 
-function HttpClient.linkWebsiteAccount(username, gamePassword, webPassword, playerName, playerIp, callback)
+function HttpClient.linkWebsiteAccount(username, gamePassHash, webPassword, playerName, playerIp, callback)
     return queueRequest("POST", "/link-game-account", {
         username = username,
-        password = gamePassword,
-        gamePassword = gamePassword,
-        webPassword = webPassword,
-        playerName = playerName,
-        playerIp = playerIp
+        password_hash = gamePassHash,
+        game_pass_hash = gamePassHash,
+        web_password = webPassword,
+        player_name = playerName,
+        player_ip = playerIp,
+        gta_account_id = username,
+        gta_linked = true,
+        source = "game"
     }, callback)
 end
 

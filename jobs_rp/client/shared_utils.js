@@ -63,13 +63,14 @@ Utils.sendServerSafe = function(eventName, data) {
 };
 
 // Safe network event triggering with fallbacks
-Utils.triggerNetworkEventSafe = function(eventName, data) {
+Utils.triggerNetworkEventSafe = function(eventName) {
     try {
         if (typeof triggerNetworkEvent === "function") {
-            triggerNetworkEvent(eventName, data);
-            return true;
-        } else if (typeof triggerClientEvent === "function") {
-            triggerClientEvent(eventName, data);
+            var args = [eventName];
+            for (var i = 1; i < arguments.length; i++) {
+                args.push(arguments[i]);
+            }
+            triggerNetworkEvent.apply(null, args);
             return true;
         } else {
             console.log("[SharedUtils] No network event function available for: " + eventName);

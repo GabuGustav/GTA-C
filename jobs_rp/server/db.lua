@@ -22,7 +22,9 @@ local function log(...)
     for i = 1, select("#", ...) do
         parts[#parts + 1] = tostring(select(i, ...))
     end
-    print(table.concat(parts, " "))
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(table.concat(parts, " "))
+    end
 end
 
 local function safeIdentifier(raw, fallback)
@@ -39,6 +41,10 @@ local function hasNativeDbApi()
         and type(dbExec) == "function"
         and type(dbQuery) == "function"
         and type(dbPoll) == "function"
+end
+
+local function hasHttpClient()
+    return JobsRP.HttpClient and type(JobsRP.HttpClient.request) == "function"
 end
 
 local function unpackTable(values, index)
@@ -142,6 +148,70 @@ local function encodePayload(record)
     return encoded
 end
 
+local function localRecordPath(kind, accountId)
+    local baseDir = kind == "profile"
+        and tostring(cfg("profiles_dir", "data/profiles"))
+        or tostring(cfg("accounts_dir", "data/accounts"))
+    return baseDir .. "/" .. safeIdentifier(accountId, "unknown") .. ".json"
+end
+
+local function loadLocalRecord(kind, accountId)
+    local path = localRecordPath(kind, accountId)
+    local raw = nil
+
+    if loadTextFile then
+        local ok, result = pcall(loadTextFile, path)
+        if ok then
+            raw = result
+        end
+    end
+
+    if (not raw or raw == "") and io and io.open then
+        local file = io.open(path, "r")
+        if file then
+            raw = file:read("*a")
+            file:close()
+        end
+    end
+
+    if not raw or raw == "" then
+        return nil
+    end
+
+    local ok, decoded = pcall(JobsRP.Json.decode, raw)
+    if ok and type(decoded) == "table" then
+        return decoded
+    end
+
+    return nil
+end
+
+local function saveLocalRecord(kind, accountId, record)
+    local path = localRecordPath(kind, accountId)
+    local payload = encodePayload(record)
+    if not payload then
+        return false
+    end
+
+    if saveTextFile then
+        local ok = pcall(saveTextFile, path, payload)
+        if ok then
+            return true
+        end
+    end
+
+    if io and io.open then
+        local file = io.open(path, "w")
+        if file then
+            file:write(payload)
+            file:close()
+            return true
+        end
+    end
+
+    return false
+end
+
 local function ensureSchema()
     local accountOk = exec(
         "CREATE TABLE IF NOT EXISTS `" .. DB.accountsTable .. "` (" ..
@@ -235,6 +305,10 @@ function DB.accountExists(accountId)
         return false
     end
 
+    if DB.connection == "supabase" then
+        return loadLocalRecord("account", key) ~= nil
+    end
+
     local ok, rows = query(
         "SELECT account_id FROM `" .. DB.accountsTable .. "` WHERE account_id = ? LIMIT 1",
         key
@@ -256,6 +330,20 @@ function DB.loadAccount(accountId)
         return nil
     end
 
+    if DB.connection == "supabase" then
+        local record = loadLocalRecord("account", key)
+        if not record then
+            return nil
+        end
+        if record.payload then
+            local decoded = decodePayload(record.payload)
+            if decoded then
+                return decoded
+            end
+        end
+        return record
+    end
+
     local ok, rows = query(
         "SELECT payload FROM `" .. DB.accountsTable .. "` WHERE account_id = ? LIMIT 1",
         key
@@ -275,6 +363,34 @@ function DB.saveAccount(accountId, record)
     local key = tostring(accountId or "")
     if key == "" then
         return false
+    end
+
+    if DB.connection == "supabase" then
+        local payload = encodePayload(record)
+        if not payload then
+            return false
+        end
+
+        local cacheRecord = {
+            account_id = key,
+            payload = payload,
+            updated_at = JobsRP.nowSeconds()
+        }
+
+        if not saveLocalRecord("account", key, cacheRecord) then
+            return false
+        end
+
+        if hasHttpClient() then
+            JobsRP.HttpClient.request("POST", "/supabase/upsert", {
+                table = DB.accountsTable,
+                account_id = key,
+                payload = payload,
+                updated_at = cacheRecord.updated_at
+            })
+        end
+
+        return true
     end
 
     local payload = encodePayload(record)
@@ -302,6 +418,20 @@ function DB.loadProfile(accountId)
         return nil
     end
 
+    if DB.connection == "supabase" then
+        local record = loadLocalRecord("profile", key)
+        if not record then
+            return nil
+        end
+        if record.payload then
+            local decoded = decodePayload(record.payload)
+            if decoded then
+                return decoded
+            end
+        end
+        return record
+    end
+
     local ok, rows = query(
         "SELECT payload FROM `" .. DB.profilesTable .. "` WHERE account_id = ? LIMIT 1",
         key
@@ -321,6 +451,34 @@ function DB.saveProfile(accountId, record)
     local key = tostring(accountId or "")
     if key == "" then
         return false
+    end
+
+    if DB.connection == "supabase" then
+        local payload = encodePayload(record)
+        if not payload then
+            return false
+        end
+
+        local cacheRecord = {
+            account_id = key,
+            payload = payload,
+            updated_at = JobsRP.nowSeconds()
+        }
+
+        if not saveLocalRecord("profile", key, cacheRecord) then
+            return false
+        end
+
+        if hasHttpClient() then
+            JobsRP.HttpClient.request("POST", "/supabase/upsert", {
+                table = DB.profilesTable,
+                account_id = key,
+                payload = payload,
+                updated_at = cacheRecord.updated_at
+            })
+        end
+
+        return true
     end
 
     local payload = encodePayload(record)
@@ -361,75 +519,58 @@ end
 function DB.initSupabase()
     local supabaseUrl = tostring(cfg("supabase_url", ""))
     local supabaseKey = tostring(cfg("supabase_key", ""))
-    local serviceKey = tostring(cfg("supabase_service_key", ""))
+    local serviceKey = tostring(cfg("supabase_service_role", cfg("supabase_service_key", "")))
     
     if supabaseUrl == "" or supabaseKey == "" or serviceKey == "" then
         DB.lastError = "Supabase configuration missing (url, key, or service_key)"
         log(DB.lastError)
         return false
     end
-    
-    -- Test connection by making a simple request
-    local testUrl = supabaseUrl .. "/rest/v1/" .. DB.accountsTable .. "?select=count&limit=1"
-    local success, response = makeHttpRequest(testUrl, "GET")
-    
-    if not success then
-        DB.lastError = "Supabase connection failed: " .. tostring(response)
-        log(DB.lastError)
-        return false
-    end
-    
-    DB.connection = "supabase"  -- Mark as connected
+
+    DB.connection = "supabase"
+    local prefix = safeIdentifier(cfg("db_table_prefix", "jobs_rp_"), "jobs_rp_")
+    DB.accountsTable = prefix .. "accounts"
+    DB.profilesTable = prefix .. "profiles"
     DB.ready = true
-    log("Supabase database initialized successfully")
+    if not hasHttpClient() then
+        log("Supabase cache initialized; HttpClient bridge not yet available")
+    end
+    log("Supabase backend configured")
     return true
 end
 
 function DB.supabaseUpsert(table, key, payload)
-    local supabaseUrl = tostring(cfg("supabase_url", ""))
-    if supabaseUrl == "" then
-        return false
-    end
-    
+    local kind = table == DB.profilesTable and "profile" or "account"
     local now = JobsRP.nowSeconds()
-    local data = {
+    local cacheRecord = {
         account_id = key,
         payload = payload,
         updated_at = now
     }
-    
-    local url = supabaseUrl .. "/rest/v1/" .. table
-    local body = JobsRP.Json.encode(data)
-    
-    -- Use POST for upsert (Supabase supports upsert via POST with on conflict)
-    local headers = {
-        ["Prefer"] = "resolution=merge-duplicates"
-    }
-    
-    local success, response = makeHttpRequest(url, "POST", headers, body)
-    return success
+
+    if not saveLocalRecord(kind, key, cacheRecord) then
+        return false
+    end
+
+    if hasHttpClient() then
+        JobsRP.HttpClient.request("POST", "/supabase/upsert", {
+            table = table,
+            account_id = key,
+            payload = payload,
+            updated_at = now
+        })
+    end
+
+    return true
 end
 
 function DB.supabaseGet(table, key)
-    local supabaseUrl = tostring(cfg("supabase_url", ""))
-    if supabaseUrl == "" then
+    local kind = table == DB.profilesTable and "profile" or "account"
+    local record = loadLocalRecord(kind, key)
+    if not record then
         return false, nil
     end
-    
-    local url = supabaseUrl .. "/rest/v1/" .. table .. "?account_id=eq." .. key .. "&limit=1"
-    local success, response = makeHttpRequest(url, "GET")
-    
-    if not success then
-        return false, nil
-    end
-    
-    -- Parse response
-    local ok, data = pcall(JobsRP.Json.decode, response)
-    if not ok or type(data) ~= "table" or #data == 0 then
-        return false, nil
-    end
-    
-    return true, data[1]
+    return true, record
 end
 
 -- Override functions for Supabase
@@ -443,7 +584,13 @@ if cfg("storage_backend", "json") == "supabase" then
         if not success or not record then
             return nil
         end
-        return decodePayload(record.payload)
+        if record.payload then
+            local decoded = decodePayload(record.payload)
+            if decoded then
+                return decoded
+            end
+        end
+        return record
     end
     
     DB.setProfile = function(key, payload)
@@ -455,6 +602,12 @@ if cfg("storage_backend", "json") == "supabase" then
         if not success or not record then
             return nil
         end
-        return decodePayload(record.payload)
+        if record.payload then
+            local decoded = decodePayload(record.payload)
+            if decoded then
+                return decoded
+            end
+        end
+        return record
     end
 end

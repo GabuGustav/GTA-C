@@ -6,6 +6,12 @@ JobsRP.JobStats = JobsRP.JobStats or {}
 
 local JobStats = JobsRP.JobStats
 
+local function debugPrint(...)
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 -- Load time statistics module in runtimes where global require may be unavailable.
 local function safeRequire(moduleName)
     if type(require) == "function" then
@@ -49,7 +55,7 @@ end
 local TimeStats = safeRequire("time_stats")
 if TimeStats then
     JobsRP.TimeStats = TimeStats
-    print("[JobStats] Time statistics module loaded")
+    debugPrint("[JobStats] Time statistics module loaded")
 else
     print("[JobStats] Failed to load time statistics module")
 end
@@ -555,7 +561,7 @@ end
 
 -- Initialize the job stats system
 function JobStats.init()
-    print("[JobStats] Initializing job statistics system")
+    debugPrint("[JobStats] Initializing job statistics system")
     
     -- Set up periodic time updates (every 5 minutes)
     if setInterval then
@@ -633,7 +639,7 @@ function JobStats.init()
         print("[JobStats] ERROR: setInterval not available - playtime rewards disabled")
     end
     
-    print("[JobStats] Job statistics system loaded with playtime rewards")
+    debugPrint("[JobStats] Job statistics system loaded with playtime rewards")
 end
 
 -- Initialize on load
@@ -643,4 +649,4 @@ JobStats.init()
 print("[JobStats] AUTO-RESETTING ACCOUNTS FOR NEW PLAYTIME XP SYSTEM...")
 JobStats.resetAllAccounts()
 
-print("[JobStats] Job stats module loaded")
+debugPrint("[JobStats] Job stats module loaded")

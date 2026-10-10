@@ -4,6 +4,12 @@
 
 UniversalSync = {}
 
+local function debugPrint(...)
+    if JobsRP and JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 -- Global sync state
 UniversalSync.playerStates = {}
 UniversalSync.entityStates = {}
@@ -11,7 +17,7 @@ UniversalSync.serverTick = 0
 UniversalSync.baseDelay = 100 -- Base compensation delay in ms
 
 function UniversalSync.init()
-    print("[UniversalSync] Initializing universal sync system")
+    debugPrint("[UniversalSync] Initializing universal sync system")
     
     -- Register event handlers
     addEventHandler("OnPlayerJoined", UniversalSync.onPlayerJoin)
@@ -24,9 +30,9 @@ function UniversalSync.init()
     addNetworkHandler("sync_requestState", function(client, data)
         UniversalSync.onStateRequest(client, data)
     end)
-    print("[UniversalSync] Network handlers registered")
+    debugPrint("[UniversalSync] Network handlers registered")
     
-    print("[UniversalSync] Universal sync initialized")
+    debugPrint("[UniversalSync] Universal sync initialized")
 end
 
 function UniversalSync.onPlayerJoin(client)
@@ -41,11 +47,11 @@ function UniversalSync.onPlayerJoin(client)
         playtimeInitialized = false
     }
     
-    print("[UniversalSync] Player joined: " .. (client.name or "Unknown") .. " with ping: " .. (client.ping or 100))
+    debugPrint("[UniversalSync] Player joined: " .. (client.name or "Unknown") .. " with ping: " .. (client.ping or 100))
     
     -- Delay playtime tracking initialization to wait for authentication
     if JobsRP and JobsRP.JobStats then
-        print("[UniversalSync] DEBUG: Scheduling delayed playtime tracking initialization...")
+        debugPrint("[UniversalSync] DEBUG: Scheduling delayed playtime tracking initialization...")
         
         -- Schedule delayed initialization (5 seconds after join)
         if setTimeout then
@@ -57,7 +63,7 @@ function UniversalSync.onPlayerJoin(client)
             UniversalSync.initializePlaytimeTrackingImmediate(client)
         end
     else
-        print("[UniversalSync] DEBUG: JobsRP.JobStats not available")
+        debugPrint("[UniversalSync] DEBUG: JobsRP.JobStats not available")
     end
     
     -- Send current server state immediately
@@ -67,11 +73,11 @@ end
 -- Delayed initialization function
 function UniversalSync.initializePlaytimeTrackingDelayed(client)
     if not client or not UniversalSync.playerStates[client] then
-        print("[UniversalSync] DEBUG: Client no longer valid for delayed initialization")
+        debugPrint("[UniversalSync] DEBUG: Client no longer valid for delayed initialization")
         return
     end
     
-    print("[UniversalSync] DEBUG: Running delayed playtime tracking initialization...")
+    debugPrint("[UniversalSync] DEBUG: Running delayed playtime tracking initialization...")
     
     -- Get accountId from Auth system or fallback to Store system
     local accountId = nil
@@ -79,35 +85,35 @@ function UniversalSync.initializePlaytimeTrackingDelayed(client)
     -- Try Auth system first
     if JobsRP.Auth and JobsRP.Auth.getAccountId then
         accountId = JobsRP.Auth.getAccountId(client)
-        print("[UniversalSync] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
+        debugPrint("[UniversalSync] DEBUG: Auth.getAccountId returned: " .. tostring(accountId))
     end
     
     -- Fallback: Try Store system if Auth fails
     if not accountId and JobsRP.Store and JobsRP.Store.getPlayerId then
         accountId = JobsRP.Store.getPlayerId(client)
-        print("[UniversalSync] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
+        debugPrint("[UniversalSync] DEBUG: Store.getPlayerId returned: " .. tostring(accountId))
     end
     
     -- Final fallback: only allowed when auth is not required.
     if not accountId and client.name and not (JobsRP and JobsRP.Config and JobsRP.Config.auth_required == true) then
         accountId = JobsRP.normalizeName(client.name)
-        print("[UniversalSync] DEBUG: Using player name as accountId: " .. accountId)
+        debugPrint("[UniversalSync] DEBUG: Using player name as accountId: " .. accountId)
         
         -- Attach to Store system if not already attached
         if JobsRP.Store and JobsRP.Store.attachPlayerAccount then
             JobsRP.Store.attachPlayerAccount(client, accountId)
-            print("[UniversalSync] DEBUG: Attached player to Store with accountId: " .. accountId)
+            debugPrint("[UniversalSync] DEBUG: Attached player to Store with accountId: " .. accountId)
         end
     end
     
     if accountId then
-        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has accountId: " .. accountId)
+        debugPrint("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has accountId: " .. accountId)
         JobsRP.JobStats.initPlayerSession(accountId)
         JobsRP.JobStats.initPlayerStats(accountId, "civilian")
         UniversalSync.playerStates[client].playtimeInitialized = true
-        print("[UniversalSync] DEBUG: Playtime tracking initialized successfully for " .. accountId)
+        debugPrint("[UniversalSync] DEBUG: Playtime tracking initialized successfully for " .. accountId)
     else
-        print("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId - giving up after retries")
+        debugPrint("[UniversalSync] DEBUG: Player " .. (client.name or "Unknown") .. " has no accountId - giving up after retries")
         -- Stop retrying to prevent infinite loop
         UniversalSync.playerStates[client].playtimeInitialized = false
     end
@@ -115,7 +121,7 @@ end
 
 -- Immediate initialization fallback
 function UniversalSync.initializePlaytimeTrackingImmediate(client)
-    print("[UniversalSync] DEBUG: Running immediate playtime tracking initialization...")
+    debugPrint("[UniversalSync] DEBUG: Running immediate playtime tracking initialization...")
     
     -- Get accountId from Auth system or fallback to Store system
     local accountId = nil
@@ -403,4 +409,4 @@ end
 -- Initialize the system
 UniversalSync.init()
 
-print("[UniversalSync] Universal sync system loaded successfully")
+debugPrint("[UniversalSync] Universal sync system loaded successfully")

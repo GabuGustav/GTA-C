@@ -6,9 +6,15 @@ JobsRP.WebIntegration = JobsRP.WebIntegration or {}
 
 local WebIntegration = JobsRP.WebIntegration
 
+local function debugPrint(...)
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 -- Initialize web integration system
 function WebIntegration.init(config)
-    print("[WebIntegration] Initializing web integration system...")
+    debugPrint("[WebIntegration] Initializing web integration system...")
     
     -- Set default configuration
     WebIntegration.config = {
@@ -39,13 +45,13 @@ function WebIntegration.init(config)
             apiUrl = WebIntegration.config.apiUrl,
             apiKey = WebIntegration.config.apiKey
         })
-        print("[WebIntegration] HTTP client initialized")
+        debugPrint("[WebIntegration] HTTP client initialized")
     end
     
     -- Initialize job stats if enabled
     if WebIntegration.config.enableStats and JobsRP.JobStats then
         JobsRP.JobStats.init()
-        print("[WebIntegration] Job stats initialized")
+        debugPrint("[WebIntegration] Job stats initialized")
     end
     
     -- Initialize sync scheduler if enabled
@@ -54,7 +60,7 @@ function WebIntegration.init(config)
             enabled = WebIntegration.config.enabled,
             intervalMinutes = WebIntegration.config.syncInterval
         })
-        print("[WebIntegration] Sync scheduler initialized")
+        debugPrint("[WebIntegration] Sync scheduler initialized")
     end
     
     -- Initialize account data store for local JSON backup
@@ -65,7 +71,7 @@ function WebIntegration.init(config)
             retryFailedSync = true,
             retryInterval = 60
         })
-        print("[WebIntegration] Account data store initialized")
+        debugPrint("[WebIntegration] Account data store initialized")
         
         -- Set up automatic retry of failed syncs every 2 minutes
         WebIntegration.startRetryScheduler()
@@ -76,7 +82,7 @@ function WebIntegration.init(config)
         WebIntegration.testConnection()
     end
     
-    print("[WebIntegration] Web integration system ready")
+    debugPrint("[WebIntegration] Web integration system ready")
 end
 
 -- Test connection to website API
@@ -88,9 +94,9 @@ function WebIntegration.testConnection()
     
     JobsRP.HttpClient.testConnection(function(success, response)
         if success then
-            print("[WebIntegration] Connection test successful")
+        debugPrint("[WebIntegration] Connection test successful")
             if response and response.status then
-                print("[WebIntegration] Website status: " .. response.status)
+                debugPrint("[WebIntegration] Website status: " .. response.status)
             end
         else
             print("[WebIntegration] Connection test failed: " .. tostring(response))
@@ -533,4 +539,4 @@ if JobsRP.Config and JobsRP.Config.web_integration_enabled ~= false then
     end, 2000) -- Start 2 seconds after server loads
 end
 
-print("[WebIntegration] Web integration module loaded")
+    debugPrint("[WebIntegration] Web integration module loaded")

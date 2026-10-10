@@ -1,0 +1,10 @@
+﻿{
+	"ip:127.0.0.1": {
+		"deviceId": "ip:127.0.0.1",
+		"accountId": "ggplays",
+		"label": "Game client",
+		"createdAt": 1791297366,
+		"lastSeenAt": 1791297366,
+		"newDevice": false
+	}
+}

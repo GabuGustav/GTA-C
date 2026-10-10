@@ -6,6 +6,12 @@ JobsRP.SyncScheduler = JobsRP.SyncScheduler or {}
 
 local SyncScheduler = JobsRP.SyncScheduler
 
+local function debugPrint(...)
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 -- Configuration
 SyncScheduler.config = {
     enabled = true,
@@ -40,20 +46,20 @@ function SyncScheduler.performSync()
     end
     
     if SyncScheduler.isRunning then
-        print("[SyncScheduler] Sync already in progress, skipping")
+        debugPrint("[SyncScheduler] Sync already in progress, skipping")
         return false
     end
     
     -- Check if web integration is available
     if not JobsRP.Config.web_integration_enabled or not JobsRP.HttpClient then
-        print("[SyncScheduler] Web integration not enabled or HTTP client not available")
+        debugPrint("[SyncScheduler] Web integration not enabled or HTTP client not available")
         return false
     end
     
     SyncScheduler.isRunning = true
     local startTime = JobsRP.nowMilliseconds()
     
-    print("[SyncScheduler] Starting batch synchronization...")
+    debugPrint("[SyncScheduler] Starting batch synchronization...")
     
     -- Collect all player statistics
     local allPlayerStats = {}
@@ -62,7 +68,7 @@ function SyncScheduler.performSync()
     end
     
     if #allPlayerStats == 0 then
-        print("[SyncScheduler] No player data to sync")
+        debugPrint("[SyncScheduler] No player data to sync")
         SyncScheduler.isRunning = false
         return true
     end
@@ -77,7 +83,7 @@ function SyncScheduler.performSync()
         table.insert(batches, batch)
     end
     
-    print("[SyncScheduler] Processing " .. #allPlayerStats .. " players in " .. #batches .. " batches")
+    debugPrint("[SyncScheduler] Processing " .. #allPlayerStats .. " players in " .. #batches .. " batches")
     
     -- Process batches with delay to respect rate limits
     local batchIndex = 0
@@ -93,14 +99,14 @@ function SyncScheduler.performSync()
             SyncScheduler.isRunning = false
             SyncScheduler.lastSyncTime = JobsRP.nowSeconds()
             
-            print("[SyncScheduler] Sync completed in " .. duration .. "ms")
+            debugPrint("[SyncScheduler] Sync completed in " .. duration .. "ms")
             return
         end
         
         local batch = batches[batchIndex]
         SyncScheduler.syncBatch(batch, function(success, error)
             if not success then
-                print("[SyncScheduler] Batch " .. batchIndex .. " failed: " .. tostring(error))
+                debugPrint("[SyncScheduler] Batch " .. batchIndex .. " failed: " .. tostring(error))
                 SyncScheduler.errorCount = SyncScheduler.errorCount + 1
             end
             
@@ -427,4 +433,4 @@ if not setInterval then
     end
 end
 
-print("[SyncScheduler] Sync scheduler module loaded")
+    debugPrint("[SyncScheduler] Sync scheduler module loaded")

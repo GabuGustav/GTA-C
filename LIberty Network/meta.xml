@@ -1,0 +1,42 @@
+<meta>
+	<info title="Liberty Network RP" author="Liberty Network Team" version="0.4.0" description="Liberty Network Roleplay System - Authorization &amp; Account Service + Spawn/Lifecycle + Admin module" />
+
+	<!-- Server Core (load order matters) -->
+	<script language="javascript" type="server" src="Core/Server/Auth/Util.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Hash.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Native.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Store.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Throttle.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Characters.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Accounts.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Sessions.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Service.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/Network.js" />
+	<script language="javascript" type="server" src="Core/Server/Auth/API.js" />
+
+	<!-- Admin module (depends on Auth; load order matters) -->
+	<script language="javascript" type="server" src="Core/Server/Admin/Roles.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Bans.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Service.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Service2.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Service3.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Network.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Network2.js" />
+	<script language="javascript" type="server" src="Core/Server/Admin/Network3.js" />
+
+	<!-- Spawn / lifecycle subsystem -->
+	<script language="javascript" type="server" src="Core/Server/Subsystems.js" />
+	<script language="javascript" type="server" src="Core/Server/Spawn.js" />
+	<script language="javascript" type="server" src="Core/Server/SpawnNet.js" />
+
+	<script language="javascript" type="server" src="Core/Server/Init.js" />
+
+	<!-- Client Core -->
+	<script language="javascript" type="client" src="Core/Client/Auth/Init.js" />
+	<script language="javascript" type="client" src="Core/Client/Auth/UI.js" />
+	<script language="javascript" type="client" src="Core/Client/Spawn/Init.js" />
+	<script language="javascript" type="client" src="Core/Client/Admin/Panel.js" />
+	<script language="javascript" type="client" src="Core/Client/Admin/Panel2.js" />
+	<script language="javascript" type="client" src="Core/Client/Admin/Panel3.js" />
+	<script language="javascript" type="client" src="Core/Client/Init.js" />
+</meta>

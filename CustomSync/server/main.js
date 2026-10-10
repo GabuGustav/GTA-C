@@ -13,6 +13,26 @@
 var players = {};
 
 // ---------------------------------------------------------
+// Share ping with clients the same way v-scoreboard does.
+// The client UI reads cached data instead of touching ping
+// directly, which avoids context-specific access errors.
+// ---------------------------------------------------------
+var PING_SYNC_INTERVAL_MS = 3000;
+
+function updateClientPingCache() {
+    var clients = getClients();
+    for (var i = 0; i < clients.length; i++) {
+        var client = clients[i];
+        if (!client) continue;
+
+        try {
+            client.setData("CustomSync.ping", client.ping, true);
+        } catch (e) {
+        }
+    }
+}
+
+// ---------------------------------------------------------
 // Diff helper — find clients in getClients() not in registry.
 // ---------------------------------------------------------
 function findNewClients() {
@@ -61,6 +81,8 @@ addEventHandler("OnPlayerJoined", function() {
         console.log("[sync_manager] Player joined: "
             + client.name + " (index: " + client.index + ")");
     }
+
+    updateClientPingCache();
 });
 
 // ---------------------------------------------------------
@@ -78,6 +100,14 @@ addEventHandler("OnPlayerQuit", function() {
 
         console.log("[sync_manager] Player quit: " + client.name);
     }
+
+    updateClientPingCache();
+});
+
+// Keep ping data fresh for the client HUD and scoreboard-like UI.
+addEventHandler("OnResourceStart", function() {
+    updateClientPingCache();
+    setInterval(updateClientPingCache, PING_SYNC_INTERVAL_MS);
 });
 
 // ---------------------------------------------------------

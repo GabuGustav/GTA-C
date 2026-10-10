@@ -1,0 +1,85 @@
+"use strict";
+/* Part 3a: admin roles + punishments. Run: node tests/t3.js */
+var H = require("./harness");
+var T = require("./tiny");
+var LN = require("./t1").LN;
+module.exports.LN = LN;
+
+console.log("[8] admin roles");
+H.freshService(LN, { password: { iterations: 50, minPasswordLen: 8 } });
+LN.Config = { auth: { enabled: true }, admin: { commandLevels: LN.Admin.Roles.DEFAULT.commandLevels } };
+T.ok(LN.Admin.Service.init({}) === true, "admin boots when Auth present");
+var cc = { console: true, name: "Console" };
+T.ok(LN.Admin.Roles.levelForClient(cc) === 999, "console level 999");
+var mod = H.fakeClient(101), adm = H.fakeClient(102), ply = H.fakeClient(103);
+LN.Auth.Service.register(mod, { username: "modone", password: "longpassword1" });
+LN.Auth.Service.register(adm, { username: "admtwo", password: "longpassword1" });
+LN.Auth.Service.register(ply, { username: "plthree", password: "longpassword1" });
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("modone"), "moderator", true);
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("admtwo"), "admin", true);
+T.ok(LN.Admin.Roles.levelForClient(mod) === 1, "moderator level 1");
+T.ok(LN.Admin.Roles.levelForClient(adm) === 2, "admin level 2");
+T.ok(LN.Admin.Roles.levelForClient(ply) === 0, "player level 0");
+T.ok(LN.Admin.Roles.can(mod, "akick") === true, "mod can akick");
+T.ok(LN.Admin.Roles.can(mod, "aban") === false, "mod cannot aban (fail closed)");
+T.ok(LN.Admin.Roles.can(adm, "aban") === true, "admin can aban");
+T.ok(LN.Admin.Roles.require(ply, "akick").code === "not_authorized", "player denied");
+T.ok(LN.Admin.Roles.isStaff(mod) === true && LN.Admin.Roles.isStaff(ply) === false, "staff flag");
+// logoutall is admin/console only — no mod, no player.
+T.ok(LN.Admin.Roles.can(mod, "logoutall") === false, "mod cannot logoutall");
+T.ok(LN.Admin.Roles.can(ply, "logoutall") === false, "player cannot logoutall");
+T.ok(LN.Admin.Roles.can(adm, "logoutall") === true, "admin can logoutall");
+T.ok(LN.Admin.Roles.can(cc, "logoutall") === true, "console can logoutall");
+
+console.log("[9] admin punishments");
+var r = LN.Admin.Service.setRole(adm, "plthree", "moderator");
+T.ok(r.ok === true, "amakemod grants role");
+T.ok(LN.Auth.Accounts.hasRole(LN.Auth.Accounts.getAccount("plthree"), "moderator"), "role persisted");
+r = LN.Admin.Service.demote(adm, "admtwo", "x");
+T.ok(!r.ok && r.code === "console_only", "only console demotes admin");
+r = LN.Admin.Service.demote(cc, "admtwo", "x");
+T.ok(r.ok === true, "console demotes admin");
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("admtwo"), "admin", true);
+// Only console may grant admin now.
+var sneak = H.fakeClient(110);
+LN.Auth.Service.register(sneak, { username: "sneaky", password: "longpassword1" });
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("sneaky"), "admin", true);
+T.ok(LN.Admin.Service.setRole(sneak, "modone", "admin").code === "console_only", "in-game admin cannot grant admin");
+T.ok(LN.Admin.Service.setRole(cc, "modone", "admin").ok === true, "console can grant admin");
+var granteeAcc = LN.Auth.Accounts.createAccount("grantee", "longpassword1");
+T.ok(!!granteeAcc && LN.Admin.Service.setRole(adm, "grantee", "moderator").ok === true, "admin can grant moderator");
+// Purge wipes every staff role (console only).
+var pg = LN.Admin.Service.purgeStaff(sneak);
+T.ok(pg.code === "console_only", "purge is console only");
+pg = LN.Admin.Service.purgeStaff(cc);
+T.ok(pg.ok === true && pg.purged.length >= 4, "console purges all staff (" + pg.purged.length + ")");
+T.ok(LN.Admin.Roles.levelForClient(adm) === 0 && LN.Admin.Roles.levelForClient(mod) === 0, "purge clears levels");
+// restore staff for the rest of the suite
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("admtwo"), "admin", true);
+LN.Auth.Accounts.addRole(LN.Auth.Accounts.getAccount("modone"), "moderator", true);
+var kick = LN.Admin.Service.kick(mod, ply, "griefing");
+T.ok(kick.ok === true, "kick ok");
+T.ok(LN.Admin.Service.kick(mod, ply, "").code === "reason_required", "kick needs reason");
+var freshPly = H.fakeClient(109);
+LN.Auth.Service.register(freshPly, { username: "freshply", password: "longpassword1" });
+T.ok(LN.Admin.Service.kick(freshPly, mod, "x").code === "not_authorized", "player cannot kick");
+var ban = LN.Admin.Service.ban(adm, ply, "cheating", 0);
+T.ok(ban.ok === true && ban.until === 0, "perm ban ok");
+T.ok(LN.Auth.Service.isAuthenticated(ply) === false, "ban force-logouts");
+var acc = LN.Auth.Accounts.getAccount("plthree");
+T.ok(acc.status === "banned" && acc.banCount === 1, "banCount tracks repeats");
+var gate = LN.Admin.Bans.checkJoin(ply, acc);
+T.ok(gate.banned === true && gate.kind === "account", "join gate refuses banned");
+var unb = LN.Admin.Service.unban(mod, "plthree");
+T.ok(unb.ok === true, "unban ok");
+H.clock.nowMs += 1000;
+LN.Auth.Service.login(ply, { username: "plthree", password: "longpassword1" });
+var tb = LN.Admin.Service.ban(adm, ply, "spam", 60);
+T.ok(tb.ok === true && tb.until > 0, "tempban sets until");
+T.ok(tb.banCount === 2, "repeat increments banCount");
+var mins2 = LN.Admin.Bans.escalatedMinutes(LN.Auth.Accounts.getAccount("plthree"), 60);
+T.ok(mins2 >= 60, "escalation grows with repeats");
+H.clock.nowMs += 60 * 60 * 1000 * 20;
+T.ok(LN.Admin.Bans.pruneExpired() >= 1, "prune lifts expired tempban");
+T.ok(LN.Auth.Accounts.getAccount("plthree").status === "active", "account active after expiry");
+H.clock.nowMs = 1700000000000;

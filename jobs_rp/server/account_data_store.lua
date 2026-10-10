@@ -7,6 +7,12 @@ JobsRP.AccountDataStore = JobsRP.AccountDataStore or {}
 
 local AccountDataStore = JobsRP.AccountDataStore
 
+local function debugPrint(...)
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 -- Configuration
 AccountDataStore.config = {
     basePath = "resources/jobs_rp/data/sync_backup/",
@@ -80,7 +86,7 @@ function AccountDataStore.loadAccount(accountId)
             return JobsRP.Json.decode(content)
         end)
         if ok and type(data) == "table" then
-            print("[AccountDataStore] Loaded account data: " .. accountId)
+            debugPrint("[AccountDataStore] Loaded account data: " .. accountId)
             return data
         end
     end
@@ -116,7 +122,7 @@ function AccountDataStore.saveAccount(accountId, data)
     if saveTextFile then
         local saveOk = pcall(saveTextFile, filePath, jsonContent)
         if saveOk then
-            print("[AccountDataStore] Saved account data: " .. accountId)
+            debugPrint("[AccountDataStore] Saved account data: " .. accountId)
             return true
         end
     end
@@ -127,7 +133,7 @@ function AccountDataStore.saveAccount(accountId, data)
         if file then
             file:write(jsonContent)
             file:close()
-            print("[AccountDataStore] Saved account data: " .. accountId)
+            debugPrint("[AccountDataStore] Saved account data: " .. accountId)
             return true
         end
     end
@@ -260,7 +266,7 @@ function AccountDataStore.init(config)
     end
     
     AccountDataStore.ensureDirectory()
-    print("[AccountDataStore] Initialized with base path: " .. AccountDataStore.config.basePath)
+    debugPrint("[AccountDataStore] Initialized with base path: " .. AccountDataStore.config.basePath)
     
     -- Hook into JobStats updates
     AccountDataStore.hookIntoJobStats()
@@ -286,15 +292,15 @@ function AccountDataStore.hookIntoJobStats()
         return result
     end
     
-    print("[AccountDataStore] Hooked into JobStats updateStat")
+    debugPrint("[AccountDataStore] Hooked into JobStats updateStat")
 end
 
 -- Debug: List all saved accounts (if possible)
 function AccountDataStore.listSavedAccounts()
-    print("[AccountDataStore] Pending sync accounts:")
+    debugPrint("[AccountDataStore] Pending sync accounts:")
     for accountId, info in pairs(AccountDataStore.pendingSync) do
-        print("  - " .. accountId .. " (retries: " .. (info.retryCount or 0) .. ")")
+        debugPrint("  - " .. accountId .. " (retries: " .. (info.retryCount or 0) .. ")")
     end
 end
 
-print("[AccountDataStore] Module loaded")
+debugPrint("[AccountDataStore] Module loaded")

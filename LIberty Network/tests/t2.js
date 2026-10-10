@@ -1,0 +1,68 @@
+"use strict";
+/* Part 2: throttling, auth-gated spawn, time units, client memory-only store. */
+var H = require("./harness");
+var T = require("./tiny");
+var LN = require("./t1").LN;
+var sb = require("./t1").sb;
+
+console.log("[4] throttle");
+H.freshService(LN, { password: { iterations: 50, minPasswordLen: 8 } });
+LN.Auth.Service.register(H.fakeClient(51, { ip: "9.9.9.9" }), { username: "throt", password: "longpassword1" });
+var bad = null;
+for (var i = 0; i < 5; i++) bad = LN.Auth.Service.login(H.fakeClient(52, { ip: "9.9.9.9" }), { username: "throt", password: "wrongpass1" });
+T.ok(bad && bad.code === "invalid_credentials", "failures return invalid_credentials (no enumeration)");
+var locked = LN.Auth.Service.login(H.fakeClient(52, { ip: "9.9.9.9" }), { username: "throt", password: "longpassword1" });
+T.ok(!locked.ok && locked.code === "locked" && locked.lockRemaining > 0, "account locked after maxAttempts");
+T.ok(LN.Auth.Throttle.allowRegister("1.2.3.4") === true, "registration allowed initially");
+var allowed = true;
+for (var j = 0; j < 5; j++) allowed = LN.Auth.Throttle.allowRegister("1.2.3.4");
+T.ok(allowed === false, "registration per-IP rate limit trips");
+
+console.log("[5+6] spawn gate + time units");
+T.ok(typeof LN.U.nowMs() === "number" && LN.U.nowMs() > 1e12, "U.nowMs() is ms epoch");
+T.ok(Math.abs(LN.U.now() * 1000 - LN.U.nowMs()) < 1000, "U.now() seconds consistent with U.nowMs()");
+H.freshService(LN, { password: { iterations: 50, minPasswordLen: 8 } });
+LN.Config = { auth: { enabled: true, requireLoginBeforeSpawn: true } };
+LN.Spawn.init({ spawn: { respawnDelaySec: 5, cooldownMs: 5000, fadeOnSpawn: false } });
+var anon = H.fakeClient(61);
+T.ok(LN.Spawn.spawnPlayer(anon).code === "not_authenticated", "spawn denied when unauthenticated");
+T.ok(LN.Spawn.onDeath(anon).code === "not_authenticated", "onDeath denied when unauthenticated");
+T.ok(LN.Spawn.forceRespawn(anon).code === "not_authenticated", "forceRespawn denied when unauthenticated");
+var realAuth = LN.Auth.Service.isAuthenticated;
+LN.Auth.Service.isAuthenticated = function () { return true; };
+T.ok(LN.Spawn.spawnPlayer(anon, { reason: "spawn" }).ok === true, "spawn allowed when authenticated");
+var fr1 = LN.Spawn.forceRespawn(anon);
+T.ok(!fr1.ok && fr1.code === "cooldown" && typeof fr1.remainingMs === "number", "manual respawn cooldown in ms");
+H.clock.nowMs += 5001;
+T.ok(LN.Spawn.forceRespawn(anon).ok === true, "cooldown expires after cooldownMs");
+var d = LN.Spawn.onDeath(anon);
+T.ok(d.ok === true && d.delayMs === 5000, "respawn delay = respawnDelaySec*1000 ms");
+T.ok(sb.__timers.length === 1, "death schedules one timeout");
+var __t = sb.__timers.pop();
+__t.fn();
+T.ok(sb.__timers.length === 0, "respawn timeout fires once and clears");
+T.ok(typeof sb.setTimer === "undefined", "no GTAC-unknown setTimer in sandbox");
+var spawnSrc = require("fs").readFileSync(require("path").join(__dirname, "..", "Core", "Server", "Spawn.js"), "utf8");
+T.ok(spawnSrc.indexOf("setTimer") === -1, "Spawn.js contains no setTimer");
+T.ok(spawnSrc.indexOf("clearTimer") === -1, "Spawn.js contains no clearTimer");
+LN.Auth.Service.isAuthenticated = realAuth;
+
+console.log("[7] client token store");
+var fs2 = require("fs"), vm2 = require("vm"), path2 = require("path");
+var clientSrc = fs2.readFileSync(path2.join(__dirname, "..", "Core", "Client", "Auth", "Init.js"), "utf8");
+var fileWrites = 0;
+var csb = { console: console, addNetworkHandler: function () {}, triggerNetworkEvent: function () {}, message: function () {} };
+csb.globalThis = csb;
+csb.saveTextFile = function () { fileWrites++; };
+csb.loadTextFile = function () { return null; };
+vm2.createContext(csb);
+vm2.runInContext(clientSrc, csb, { filename: "ClientAuthInit.js" });
+csb.LN.AuthClient.updateStoredToken("tok_abc");
+T.ok(csb.LN.AuthClient.readStoredToken() === "tok_abc", "token kept in memory");
+csb.LN.AuthClient.clearStoredToken();
+T.ok(csb.LN.AuthClient.readStoredToken() === "", "clear wipes in-memory token");
+T.ok(fileWrites === 0, "no client file writes on update/clear");
+T.ok(clientSrc.indexOf("saveTextFile") === -1, "client source contains no saveTextFile");
+T.ok(clientSrc.indexOf("loadTextFile") === -1, "client source contains no loadTextFile");
+
+T.summary();

@@ -105,9 +105,39 @@ var CONFIG = {
     // ---------------------------------------------------------
     VEHICLE_CORRECTION_FACTOR: 5.0,
 
-    // If positional error exceeds this (GTA units), snap
-    // directly instead of nudging. Handles teleports/spawns.
+    // If positional error exceeds this, snap directly instead of
+    // nudging. This is the BASE allowance at 0 km/h — it scales up
+    // with speed below, because the true distance between two
+    // snapshots naturally grows with speed even under perfect
+    // sync. A flat threshold treats fast-but-correct movement
+    // (boost pads, nitro) as desync and snaps constantly.
     VEHICLE_SNAP_THRESHOLD: 10.0,
+
+    // Extra snap-threshold allowance per km/h of the vehicle's
+    // current speed. At 150 km/h this adds 150 * 0.08 = 12 units
+    // on top of the base 10.
+    VEHICLE_SNAP_THRESHOLD_PER_KMH: 0.08,
+
+    // Hard ceiling on the scaled snap threshold — even at absurd
+    // boost speeds we still want a cap, or real desync would never
+    // get corrected at all.
+    VEHICLE_SNAP_THRESHOLD_MAX: 40.0,
+
+    // Once error drops below this (GTA units), stop injecting
+    // correction velocity entirely and let native physics
+    // (suspension, friction, ground contact) own the vehicle.
+    // Without this, a P-only correction fights the engine's own
+    // sub-tick settling forever and never converges — this is
+    // what causes standing vehicles to jitter in place.
+    VEHICLE_POSITION_DEADZONE: 0.15,
+
+    // Hysteresis for the snap/nudge boundary, as a fraction of the
+    // (speed-scaled) snap threshold. After a hard snap, we don't
+    // resume soft nudging until error falls below this fraction of
+    // the snap threshold — not just under the threshold itself.
+    // Prevents flip-flopping between the two correction modes
+    // every frame near the boundary.
+    VEHICLE_CORRECTION_RESUME_RATIO: 0.4,
 
     // If heading error exceeds this (degrees), snap heading
     // directly instead of waiting for turnVelocity to fix it.

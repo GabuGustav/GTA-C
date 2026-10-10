@@ -1,0 +1,398 @@
+﻿[
+	{
+		"ts": 1791296517,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplays",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791297343,
+		"action": "register",
+		"outcome": "denied:invalid_password",
+		"accountId": null,
+		"detail": "",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791297366,
+		"action": "register",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "account+device registered",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791297568,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791300223,
+		"action": "refresh",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "token rotated",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791301043,
+		"action": "refresh",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "token rotated",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791302201,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplays",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791302253,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791303884,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791304574,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791304938,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791313165,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791313238,
+		"action": "admin:makeadmin",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "by=Console",
+		"clientName": "Console",
+		"ip": "0.0.0.0"
+	},
+	{
+		"ts": 1791313388,
+		"action": "admin:makeadmin",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791313548,
+		"action": "admin:demote",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "reason= by=Console",
+		"clientName": "Console",
+		"ip": "0.0.0.0"
+	},
+	{
+		"ts": 1791313688,
+		"action": "admin:makeadmin",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "by=Console",
+		"clientName": "Console",
+		"ip": "0.0.0.0"
+	},
+	{
+		"ts": 1791313768,
+		"action": "logout_all",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "revoked:7",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791313768,
+		"action": "admin:tempban",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=ggplays reason=Testing until=1791313828 count=1 by=GGPlays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791313839,
+		"action": "login",
+		"outcome": "banned",
+		"accountId": "ggplays",
+		"detail": "Testing",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791314039,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplays",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791314059,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791361719,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791363668,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplays",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791363686,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791364305,
+		"action": "logout_all",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "revoked:3",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791364351,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791365530,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791365599,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791365690,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=No reason by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791365691,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=No reason by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791365694,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=No reason by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791374361,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791386743,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791387155,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791459974,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791462633,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplayys",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791462643,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggplayys",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791462660,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619624,
+		"action": "login",
+		"outcome": "bad_credentials",
+		"accountId": "ggpays",
+		"detail": "remaining_lock=0",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619639,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619642,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619847,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=Testing Kick by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619881,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=No reason by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1791619911,
+		"action": "admin:kick",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "target=GGPlays reason=Testing by=ggplays",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	}
+]

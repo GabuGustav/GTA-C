@@ -49,11 +49,33 @@ var _lineIndex = 0;
 function hudLine(label, value, colour) {
     var y = HUD_Y + (_lineIndex * HUD_LINE_HEIGHT);
     var text = label + ": " + value;
-    natives.displayTextWithLiteralString(
-        HUD_X, y, HUD_SCALE, HUD_SCALE,
-        HUD_FONT, colour.r, colour.g, colour.b, colour.a,
-        0, text
-    );
+    try {
+        if (natives.setTextScale) {
+            natives.setTextScale(HUD_SCALE, HUD_SCALE);
+        }
+        if (natives.setTextFont) {
+            natives.setTextFont(HUD_FONT);
+        }
+        if (natives.setTextColour) {
+            natives.setTextColour(colour.r, colour.g, colour.b, colour.a);
+        }
+        if (natives.setTextCentre) {
+            natives.setTextCentre(false);
+        }
+        if (natives.setTextProportional) {
+            natives.setTextProportional(true);
+        }
+    } catch (e) {
+    }
+
+    try {
+        natives.displayTextWithLiteralString(new Vec2(HUD_X, y), "STRING", text);
+    } catch (eVec2) {
+        try {
+            natives.displayTextWithLiteralString(HUD_X, y, "STRING", text);
+        } catch (eNum) {
+        }
+    }
     _lineIndex++;
 }
 
@@ -80,8 +102,18 @@ function renderDiagHud() {
     // --- LOCAL CLIENT ---
     hudLine("== LOCAL CLIENT ==", "", COL_CYAN);
 
-    // Ping via client property — Client class exposes .ping directly
-    var ping = localClient ? localClient.ping : -1;
+    // Ping comes from server-synced client data, like v-scoreboard.
+    var ping = -1;
+    try {
+        if (typeof localClient !== "undefined" && localClient && typeof localClient.getData === "function") {
+            var cachedPing = localClient.getData("CustomSync.ping");
+            if (typeof cachedPing !== "undefined" && cachedPing !== null) {
+                ping = cachedPing;
+            }
+        }
+    } catch (ePing) {
+        ping = -1;
+    }
     hudLine("Ping", ping + "ms", pingColour(ping));
 
     // State

@@ -18,7 +18,13 @@ const client = localClient;
 var clientName = client.name;
 const myPed = localPlayer;
 var player = client;
-const taxiVehicleNames = ["Taxi", "Taxi2", "Cabby"];
+const taxiVehicleNames = [
+  "Taxi",
+  "Taxi2",
+  "Cabby",
+  "Stretch Limo",
+  "Cognoscenti",
+];
 
 function showCars() {
   var isInCar = false;
@@ -35,7 +41,7 @@ function showCars() {
       var carName = Test.API.getVehicleName(index);
     }
   }
-  return { isInCar, carName, passenger1, passenger2, passenger3, driver };
+  return { isInCar, carName, passenger1, passenger2, passenger3, driver, veh };
 }
 
 function checkIfTaxi(vehicle) {
@@ -56,7 +62,10 @@ function checkIfTaxi(vehicle) {
           {
             var vehID = vehicle.modelIndex;
             var vehName = Test.API.getVehicleName(vehID);
-            if (distance < closestDistance && taxiVehicleNames.includes(vehName)) {
+            if (
+              distance < closestDistance &&
+              taxiVehicleNames.includes(vehName)
+            ) {
               currentVehName = vehName;
               var closestVehObject = vehicle;
             }
@@ -109,7 +118,61 @@ function enterPassenger() {
   } else {
     console.log("Taxi is full");
   }
+
+  setTimeout(function () {
+    var carState = showCars();
+    if (myPed.isInVehicle && carState.driver == null) {
+      TaskDrivetoWaypoint();
+    }
+  }, 10000);
 }
+
+function TaskDrivetoWaypoint() {
+  var carState = showCars();
+
+  // No car to work with - nothing to do.
+  if (carState.veh == null) {
+    return;
+  }
+
+  // No driver yet - create one, then stop (tasking will happen on next call).
+  if (carState.driver == null) {
+    natives.createRandomCharAsDriver(carState.veh);
+    return;
+  }
+
+  // Driver present - drive the route.
+  // Get the player's waypoint (blue map flag) as the drive destination.
+  var blipId = natives.getFirstBlipInfoId(8); // 8 is waypoint blip type
+  if (!blipId) {
+    return; // no waypoint set - nothing to drive to
+  }
+
+  var waypointPos = natives.getBlipCoords(blipId);
+  if (
+    !waypointPos ||
+    isNaN(waypointPos.x) ||
+    isNaN(waypointPos.y) ||
+    isNaN(waypointPos.z)
+  ) {
+    return; // waypoint coordinates not valid
+  }
+
+  natives.taskCarDriveToCoord(
+    carState.driver,   // pedHandle: driver ped
+    carState.veh,      // veh: the taxi
+    waypointPos.x,     // Unk133: destination X
+    waypointPos.y,     // Unk134: destination Y
+    waypointPos.z,     // Unk135: destination Z
+    60,                // Unk136: drive speed
+    0,                 // Unk137: siren on/off flag (off)
+    786603,            // Unk138: driving mode ("normal" driving behavior)
+    0,                 // Unk139: change-direction flag
+    5,                 // Unk140: stop radius
+    0,                 // Unk141: extra flag
+  );
+}
+
 
 var wasInCar = false;
 var lastVehName = null;
@@ -131,7 +194,10 @@ addEventHandler("OnProcess", function (OnProcess, deltaTime) {
   }
   wasInCar = carState.isInCar;
 
-  if (taxiVehicleNames.includes(nearbyCar.currentVehName) && lastVehName == null) {
+  if (
+    taxiVehicleNames.includes(nearbyCar.currentVehName) &&
+    lastVehName == null
+  ) {
     console.log("There is a:" + nearbyCar.currentVehName + " nearby.");
     message(
       "There is a car nearby with the name: " + nearbyCar.currentVehName,
@@ -144,4 +210,3 @@ addEventHandler("OnProcess", function (OnProcess, deltaTime) {
 bindKey(SDLK_g, KEYSTATE_DOWN, function () {
   enterPassenger();
 });
-

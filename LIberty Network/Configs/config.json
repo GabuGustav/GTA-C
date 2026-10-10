@@ -1,0 +1,67 @@
+{
+	"server_id": "liberty_network",
+	"server_display_name": "Liberty Network",
+	"debug": true,
+
+	"player": {
+		"spawn": [39.59, 128.88, 15.63],
+		"spawn_rotation": 0.0
+	},
+
+	"spawn": {
+		"position": [39.59, 128.88, 15.63],
+		"rotation": 0.0,
+		"respawnDelaySec": 5,
+		"cooldownMs": 5000,
+		"healthPollMs": 500,
+		"fadeOnSpawn": true
+	},
+
+	"messages": {
+		"welcome": "Welcome to Liberty Network.",
+		"help_hint": "Register or log in with /register or /login, then /help.",
+		"help": "Liberty Network RP: /register <name> <pass> [email], /login <name> <pass>, /logout, /sessions, /revoke <id>. /logoutall = admin only."
+	},
+
+	"auth": {
+		"enabled": true,
+		"requireLoginBeforeSpawn": true,
+		"password": {
+			"iterations": 60000,
+			"minPasswordLen": 8
+		},
+		"throttle": {
+			"maxAttempts": 5,
+			"windowSec": 900,
+			"lockSec": 900,
+			"maxIpAttempts": 20,
+			"ipLockSec": 600,
+			"regWindowSec": 3600,
+			"maxRegistrations": 4
+		},
+		"sessions": {
+			"accessTtlSec": 3600,
+			"refreshTtlSec": 2592000
+		},
+		"devices": {
+			"newDeviceOtpSeam": true
+		}
+	},
+
+	"admin": {
+		"escalationMultiplier": 2,
+		"maxEscalatedMin": 10080,
+		"commandLevels": {
+			"akick": 1, "atempban": 1, "aban": 2, "aunban": 1,
+			"abanip": 2, "aunbanip": 2, "abanlist": 1,
+			"amakeadmin": 2, "amakemod": 2, "ademote": 2,
+			"alistplayers": 1, "aadminstatus": 1, "aadminhelp": 1,
+			"aannounce": 1, "amsay": 1, "awsay": 2,
+			"ascripts": 1, "ablockscript": 1, "atrainers": 1, "adisableweapons": 1,
+			"amute": 1, "aunmute": 1, "afreeze": 1, "aunfreeze": 1,
+			"abring": 1, "agoto": 1, "awarn": 1,
+			"ahwidban": 2, "ahwidunban": 2, "ahwidbanlist": 1,
+			"logoutall": 2
+		}
+	}
+}

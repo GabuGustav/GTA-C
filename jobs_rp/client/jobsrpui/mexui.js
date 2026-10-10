@@ -290,12 +290,7 @@ mexui.isAnyWindowShown = function()
 mexui.setInput = function(showInput)
 {
 	gui.showCursor(showInput, !showInput);
-	if(localClient.player && gta.game != GAME_GTA_IV)
-	{
-		if(showInput)
-			gta.setCameraLookAtEntity(new Vec3(gta.cameraMatrix.m41, gta.cameraMatrix.m42, gta.cameraMatrix.m43), localPlayer, false);
-		else
-			gta.restoreCamera(false);
-	}
+	// Keep cursor handling isolated from camera state.
+	// Some episode builds do not tolerate the old camera toggle path cleanly.
 };
 

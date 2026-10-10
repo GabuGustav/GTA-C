@@ -102,6 +102,14 @@ CommandsInit.init = function()
     else
         print("[Commands] Failed to load jobdiag commands")
     end
+
+    --Load zone Commands
+    local ZoneCommands = safeRequire("commands.zone")
+if ZoneCommands then
+    ZoneCommands.register()
+else
+    print("[Commands] Failed to load zone commands")
+end
     
     print("[Commands] All command modules initialized successfully")
 end

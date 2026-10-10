@@ -5,7 +5,7 @@
 // Vehicles use velocity application, not position teleport.
 // =============================================================
 
-function extrapolateEntity(entityId, lastSnap, renderTime) {
+function extrapolateEntity(entityId, lastSnap, renderTime, frameDt) {
     var elapsed = renderTime - lastSnap.t;
 
     // Past the cap — freeze in last known state.
@@ -36,19 +36,45 @@ function extrapolateEntity(entityId, lastSnap, renderTime) {
         var errorZ = predictedPos.z - currentPos.z;
         var errorMag = Math.sqrt(errorX*errorX + errorY*errorY + errorZ*errorZ);
 
-        if (errorMag > CONFIG.VEHICLE_SNAP_THRESHOLD) {
+        var speedMs  = natives.getCarSpeed ? natives.getCarSpeed(vehicle) : 0;
+        var speedKmh = speedMs * 3.6;
+
+        // Shared buffer state — same object interpolator.js reads/
+        // writes. Without sharing this, a single-frame buffer
+        // underrun (very common — it's just one late packet) drops
+        // into this file's OWN independent snap decision, which
+        // disagreed with interpolator.js's and fought it.
+        var buf        = buffers[entityId];
+        var wasSnapped = buf ? buf.vehicleSnapped : false;
+
+        var effectiveSnapThreshold = Math.min(
+            CONFIG.VEHICLE_SNAP_THRESHOLD + speedKmh * CONFIG.VEHICLE_SNAP_THRESHOLD_PER_KMH,
+            CONFIG.VEHICLE_SNAP_THRESHOLD_MAX
+        );
+        var effectiveResumeThreshold = effectiveSnapThreshold * CONFIG.VEHICLE_CORRECTION_RESUME_RATIO;
+
+        if (errorMag > effectiveSnapThreshold
+            || (wasSnapped && errorMag > effectiveResumeThreshold)) {
             vehicle.position = predictedPos;
             vehicle.velocity = vel;
+            if (buf) buf.vehicleSnapped = true;
             return;
         }
 
-        // Velocity nudge correction — same as interpolator
-        var factor = CONFIG.VEHICLE_CORRECTION_FACTOR;
-        vehicle.velocity = {
-            x: vel.x + errorX * factor,
-            y: vel.y + errorY * factor,
-            z: vel.z + errorZ * factor,
-        };
+        if (buf) buf.vehicleSnapped = false;
+
+        if (errorMag < CONFIG.VEHICLE_POSITION_DEADZONE) {
+            // Close enough — don't fight native physics settling.
+            vehicle.velocity = vel;
+        } else {
+            var factor = CONFIG.VEHICLE_CORRECTION_FACTOR;
+            var fdt    = (typeof frameDt === "number") ? frameDt : dt;
+            vehicle.velocity = {
+                x: vel.x + errorX * factor * fdt,
+                y: vel.y + errorY * factor * fdt,
+                z: vel.z + errorZ * factor * fdt,
+            };
+        }
 
         if (lastSnap.turnVelocity) {
             vehicle.turnVelocity = lastSnap.turnVelocity;

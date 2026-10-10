@@ -8,8 +8,11 @@
 
 <!-- Server Scripts -->
 <script language="javascript" type="server" src="server/server.js" />
+<script language="javascript" type="server" src="server/interior.js" />
 
 <!-- Client Scripts -->
 <script language="javascript" type="client" src="client/taxipassenger.js" />
+<script language="javascript" type="client" src="client/testphones.js" />
+<script language="javascript" type="client" src="client/density.js" />
 
 </meta>

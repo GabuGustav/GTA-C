@@ -1,0 +1,30 @@
+﻿{
+	"ggplays": {
+		"accountId": "ggplays",
+		"username": "ggplays",
+		"displayName": "GGPlays",
+		"email": null,
+		"password": {
+			"alg": "pbkdf2-hmac-sha256",
+			"iterations": 60000,
+			"salt": "8e8edfc1bdfc3537ade301ef4d4daedb",
+			"hash": "991a453f5229a3e3b41a206a8ba2d74517eaf88aea5ce641330a1a465e425017"
+		},
+		"createdAt": 1791297366,
+		"lastLoginAt": 1791619642,
+		"roles": [
+			"admin"
+		],
+		"permissions": [],
+		"status": "active",
+		"banReason": null,
+		"bannedAt": 0,
+		"characterIds": [
+			"c_3df578ae53c912275428d7b6"
+		],
+		"banBy": null,
+		"banUntil": 0,
+		"banCount": 1,
+		"hwidfp": "7044dadf0a33d202fe4891556d8f2f7562a999a35794f6c0e1f599826f944c1b"
+	}
+}

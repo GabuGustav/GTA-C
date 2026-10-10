@@ -3,6 +3,12 @@
 
 local AuthInit = {}
 
+local function debugPrint(...)
+    if JobsRP.Config and JobsRP.Config.debug then
+        print(...)
+    end
+end
+
 local function safeRequire(moduleName)
     if type(require) == "function" then
         local ok, mod = pcall(require, moduleName)
@@ -66,7 +72,7 @@ AuthInit.init = function()
         JobsRP.Auth.handlePlayerQuit = AuthCore.handlePlayerQuit
         JobsRP.Auth.handlePlayerJoin = AuthCore.handlePlayerJoin
         JobsRP.Auth.loginWithTokens = AuthCore.loginWithTokens
-        print("[Auth] Core authentication loaded")
+        debugPrint("[Auth] Core authentication loaded")
     else
         print("[Auth] Failed to load core authentication")
     end
@@ -82,7 +88,7 @@ AuthInit.init = function()
         JobsRP.Auth.refreshTokens = SessionManager.refreshTokens
         JobsRP.Auth.serverToken = SessionManager.serverToken
         JobsRP.Auth.tokenRefreshRateLimit = SessionManager.tokenRefreshRateLimit
-        print("[Auth] Session manager loaded")
+        debugPrint("[Auth] Session manager loaded")
     else
         print("[Auth] Failed to load session manager")
     end
@@ -91,7 +97,7 @@ AuthInit.init = function()
     local AuthCommands = safeRequire("auth.commands")
     if AuthCommands then
         AuthCommands.init()
-        print("[Auth] Authentication commands loaded")
+        debugPrint("[Auth] Authentication commands loaded")
     else
         print("[Auth] Failed to load authentication commands")
     end
@@ -101,10 +107,10 @@ AuthInit.init = function()
         setInterval(function()
             SessionManager.cleanupExpired()
         end, 5 * 60 * 1000) -- Every 5 minutes
-        print("[Auth] Session cleanup timer started")
+        debugPrint("[Auth] Session cleanup timer started")
     end
     
-    print("[Auth] All authentication modules initialized successfully")
+    debugPrint("[Auth] All authentication modules initialized successfully")
 end
 
 return AuthInit

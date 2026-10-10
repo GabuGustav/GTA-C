@@ -85,12 +85,12 @@ local function ensureDirectory(path)
     return false
 end
 
-local function usingMysqlBackend()
+local function usingDatabaseBackend()
     if not Store.storageReady then
         Store.ensureStorageDirs()
     end
 
-    if Store.backendMode ~= "mysql" then
+    if Store.backendMode ~= "mysql" and Store.backendMode ~= "supabase" then
         return false
     end
 
@@ -200,7 +200,7 @@ function Store.ensureStorageDirs()
     end
 
     local requestedBackend = tostring(JobsRP.Config.storage_backend or "json")
-    if requestedBackend == "mysql" and JobsRP.DB and JobsRP.DB.init then
+    if (requestedBackend == "mysql" or requestedBackend == "supabase") and JobsRP.DB and JobsRP.DB.init then
         local okInit, initResult = pcall(function()
             return JobsRP.DB.init()
         end)
@@ -213,7 +213,7 @@ function Store.ensureStorageDirs()
         end
 
         if dbReady then
-            Store.backendMode = "mysql"
+            Store.backendMode = requestedBackend
             Store.backendLastError = nil
             Store.storageReady = true
             return true
@@ -398,7 +398,7 @@ function Store.loadProfileById(playerId)
     local path = Store.getProfilePath(normalizedId)
     local profile
 
-    if usingMysqlBackend() then
+    if usingDatabaseBackend() then
         local decoded = nil
         local okDb, dbValue = pcall(function()
             return JobsRP.DB.loadProfile(normalizedId)
@@ -464,7 +464,7 @@ function Store.accountExists(accountId)
         return true
     end
 
-    if usingMysqlBackend() then
+    if usingDatabaseBackend() then
         local ok, exists = pcall(function()
             return JobsRP.DB.accountExists(normalizedId)
         end)
@@ -488,7 +488,7 @@ function Store.loadAccountById(accountId)
 
     local account
 
-    if usingMysqlBackend() then
+    if usingDatabaseBackend() then
         local decoded = nil
         local okDb, dbValue = pcall(function()
             return JobsRP.DB.loadAccount(normalizedId)
@@ -676,7 +676,7 @@ function Store.saveProfileById(playerId, force)
         return true
     end
 
-    if usingMysqlBackend() then
+    if usingDatabaseBackend() then
         local okWrite, result = pcall(function()
             return JobsRP.DB.saveProfile(normalizedId, profile)
         end)
@@ -723,7 +723,7 @@ function Store.saveAccountById(accountId, force)
         return true
     end
 
-    if usingMysqlBackend() then
+    if usingDatabaseBackend() then
         local okWrite, result = pcall(function()
             return JobsRP.DB.saveAccount(normalizedId, account)
         end)
