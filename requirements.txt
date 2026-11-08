@@ -1,0 +1,28 @@
+# YT Stream Studio — pinned-ish dependencies for reproducible builds
+# Install:  python -m pip install -r requirements.txt
+#
+# Core path needs only Python stdlib + FFmpeg on PATH.
+# The packages below unlock WGC capture, WASAPI loopback, and faster scaling.
+
+# Recommended for modern Windows screen / window capture (Game Bar–class)
+windows-capture>=0.1.0,<1.0; sys_platform == "win32"
+dxcam>=0.0.5,<1.0; sys_platform == "win32"
+
+# Required for WASAPI loopback (system audio) and mic mixing
+PyAudioWPatch>=0.2.12.6,<0.3; sys_platform == "win32"
+numpy>=1.24.0,<3
+
+# Faster / higher-quality downscale in the WGC producer (strongly recommended)
+opencv-python-headless>=4.8.0,<5
+
+# Packaging (dev / build machines)
+# pyinstaller>=6.0
+
+# Optional: per-process audio capture (game audio only)
+# proctap; sys_platform == "win32"
+
+# Optional: used by the standalone sync_check.py helper
+# yt-dlp>=2024.1.0
+
+# Optional: alternate loopback probe path in some environments
+# sounddevice>=0.4.6,<0.6

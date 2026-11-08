@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# App runtime / secrets (never commit)
+.yt_stream_studio.json
+.yt_stream_studio_token.json
+.yt_stream_studio_client.json
+client_secret.json
+*.token.json
+
+# Logs and diagnostics
+logs/
+*.log
+yt_stream_studio_benchmarks/
+
+# Backups / local experiments
+*.bak
+*_backup.py
+*_monolith*.py
+
+# Media / large local assets (keep your own music outside git if desired)
+# Start screen music/   # uncomment if you don't want the ogg files tracked
+
+# PyInstaller
+*.manifest
+*.spec.bak
+warn-*.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
