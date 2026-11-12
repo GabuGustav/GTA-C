@@ -113,12 +113,10 @@
 			bannedAt: 0,
 			characterIds: []
 		};
-		// New accounts always get at least one character slot (characters are
-		// separate concepts stored in characters.json, not here).
-		var charId = LN.Characters.createDefaultCharacter(account.accountId);
-		account.characterIds.push(charId);
+		// Characters are created separately in the character select/create UI.
+		// Registration creates the account only; no character is auto-created.
 		Store.setAccount(account, true);
-		return { ok: true, accountId: normalized, characterId: charId };
+		return { ok: true, accountId: normalized };
 	};
 
 	A.getAccount = function (accountId) { return Store.getAccount(U.normalizeId(accountId)); };

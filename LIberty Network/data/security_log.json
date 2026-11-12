@@ -394,5 +394,50 @@
 		"detail": "target=GGPlays reason=Testing by=ggplays",
 		"clientName": "GGPlays",
 		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1793872510,
+		"action": "login",
+		"outcome": "hash_upgraded",
+		"accountId": "ggplays",
+		"detail": "pbkdf2->argon2id",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1793872510,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1794413575,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1794414040,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1794414123,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
 	}
 ]

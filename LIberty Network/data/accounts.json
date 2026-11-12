@@ -5,13 +5,11 @@
 		"displayName": "GGPlays",
 		"email": null,
 		"password": {
-			"alg": "pbkdf2-hmac-sha256",
-			"iterations": 60000,
-			"salt": "8e8edfc1bdfc3537ade301ef4d4daedb",
-			"hash": "991a453f5229a3e3b41a206a8ba2d74517eaf88aea5ce641330a1a465e425017"
+			"alg": "argon2id",
+			"enc": "$argon2id$v=19$m=65536,t=2,p=1$uLMbUQsws2yfxioP27INFQ$9gV25KB5O4SdY1Y2LJPmOhL4THpMMURsEHFoFNoBnGw"
 		},
 		"createdAt": 1791297366,
-		"lastLoginAt": 1791619642,
+		"lastLoginAt": 1794414123,
 		"roles": [
 			"admin"
 		],

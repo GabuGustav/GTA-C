@@ -1,10 +1,11 @@
-"use strict";
+﻿"use strict";
 /*
  * Liberty Network - Auth network layer (LN.Auth.Network)
  *
  * Wires the GTAC networking to the Auth Service. Receives register/login/
  * refresh/logout/device actions from the client, and pushes auth state and
- * errors back. Also exposes the in-game chat commands for the foundation.
+ * errors back. Also exposes the in-game chat commands for the foundation
+ * (auth, sessions, characters).
  */
 (function (root) {
 	"use strict";
@@ -14,18 +15,21 @@
 	var U = LN.U;
 	var Service = LN.Auth.Service;
 
+	// Characters module may load after this file, so resolve it lazily.
+	function Chars() { return LN.Characters; }
+
 	// Server -> client. IMPORTANT: this GTAC build cannot marshal JS objects as
 	// network args (CArgument::Create(ARGUMENT_JSVALUE) fails), so we only send
 	// primitives; structured data is JSON-stringified.
 	function send(client, eventName /*, ...args */) {
 		var args = Array.prototype.slice.call(arguments, 2);
 		try { triggerNetworkEvent.apply(null, [eventName, client].concat(args)); return; } catch (e) {}
-		try { if (pushClientEvent) pushClientEvent.apply(null, [client, eventName].concat(args)); } catch (e2) {}
+		try { if (typeof pushClientEvent === "function") pushClientEvent.apply(null, [client, eventName].concat(args)); } catch (e2) {}
 	}
 
 	function sendError(client, code, extra) {
-		var msg = (extra && extra.message) || code;
-		send(client, "ln:authError", code || "", msg || "", (extra && extra.lockRemaining) || 0);
+		var m = (extra && extra.message) || code;
+		send(client, "ln:authError", code || "", m || "", (extra && extra.lockRemaining) || 0);
 	}
 
 	function pushState(client) {
@@ -36,7 +40,7 @@
 			var id = Service.getAccountIdentity(client);
 			data.roles = id.roles;
 			data.permissions = id.permissions;
-			data.characters = LN.Characters.listByAccount(accountId);
+			data.characters = Chars().listByAccount(accountId);
 		}
 		send(client, "ln:authState", authed, accountId || "", JSON.stringify(data));
 	}
@@ -54,7 +58,7 @@
 			var r = Service.register(client, { username: username, password: password, email: email });
 			if (!r.ok) return void sendError(client, r.code, r);
 			pushState(client);
-			send(client, "ln:authResult", "register", "1", r.accountId || "", r.refreshToken || "", JSON.stringify({ newDevice: true, characters: LN.Characters.listByAccount(r.accountId) }));
+			send(client, "ln:authResult", "register", "1", r.accountId || "", r.refreshToken || "", JSON.stringify({ newDevice: true, characters: Chars().listByAccount(r.accountId) }));
 		});
 
 		registerEvent("ln:login");
@@ -100,13 +104,29 @@
 	};
 
 	function msg(client, text, colour) {
-		try { if (messageClient) { messageClient(text, client, colour || COLOUR_YELLOW); return; } } catch (e) {}
-		try { if (outputChatBox) outputChatBox(text, client, 255, 255, 0); } catch (e2) {}
+		try { if (typeof messageClient === "function") { messageClient(text, client, colour || COLOUR_YELLOW); return; } } catch (e) {}
+		try { if (typeof outputChatBox === "function") outputChatBox(text, client, 255, 255, 0); } catch (e2) {}
+	}
+
+	function parseArgs(str) {
+		return String(str || "").trim().split(/\s+/).filter(function (x) { return x; });
+	}
+
+	function charLine(c) {
+		var a = c.appearance || {};
+		return "  " + c.characterId + " | " + c.name + " | " + (a.model !== undefined ? a.model : "?") + " | " + (a.outfit || "");
+	}
+
+	function showCharacters(client, chars) {
+		var lines = ["Your characters:"];
+		chars.forEach(function (c) { lines.push(charLine(c)); });
+		msg(client, lines.join("\n"), COLOUR_YELLOW);
 	}
 
 	N.registerCommands = function () {
 		if (typeof addCommandHandler !== "function") return;
 
+		// ---- Auth commands ----
 		addCommandHandler("register", function (cmd, params, client) {
 			var p = parseArgs(params);
 			if (!p[0] || !p[1]) return msg(client, "Usage: /register <username> <password> [email]", COLOUR_RED);
@@ -162,9 +182,63 @@
 			if (r.currentSessionRevoked) pushState(client);
 			msg(client, "Session revoked.", COLOUR_GREEN);
 		});
-	};
 
-	function parseArgs(str) {
-		return String(str || "").trim().split(/\s+/).filter(function (x) { return x; });
-	}
+		// ---- Phase 4: character commands ----
+		addCommandHandler("cc", function (cmd, params, client) {
+			var p = parseArgs(params);
+			var usage = "Usage: /cc create <name> [model] [outfit] [notes] | /cc list";
+			if (!p[0]) return msg(client, usage, COLOUR_RED);
+
+			var accountId = Service.accountForClient(client);
+			if (!accountId) return msg(client, "Not authenticated.", COLOUR_RED);
+
+			if (p[0] === "create") {
+				if (!p[1]) return msg(client, usage, COLOUR_RED);
+				var r = Chars().createCharacter(client, {
+					name: p[1],
+					model: (p[2] !== undefined) ? p[2] : 90,
+					outfit: (p[3] !== undefined) ? p[3] : "",
+					notes: p.slice(4).join(" ")
+				});
+				if (!r.ok) return msg(client, "Create failed: " + r.code, COLOUR_RED);
+				msg(client, "Character created: " + r.character.name, COLOUR_GREEN);
+				send(client, "ln:charResult", "create", "1", r.characterId, JSON.stringify(r.character));
+			} else if (p[0] === "list") {
+				var chars = Chars().listByAccount(accountId);
+				if (!chars.length) return msg(client, "You have no characters yet. Use /cc create <name> to make one.", COLOUR_YELLOW);
+				showCharacters(client, chars);
+			} else {
+				msg(client, usage, COLOUR_RED);
+			}
+		});
+
+		addCommandHandler("cs", function (cmd, params, client) {
+			var p = parseArgs(params);
+			var accountId = Service.accountForClient(client);
+			if (!accountId) return msg(client, "Not authenticated.", COLOUR_RED);
+
+			var chars = Chars().listByAccount(accountId);
+			if (!chars.length) return msg(client, "You have no characters yet. Use /cc create <name> to make one.", COLOUR_YELLOW);
+
+			if (!p[0] || p[0] === "list") {
+				showCharacters(client, chars);
+				if (!p[0]) msg(client, "Usage: /cs select <characterId>", COLOUR_YELLOW);
+				return;
+			}
+
+			if (p[0] === "select") {
+				var charId = p[1];
+				if (!charId) return msg(client, "Usage: /cs select <characterId>", COLOUR_RED);
+				var r = Chars().selectCharacter(client, charId);
+				if (!r.ok) return msg(client, "Select failed: " + r.code, COLOUR_RED);
+				var c = r.character;
+				msg(client, "Selected: " + c.name + " (" + (c.appearance ? c.appearance.model : "?") + ") - spawning...", COLOUR_GREEN);
+				pushState(client);
+				send(client, "ln:charResult", "select", "1", charId, JSON.stringify(c));
+				return;
+			}
+
+			msg(client, "Usage: /cs select <characterId> | /cs list", COLOUR_RED);
+		});
+	};
 })(typeof globalThis !== "undefined" ? globalThis : this);
