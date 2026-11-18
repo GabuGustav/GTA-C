@@ -137,4 +137,5 @@ Test.API.getVehicleName = function getVehicleName(modelId) {
     return modelIdnex[modelId] || "Unknown";
 }
 
+
 console.log("Vehicle table loaded!");

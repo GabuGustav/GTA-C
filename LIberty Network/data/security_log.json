@@ -439,5 +439,32 @@
 		"detail": "existing_device",
 		"clientName": "GGPlays",
 		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1795026387,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1795030596,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
+	},
+	{
+		"ts": 1795030892,
+		"action": "login",
+		"outcome": "ok",
+		"accountId": "ggplays",
+		"detail": "existing_device",
+		"clientName": "GGPlays",
+		"ip": "127.0.0.1"
 	}
 ]

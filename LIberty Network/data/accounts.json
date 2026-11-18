@@ -9,7 +9,7 @@
 			"enc": "$argon2id$v=19$m=65536,t=2,p=1$uLMbUQsws2yfxioP27INFQ$9gV25KB5O4SdY1Y2LJPmOhL4THpMMURsEHFoFNoBnGw"
 		},
 		"createdAt": 1791297366,
-		"lastLoginAt": 1794414123,
+		"lastLoginAt": 1795030892,
 		"roles": [
 			"admin"
 		],

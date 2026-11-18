@@ -12,7 +12,7 @@ const COLOUR_WHITE = 0xffffffff;
 const COLOUR_BLACK = 0xff000000;
 
 var Test = Test || {};
-Test.API = Test.API || {};
+Test.API = Test.API || {}; 
 
 const client = localClient;
 var clientName = client.name;

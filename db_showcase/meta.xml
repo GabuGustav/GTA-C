@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<module>
+    <name>db_showcase</name>
+    <description>Database Module Showcase Resource - Demonstrates SQLite + JSON hybrid database functionality</description>
+    <version>1.0.0</version>
+    <author>Liberty Network DB Module</author>
+    
+    <requires>
+        <module>db_module</module>
+    </requires>
+    
+    <conflicts/>
+    
+    <saintsRowStart>1</saintsRowStart>
+    <saintsRowStop>1</saintsRowStop>
+    
+    <!-- Database configuration -->
+    <db>
+        <path>resources/Liberty Network/data/db/</path>
+        <backup_path>resources/Liberty Network/data/db/backups/</path>
+    </db>
+</module>

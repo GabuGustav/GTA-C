@@ -24,3 +24,7 @@ temp/
 Thumbs.db
 *.swp
 *.tmp
+
+#other ununsed files
+.vs
+.codeatlas
